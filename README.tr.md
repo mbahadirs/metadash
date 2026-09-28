@@ -62,7 +62,7 @@ En güncel kurulum dosyasını **[GitHub Releases](https://github.com/mbahadirs/
 | macOS, Apple Silicon | `MetaDash-<sürüm>-mac-arm64.dmg` |
 | macOS, Intel | `MetaDash-<sürüm>-mac-x64.dmg` |
 | Windows x64 | `MetaDash-Setup-<sürüm>.exe` (kurulum sihirbazı; kurulum klasörü seçilebilir) |
-| Linux x64 | `MetaDash-<sürüm>-linux-<mimari>.AppImage` veya `.deb` |
+| Linux x64 | `MetaDash-<sürüm>-linux-x86_64.AppImage` veya `MetaDash-<sürüm>-linux-amd64.deb` |
 
 ### İmzasız paketler
 

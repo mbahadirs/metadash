@@ -62,7 +62,7 @@ Download the latest installer from **[GitHub Releases](https://github.com/mbahad
 | macOS, Apple Silicon | `MetaDash-<version>-mac-arm64.dmg` |
 | macOS, Intel | `MetaDash-<version>-mac-x64.dmg` |
 | Windows x64 | `MetaDash-Setup-<version>.exe` (installer; you can choose the install directory) |
-| Linux x64 | `MetaDash-<version>-linux-<arch>.AppImage` or `.deb` |
+| Linux x64 | `MetaDash-<version>-linux-x86_64.AppImage` or `MetaDash-<version>-linux-amd64.deb` |
 
 ### Unsigned builds
 
