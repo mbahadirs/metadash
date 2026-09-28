@@ -1,0 +1,64 @@
+appId: com.bahadirsahin.metadash
+productName: MetaDash
+copyright: Copyright © 2026 Bahadır Şahin and contributors
+directories:
+  output: release
+  buildResources: resources
+files:
+  - src/main/**/*
+  - dist/renderer/**/*
+  - package.json
+  - "!src/renderer/**"
+  - "!server/**"
+  - "!tests/**"
+  - "!scripts/**"
+  - "!docs/**"
+extraResources:
+  - from: docs
+    to: docs
+    filter:
+      - "**/*.md"
+asar: true
+asarUnpack:
+  - node_modules/better-sqlite3/**
+compression: maximum
+afterPack: scripts/afterPack.cjs
+# Artifacts are uploaded to GitHub Releases by .github/workflows/release.yml (electron-builder itself never publishes).
+publish:
+  provider: github
+  owner: mbahadirs
+  repo: metadash
+  releaseType: release
+mac:
+  category: public.app-category.business
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  # Signing: a "Developer ID Application" certificate in the keychain (or CSC_LINK in CI) is used automatically;
+  # without one an unsigned build is produced (Gatekeeper warns). Notarized build: npm run build:mac:notarized
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  artifactName: "${productName}-${version}-mac-${arch}.${ext}"
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: "${productName}-Setup-${version}.${ext}"
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  createDesktopShortcut: true
+linux:
+  category: Office
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  maintainer: Bahadır Şahin <mbhdrshn@gmail.com>
+  artifactName: "${productName}-${version}-linux-${arch}.${ext}"
