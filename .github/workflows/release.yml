@@ -93,7 +93,7 @@ jobs:
           pattern: release-*
           merge-multiple: true
       - run: ls -la dist
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.TAG }}
           name: MetaDash ${{ env.TAG }}
