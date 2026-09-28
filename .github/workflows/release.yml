@@ -69,7 +69,7 @@ jobs:
           if [ "${{ matrix.name }}" = "macOS" ] && [ -n "$CSC_LINK" ] && [ -n "$APPLE_ID" ]; then NOTARIZE=true; fi
           npx electron-builder ${{ matrix.args }} --publish never --config.mac.notarize=$NOTARIZE
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.name }}
           if-no-files-found: error
