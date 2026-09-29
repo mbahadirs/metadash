@@ -1,6 +1,7 @@
 import { app, shell } from 'electron';
 import { getConfig } from './config/store.js';
 import { progressBus } from './sync/progress.js';
+import { markQuitting } from './lifecycle.js';
 import { RELEASES_API, updateMode, statusFromRelease, reduceUpdateStatus, safeReleaseUrl } from './updateCheck.js';
 
 /**
@@ -83,9 +84,10 @@ export async function downloadUpdate() {
   return status;
 }
 
-/** Quits and installs a downloaded update. */
+/** Quits and installs a downloaded update. The quit flag makes tray mode let go and skips the "posts are due" prompt. */
 export function installUpdate() {
   if (!autoUpdater || status.state !== 'downloaded') return false;
+  markQuitting('update');
   setImmediate(() => autoUpdater.quitAndInstall());
   return true;
 }

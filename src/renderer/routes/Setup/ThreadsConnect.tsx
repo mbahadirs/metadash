@@ -7,6 +7,7 @@ import type { ThreadsSetupState } from '@/lib/types';
 import { Spinner, Toggle } from '@/components/ui';
 import { Icon } from '@/components/Icons';
 import { PlatformIcon } from '@/components/PlatformBadge';
+import { useSettingToggle } from '@/routes/Settings/useSettingToggle';
 
 export const THREADS_GUIDE_URL = 'https://github.com/mbahadirs/metadash/blob/main/docs/threads-setup.md';
 
@@ -93,6 +94,7 @@ function ThreadsAppForm({ state, busy, run }: { state: ThreadsSetupState; busy: 
 
 function ThreadsTokenForm({ hasApp, busy, run }: { hasApp: boolean; busy: string | null; run: Run }) {
   const t = useT();
+  const toggles = useSettingToggle();
   const [mode, setMode] = useState<'token' | 'code'>('token');
   const [value, setValue] = useState('');
   const openAuth = () => run('auth', async () => { const url = await call<string>(api.setup.threads.authUrl({})); await call(api.system.openExternal(url)); });
@@ -107,6 +109,7 @@ function ThreadsTokenForm({ hasApp, busy, run }: { hasApp: boolean; busy: string
     <div className="panel p-3 space-y-3">
       <div className="flex items-center justify-between gap-2"><div className="font-medium text-sm">{t('threads_access_title')}</div><ThreadsGuideButton /></div>
       <p className="text-xs text-ink-2 m-0">{t('threads_access_hint')}</p>
+      <Toggle checked={toggles.get('threads.requestPublish')} onChange={(v) => toggles.set('threads.requestPublish', v)} label={t('threads_request_publish')} />
       <div className="flex items-center gap-2">
         <button className={`chip ${mode === 'token' ? 'active' : ''}`} onClick={() => setMode('token')}>{t('threads_mode_token')}</button>
         <button className={`chip ${mode === 'code' ? 'active' : ''}`} onClick={() => setMode('code')}>{t('threads_mode_code')}</button>

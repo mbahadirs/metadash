@@ -14,6 +14,7 @@ import { useSyncHistory } from '@/hooks/queries';
 const NAV = [
   { to: '/', key: 'nav_overview', icon: Icon.overview, end: true },
   { to: '/content', key: 'nav_content', icon: Icon.content },
+  { to: '/planner', key: 'nav_planner', icon: Icon.calendar },
   { to: '/compare', key: 'nav_compare', icon: Icon.compare },
   { to: '/ads', key: 'nav_ads', icon: Icon.ads },
   { to: '/competitors', key: 'nav_competitors', icon: Icon.competitors },

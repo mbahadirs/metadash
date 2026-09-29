@@ -12,6 +12,8 @@ import { ExcelButton } from '@/components/ExcelButton';
 import { useRef } from 'react';
 import { UpdatesPanel } from './UpdatesPanel';
 import { NotificationsSection } from './NotificationsSection';
+import { BackgroundSection } from './BackgroundSection';
+import { PublishingSection } from './PublishingSection';
 import { AiSection } from './AiSection';
 import { BrandingSection } from './BrandingSection';
 import { ClientLogoCell, useClientLogoFlags } from './ClientLogoCell';
@@ -69,6 +71,8 @@ export function SettingsPage() {
       </Section>
 
       <NotificationsSection />
+
+      <div id="publishing" className="scroll-mt-4 space-y-6"><PublishingSection /><BackgroundSection /></div>
 
       <div id="ai-assistant" className="scroll-mt-4"><AiSection /></div>
 

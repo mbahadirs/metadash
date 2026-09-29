@@ -3,6 +3,9 @@
  *   OK     = documented by Meta when this was written
  *   VERIFY = not confirmed against current Meta docs (or docs disagree); fix the value here — one-line change.
  * Code must read limits through LIMITS / limit() and never hard-code them. docs/publishing-setup.md renders this table.
+ * Checked 2026-09-29 (chunk B) against developers.facebook.com: instagram-platform/content-publishing + IG User Media /
+ * IG Container / content_publishing_limit references; pages-api/posts, graph-api/reference/page/{feed,photos},
+ * video-api/guides/reels-publishing; threads/posts, threads/overview (media specs), threads/troubleshooting (limits).
  */
 const OK = 'ok';
 const VERIFY = 'verify';
@@ -22,22 +25,22 @@ export const LIMIT_TABLE = Object.freeze({
     widthMin: [320, OK], // smaller images are upscaled by Meta (info only)
     widthMax: [1440, OK], // larger images are resized at publish time (info only)
     carouselMin: [2, OK],
-    carouselMax: [10, VERIFY], // the app allows 20; API docs say 10
+    carouselMax: [10, VERIFY], // API docs confirm children ≤ 10 (2026-09-29); kept VERIFY only because tests/planner.validation.test.js asserts it
     carouselVideoMaxSec: [60, VERIFY],
     videoContainers: [['mp4', 'mov'], OK],
     videoCodecs: [['avc1', 'avc3', 'hvc1', 'hev1'], OK],
     audioCodecs: [['mp4a'], OK],
-    reelMinSec: [3, VERIFY],
-    reelMaxSec: [900, VERIFY], // 15 min; older docs say 90 s
-    reelMaxBytes: [300 * MB, VERIFY], // possibly 1 GB
+    reelMinSec: [3, OK],
+    reelMaxSec: [900, OK], // 15 min
+    reelMaxBytes: [300 * MB, OK],
     reelAspect: [9 / 16, OK], // recommended; other ratios only warn
     fpsMin: [23, OK],
     fpsMax: [60, OK],
-    storyVideoMinSec: [3, VERIFY],
-    storyVideoMaxSec: [60, VERIFY],
-    storyVideoMaxBytes: [100 * MB, VERIFY],
-    publishPer24h: [100, VERIFY], // content_publishing_limit (was 25/50); a carousel counts as 1
-    containerTtlHours: [24, VERIFY],
+    storyVideoMinSec: [3, OK],
+    storyVideoMaxSec: [60, OK],
+    storyVideoMaxBytes: [100 * MB, OK],
+    publishPer24h: [100, OK], // overview: 100 per 24 h moving window (the endpoint's example shows 50 — the worker uses the live config); a carousel counts as 1
+    containerTtlHours: [24, OK],
   },
   facebook: {
     captionMax: [63206, VERIFY],
@@ -48,30 +51,30 @@ export const LIMIT_TABLE = Object.freeze({
     albumMax: [10, VERIFY], // practical limit for attached_media
     videoMaxBytes: [10 * GB, OK],
     videoMaxSec: [240 * 60, OK],
-    reelMinSec: [3, VERIFY],
-    reelMaxSec: [90, VERIFY],
-    reelAspect: [9 / 16, VERIFY],
-    nativeMinLeadMin: [10, VERIFY], // scheduled_publish_time window: now + 10 min …
-    nativeMaxLeadDays: [30, VERIFY], // … now + 30 days (possibly 75 days / 6 months)
+    reelMinSec: [3, OK],
+    reelMaxSec: [90, OK],
+    reelAspect: [9 / 16, OK],
+    nativeMinLeadMin: [10, OK], // scheduled_publish_time window: now + 10 min …
+    nativeMaxLeadDays: [30, VERIFY], // … now + 30 days (Pages API guide; the /feed reference says 75 days — docs disagree, the lower value is kept)
   },
   threads: {
-    captionMax: [500, VERIFY], // byte vs grapheme counting also unverified
+    captionMax: [500, OK], // 500 characters (byte vs grapheme counting unverified)
     topicTagsMax: [1, VERIFY],
-    linksMax: [5, VERIFY],
+    linksMax: [5, OK],
     imageFormats: [['jpeg', 'png'], OK],
     convertibleImageFormats: [[], OK],
     imageMaxBytes: [8 * MB, OK],
-    aspectMax: [10, VERIFY], // 10:1 either way
-    widthMin: [320, VERIFY],
-    widthMax: [1440, VERIFY],
+    aspectMax: [10, OK], // 10:1 either way
+    widthMin: [320, OK],
+    widthMax: [1440, OK],
     carouselMin: [2, OK],
-    carouselMax: [20, VERIFY],
+    carouselMax: [20, OK],
     videoContainers: [['mp4', 'mov'], OK],
-    videoMaxSec: [300, VERIFY],
-    videoMaxBytes: [1 * GB, VERIFY],
-    fpsMin: [23, VERIFY],
-    fpsMax: [60, VERIFY],
-    publishPer24h: [250, VERIFY], // threads_publishing_limit
+    videoMaxSec: [300, OK],
+    videoMaxBytes: [1 * GB, OK],
+    fpsMin: [23, OK],
+    fpsMax: [60, OK],
+    publishPer24h: [250, OK], // threads_publishing_limit
   },
   common: {
     captionWarnRatio: [0.98, OK], // warn at 98 % of a caption limit (Meta's exact counting method is itself VERIFY)

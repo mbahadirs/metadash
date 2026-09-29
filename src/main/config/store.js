@@ -15,6 +15,7 @@ const KEY_SALT = 'metadash-store-v1';
 export const DEFAULTS = {
   theme: 'dark',
   lang: 'en',
+  'threads.requestPublish': true,
   autoSyncDaily: false,
   storyIntervalHours: 4,
   refreshTiers: { fresh: 48, recent: 24, month: 168, old: 720 },

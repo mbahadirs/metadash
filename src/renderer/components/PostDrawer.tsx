@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useMediaDetail, useNotes, useApiMutation } from '@/hooks/queries';
 import { useAppStore } from '@/store/app';
 import { useT } from '@/lib/i18n';
@@ -42,6 +42,7 @@ function PostDrawerBody({ mediaId, onClose }: { mediaId: string; onClose: () => 
   const { basket, toggleBasket } = useAppStore();
   const q = useMediaDetail(mediaId);
   const pc = usePlatformCaps();
+  const navigate = useNavigate();
   if (q.isLoading || !q.data) return <div className="p-8"><Loading /></div>;
   const d = q.data;
   const m = d.media;
@@ -80,6 +81,7 @@ function PostDrawerBody({ mediaId, onClose }: { mediaId: string; onClose: () => 
         </div>
         <button className={`btn btn-sm ${inBasket ? 'btn-primary' : ''}`} onClick={() => toggleBasket(m.mediaId)}>{inBasket ? '✓ ' : '+ '}{t('report_basket')}</button>
         {m.permalink && <button className="btn btn-sm" onClick={() => api.system.openExternal(m.permalink!)}>{openLabel} <Icon.external /></button>}
+        <button className="btn btn-sm" title={t('pl_duplicate_as_draft')} aria-label={t('pl_duplicate_as_draft')} onClick={() => { onClose(); navigate('/planner?post=new', { state: { draft: { caption: m.caption ?? '', accountIds: [m.igId] } } }); }}><Icon.calendar /></button>
         <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label={t('close')}>✕</button>
       </header>
 

@@ -224,8 +224,15 @@ export function registerPlannerHandlers(handle) {
   // planner:suggestSlots     ({ accountIds, from?, days?, count? }) → Slot[]
   // planner:approval:export  ({ postIds?, from?, to?, accountIds?, format: 'html'|'pdf', title?, clientName?, lang?, includeNotes? }) → { filePath, packId, count }
   // planner:approval:import  ({ code }) → { applied: [{ ref, decision, note }], stale: [{ ref, packVersion, currentVersion }], unknown: string[] }
-  handle('planner:suggestSlots', () => { throw notImplemented(); });
-  handle('planner:approval:export', () => { throw notImplemented(); });
-  handle('planner:approval:import', () => { throw notImplemented(); });
+  //  (+ approval:import also returns rejected: [{ ref, reason }] and postIds; export returns { canceled: true } on dialog cancel)
+  // Modules are loaded lazily so this block stays self-contained (the import list above belongs to chunk A).
+  handle('planner:suggestSlots', async (p) => (await import('../planner/suggest.js')).suggestSlots(p ?? {}));
+  handle('planner:approval:export', async (p, event) => (await import('../planner/approvalExport.js')).exportApprovalPack(p ?? {}, event));
+  handle('planner:approval:import', async (p) => {
+    const { importResponse } = await import('../planner/approvalPack.js');
+    const res = importResponse(p?.code, { requireApproval: requireApproval() });
+    if (res.postIds.length) emitChanged(res.postIds, 'status', { source: 'approval_import' });
+    return res;
+  });
   // ===== END CHUNK C =====
 }

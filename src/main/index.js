@@ -9,10 +9,13 @@ import { startUpdater, stopUpdater } from './updater.js';
 import { startNotifications, stopNotifications } from './notifications.js';
 import { configureAppWindow, createMainWindow } from './appWindow.js';
 import { registerMediaScheme, handleMediaProtocol } from './protocol.js';
+import { acquireSingleInstance, shouldStartHidden, startBackground, stopBackground, confirmQuit } from './lifecycle.js';
 
 const SMOKE = process.env.METADASH_SMOKE === '1';
 
 if (process.env.METADASH_USER_DATA) app.setPath('userData', process.env.METADASH_USER_DATA);
+// One instance per userData: a second launch focuses the running window (two instances could double-publish).
+const PRIMARY = acquireSingleInstance({ smoke: SMOKE });
 registerMediaScheme(); // must run before app ready
 configureAppWindow({ onWindowCreated: SMOKE ? (win) => runSmoke(win) : null });
 
@@ -65,27 +68,30 @@ async function runSmoke(win) {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  if (!PRIMARY) return;
   const userData = app.getPath('userData');
   openDb(path.join(userData, 'data.db'));
   if (!app.isPackaged && process.argv.includes('--demo') && !isSeeded()) seedDemo({ reset: false });
   nativeTheme.themeSource = getConfig('theme') === 'light' ? 'light' : 'dark';
   handleMediaProtocol();
   registerIpc();
-  createMainWindow();
+  // Login start in tray mode: no window until the user opens one from the tray.
+  if (SMOKE || !shouldStartHidden()) createMainWindow();
   startScheduler();
   if (!SMOKE) {
     startUpdater();
     startNotifications();
   }
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createMainWindow(); });
+  // Tray, window-all-closed policy, login item, power events and the publishing worker (lifecycle.js).
+  await startBackground({ smoke: SMOKE });
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin' || SMOKE) app.quit();
-});
-
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  if (!PRIMARY) return;
+  if (!confirmQuit(event)) return; // stays open when the user cancels the "posts are due" prompt
+  stopBackground();
   stopScheduler();
   stopUpdater();
   stopNotifications();

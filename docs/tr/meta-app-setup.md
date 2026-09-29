@@ -235,6 +235,22 @@ Notlar:
 - Meta, 2025–2026'da Sayfa metriklerinin çoğunu yeniden adlandırdı ("impressions" **görüntülenme / views**, "reach" **izleyici / viewers**, "fans" **takipçi / followers** oldu). MetaDash önce güncel metrik adlarını dener, gerekirse otomatik olarak eskilerine düşer; Meta'nın artık desteklemediği metrikler Ayarlar'da listelenir ve oradan yeniden etkinleştirilebilir.
 - Sayfa istatistikleri en fazla 90 gün geriye istenebilir; bu yüzden ilk senkronizasyon en fazla son 90 günü doldurur.
 
+### 7.3 Yayımlama izinleri (Planlayıcı, isteğe bağlı)
+
+Planlayıcı'dan (v1.4) yayımlamak ek izinler gerektirir. Analiz bu izinler olmadan da çalışır; yalnızca MetaDash'ten yayımlayacaksanız ekleyin.
+
+| Platform | İzin | Ne için |
+|---|---|---|
+| Instagram | `instagram_content_publish` | gönderi, karusel, reels, hikâye |
+| Instagram | `instagram_manage_comments` | ilk yorum (yorum senkronizasyonu için zaten isteğe bağlı) |
+| Facebook Sayfaları | `pages_manage_posts` | gönderi, fotoğraf, albüm, video, reels, Facebook'ta zamanlama |
+| Facebook Sayfaları | `pages_manage_engagement` | ilk yorum |
+
+1. İzinleri uygulamanın kullanım senaryosuna ekleyin (Bölüm 3.2). Uygulama geliştirme modundayken uygulamada rolü olan herkes için çalışırlar (Bölüm 5); Uygulama İncelemesi yalnızca rolü olmayan kişiler için gerekir.
+2. Token'ı oluştururken Graph API Explorer'da bu izinleri işaretleyin (Bölüm 6) ve token'ı MetaDash'te yeniden dönüştürün (Ayarlar → Bağlantı → **Token yenile**). Bir token yalnızca oluşturulurken işaretlenen izinleri taşır; mevcut kullanıcılar token'ı yenilemelidir.
+3. **Facebook Sayfaları** için her Sayfada `CREATE_CONTENT` görevi de gerekir (Explorer: `me/accounts?fields=name,tasks` — `tasks` içinde `CREATE_CONTENT` olmalı).
+4. Ayarlar → Yayımlama, platform başına hazır olma durumunu ve eksikleri gösterir. Instagram ve Threads için medya barındırma ve ayrıntılı anlatım [publishing-setup.md](publishing-setup.md) dosyasındadır.
+
 ---
 
 ## 8. Sorun giderme

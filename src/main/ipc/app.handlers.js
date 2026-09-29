@@ -1,14 +1,16 @@
-import { notImplemented } from './notImplemented.js';
+import { backgroundState, updateBackground } from '../lifecycle.js';
 
 /**
- * Background-mode channels — STUBS (v1.4 chunk A). Chunk C replaces this file; keep `registerAppHandlers(handle)` and
- * `APP_CHANNELS`. Contract (types in renderer lib/types.ts, BackgroundSettings):
+ * Background-mode channels (v1.4 chunk C). Types: renderer lib/types.ts BackgroundSettings.
  *  app:background:get  () → { trayMode, launchAtLogin, startHidden, keepAwakeForPosts, supported: { loginItem, tray } }
- *  app:background:set  (Partial<{ trayMode, launchAtLogin, startHidden, keepAwakeForPosts }>) → same as get (applied immediately)
- * Config keys: app.trayMode, app.launchAtLogin, app.startHidden, app.keepAwakeForPosts (config/store.js DEFAULTS).
+ *  app:background:set  (Partial<{ trayMode, launchAtLogin, startHidden, keepAwakeForPosts }>) → same as get
+ *    Applied immediately: the tray is created/destroyed and the login item (macOS/Windows) or XDG autostart file (Linux)
+ *    is updated. Unknown keys and non-boolean values are ignored. keepAwakeForPosts is read by the publishing worker.
+ * Config keys: app.trayMode, app.launchAtLogin, app.startHidden, app.keepAwakeForPosts.
  */
 export const APP_CHANNELS = ['app:background:get', 'app:background:set'];
 
 export function registerAppHandlers(handle) {
-  for (const channel of APP_CHANNELS) handle(channel, () => { throw notImplemented(); });
+  handle('app:background:get', () => backgroundState());
+  handle('app:background:set', (patch) => updateBackground(patch));
 }

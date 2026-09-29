@@ -18,6 +18,9 @@ extraResources:
     to: docs
     filter:
       - "**/*.md"
+  # Tray / menu-bar icons (v1.4): resources/ is buildResources and is not packaged, so copy them to <resources>/tray.
+  - from: resources/tray
+    to: tray
 asar: true
 asarUnpack:
   - node_modules/better-sqlite3/**

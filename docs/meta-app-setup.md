@@ -235,6 +235,22 @@ Notes:
 - Meta renamed most Page metrics in 2025–2026 ("impressions" became **views**, "reach" became **viewers**, "fans" became **followers**). MetaDash tries the current metric names first and falls back automatically; metrics that Meta no longer supports are listed under Settings and can be re-enabled there later.
 - Page insights can be requested for at most 90 days back, so the first sync fills at most the last 90 days.
 
+### 7.3 Publishing permissions (Planner, optional)
+
+Publishing from the Planner (v1.4) needs extra permissions. Analytics keeps working without them; add them only if you publish from MetaDash.
+
+| Platform | Permission | Needed for |
+|---|---|---|
+| Instagram | `instagram_content_publish` | posts, carousels, reels, stories |
+| Instagram | `instagram_manage_comments` | the first comment (already optional for comment sync) |
+| Facebook Pages | `pages_manage_posts` | posts, photos, albums, videos, reels, scheduling on Facebook |
+| Facebook Pages | `pages_manage_engagement` | the first comment |
+
+1. Add the permissions to the app's use case (section 3.2). While the app is in development mode they work for everyone with a role on the app (section 5); App Review is only needed for people without a role.
+2. Tick them in Graph API Explorer when you generate the token (section 6) and exchange the token again in MetaDash (Settings → Connection → **Renew token**). A token only carries the permissions that were ticked when it was created, so existing users must renew it.
+3. **Facebook Pages** also need the `CREATE_CONTENT` task on each Page (Explorer: `me/accounts?fields=name,tasks` — `tasks` must contain `CREATE_CONTENT`).
+4. Settings → Publishing shows per-platform readiness and what is missing. Media hosting for Instagram and Threads and the full walkthrough are in [publishing-setup.md](publishing-setup.md).
+
 ---
 
 ## 8. Troubleshooting

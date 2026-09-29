@@ -11,12 +11,18 @@ export const MIN_REFRESH_AGE_MS = 24 * HOUR_MS;
 /** Auto-refresh once the token expires within this window. */
 export const REFRESH_WITHIN_MS = 20 * DAY_MS;
 
+/**
+ * v1.4 publishing scopes: threads_content_publish (posts) + threads_manage_replies (first comment as a reply). Opt-in
+ * (`publish: true`) because an app whose Threads use case lacks these permissions gets an error on the authorize page.
+ */
+export const THREADS_PUBLISH_SCOPES = Object.freeze(['threads_content_publish', 'threads_manage_replies']);
+
 /** Authorization window URL (user logs in on threads.com and is redirected to `redirectUri?code=…`). */
-export function buildAuthUrl({ appId, redirectUri, state }) {
+export function buildAuthUrl({ appId, redirectUri, state, publish = false }) {
   const url = new URL(THREADS_AUTHORIZE_URL);
   url.searchParams.set('client_id', String(appId));
   url.searchParams.set('redirect_uri', redirectUri);
-  url.searchParams.set('scope', THREADS_SCOPES.join(','));
+  url.searchParams.set('scope', [...THREADS_SCOPES, ...(publish ? THREADS_PUBLISH_SCOPES : [])].join(','));
   url.searchParams.set('response_type', 'code');
   if (state) url.searchParams.set('state', state);
   return url.toString();

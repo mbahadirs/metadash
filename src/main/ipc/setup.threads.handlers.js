@@ -4,6 +4,7 @@ import {
   setThreadsTracked, SETTING_REDIRECT_URI,
 } from '../providers/threads/connection.js';
 import { buildAuthUrl } from '../providers/threads/auth.js';
+import { getConfig } from '../config/store.js';
 
 /**
  * Threads setup channels. Contract:
@@ -30,7 +31,8 @@ export function registerThreadsSetupHandlers(handle) {
     const { appId } = requireApp();
     const redirectUri = validRedirectUri(p?.redirectUri);
     setSetting(SETTING_REDIRECT_URI, redirectUri);
-    return buildAuthUrl({ appId, redirectUri });
+    // Publishing scopes are requested unless the user opted out (Settings → Connections); the Threads use case must include threads_content_publish.
+    return buildAuthUrl({ appId, redirectUri, publish: getConfig('threads.requestPublish') !== false });
   });
 
   handle('setup:threads:exchangeToken', (p) => connectThreads(p ?? {}));

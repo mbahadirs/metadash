@@ -629,6 +629,7 @@ const dict = {
   threads_app_id: ['Threads uygulama kimliği', 'Threads App ID'],
   threads_app_secret: ['Threads uygulama gizli anahtarı', 'Threads App Secret'],
   threads_app_saved: ['Threads uygulaması kaydedildi ({id}).', 'Threads app saved ({id}).'],
+  threads_request_publish: ['Paylaşım iznini de iste (Planlayıcı için; Threads kullanım senaryosunda threads_content_publish gerekir)', 'Also request publishing permission (for the Planner; the Threads use case needs threads_content_publish)'],
   threads_access_title: ['2. Erişim', '2. Access'],
   threads_access_hint: ['Uygulama panosundaki Threads kullanıcı token oluşturucusundan kısa ömürlü bir token yapıştırın ya da yetkilendirme sayfasını açıp yönlendirme adresindeki "code" değerini yapıştırın.', 'Paste a short-lived token from the Threads user token generator in the App Dashboard, or open the authorization page and paste the "code" value from the redirect URL.'],
   threads_open_auth: ['Yetkilendirme sayfasını aç', 'Open authorization page'],
