@@ -49,3 +49,24 @@ export function safeJsonParse(text) {
     return {};
   }
 }
+
+/** Keywords the Anthropic structured-output compiler rejects; they are validated locally instead (ai/structured.js). */
+const UNSUPPORTED_KEYWORDS = new Set(['minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'multipleOf', 'minLength', 'maxLength', 'pattern', 'minItems', 'maxItems', 'uniqueItems', 'minProperties', 'maxProperties']);
+
+/**
+ * Returns a new schema for provider-enforced JSON output: every object gets additionalProperties:false and
+ * unsupported numeric/string/array constraints are removed (the caller validates the full schema locally).
+ */
+export function strictJsonSchema(schema) {
+  if (Array.isArray(schema)) return schema.map(strictJsonSchema);
+  if (!schema || typeof schema !== 'object') return schema;
+  const out = {};
+  for (const [k, v] of Object.entries(schema)) {
+    if (UNSUPPORTED_KEYWORDS.has(k)) continue;
+    if (k === 'properties' && v && typeof v === 'object') out.properties = Object.fromEntries(Object.entries(v).map(([name, s]) => [name, strictJsonSchema(s)]));
+    else if (k === 'items' || k === 'anyOf' || k === 'allOf' || k === '$defs' || k === 'definitions') out[k] = k === '$defs' || k === 'definitions' ? Object.fromEntries(Object.entries(v).map(([n, s]) => [n, strictJsonSchema(s)])) : strictJsonSchema(v);
+    else out[k] = v;
+  }
+  const isObject = out.type === 'object' || (Array.isArray(out.type) && out.type.includes('object'));
+  return isObject ? { ...out, properties: out.properties ?? {}, additionalProperties: false } : out;
+}

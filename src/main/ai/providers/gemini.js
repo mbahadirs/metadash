@@ -17,13 +17,31 @@ function geminiTool(t) {
   return { name: t.name, description: t.description, ...(hasProps ? { parameters: geminiSchema(t.parameters) } : {}) };
 }
 
-/** Pure generateContent body. */
-export function buildGeminiRequest({ system, messages, tools = [], maxTokens = GEMINI_MAX_TOKENS }) {
+/** Gemini 1.5+ / 2.x / 3.x models are multimodal (VERIFY for new families); anything else is 'unknown'. */
+export function supportsVision(model) {
+  const m = String(model ?? '').toLowerCase().replace(/^models\//, '');
+  if (/^gemini-(1\.5|[2-9])/.test(m)) return true;
+  return 'unknown';
+}
+
+/** User turn; images become inline_data parts before the text part. */
+export function geminiUserMessage(text, { images = [] } = {}) {
+  return { role: 'user', parts: [...images.map((img) => ({ inline_data: { mime_type: img.mime, data: img.data } })), { text }] };
+}
+
+/**
+ * Pure generateContent body. toolChoice forces one function (functionCallingConfig ANY + allowedFunctionNames).
+ * responseFormat json / json_schema → responseMimeType application/json (the schema itself goes in the prompt; VERIFY
+ * responseJsonSchema support before sending schemas natively).
+ */
+export function buildGeminiRequest({ system, messages, tools = [], maxTokens = GEMINI_MAX_TOKENS, toolChoice, responseFormat }) {
+  const json = responseFormat?.type === 'json' || responseFormat?.type === 'json_schema';
   return {
     systemInstruction: { parts: [{ text: system }] },
     contents: messages,
     ...(tools.length ? { tools: [{ functionDeclarations: tools.map(geminiTool) }] } : {}),
-    generationConfig: { maxOutputTokens: maxTokens },
+    ...(tools.length && toolChoice ? { toolConfig: { functionCallingConfig: { mode: 'ANY', allowedFunctionNames: [toolChoice] } } } : {}),
+    generationConfig: { maxOutputTokens: maxTokens, ...(json ? { responseMimeType: 'application/json' } : {}) },
   };
 }
 
@@ -44,7 +62,9 @@ export function createGeminiProvider({ apiKey, model, fetchImpl, baseUrl = BASE 
   return {
     id: 'gemini',
     model,
-    userMessage: (text) => ({ role: 'user', parts: [{ text }] }),
+    vision: supportsVision(model),
+    structuredModes: ['tool', 'json'],
+    userMessage: geminiUserMessage,
     assistantMessage: (text) => ({ role: 'model', parts: [{ text }] }),
     appendAssistant: (messages, res) => [...messages, res.raw],
     appendToolResults: (messages, res, results) => [
@@ -52,8 +72,8 @@ export function createGeminiProvider({ apiKey, model, fetchImpl, baseUrl = BASE 
       res.raw,
       { role: 'user', parts: results.map((r) => ({ functionResponse: { name: r.name, response: r.isError ? { error: r.content } : { content: r.content } } })) },
     ],
-    async complete({ system, messages, tools, maxTokens, signal }) {
-      const resp = await postJson(url, buildGeminiRequest({ system, messages, tools, maxTokens }), { headers: { 'x-goog-api-key': apiKey }, signal, fetchImpl, model });
+    async complete({ system, messages, tools, maxTokens, signal, toolChoice, responseFormat }) {
+      const resp = await postJson(url, buildGeminiRequest({ system, messages, tools, maxTokens, toolChoice, responseFormat }), { headers: { 'x-goog-api-key': apiKey }, signal, fetchImpl, model });
       return normalizeGeminiResponse(resp);
     },
   };

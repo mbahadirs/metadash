@@ -52,6 +52,15 @@ export const DEFAULTS = {
   'planner.s3': { endpoint: '', region: 'auto', bucket: '', prefix: 'metadash/', pathStyle: false, publicBaseUrl: '', urlTtlSec: 86400, deleteAfterPublish: true },
   'notify.publishSuccess': true,
   'notify.publishFailure': true,
+  // v1.5 AI studio: cost display/budget/history (validated through studio:settings:set), vision toggle, studio defaults.
+  'ai.keepHistory': false, // store model output in ai_generations.output (counts are always stored)
+  'ai.pricing': {}, // { provider: { modelOrPrefix: { inPerM, outPerM } } } overrides (USD per 1M tokens)
+  'ai.monthlyBudgetUsd': null, // warn when month-to-date estimated spend exceeds it
+  'ai.showCost': true, // show "≈ tokens · ≈ $" on AI results
+  'ai.vision': true, // allow sending images to vision-capable models
+  'studio.captionLangs': ['tr', 'en'],
+  'studio.anonymizeCommenters': true,
+  'studio.specialDays': [], // user additions to data/specialDays.js (chunk C validates)
 };
 
 export function getConfig(key) {

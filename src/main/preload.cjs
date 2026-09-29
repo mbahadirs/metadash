@@ -3,7 +3,10 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const invoke = (channel, ...args) => ipcRenderer.invoke(channel, ...args);
 
 /** Main → renderer events (keep in sync with RENDERER_EVENTS in ipc/index.js). */
-const EVENTS = ['sync:progress', 'sync:done', 'token:warning', 'update:status', 'app:navigate', 'planner:changed', 'publish:progress', 'publish:missed'];
+const EVENTS = ['sync:progress', 'sync:done', 'token:warning', 'update:status', 'app:navigate', 'planner:changed', 'publish:progress', 'publish:missed', 'studio:progress', 'studio:changed'];
+
+/** Generic studio escape hatch: only `studio:<a-z:>` channels (chunks may add channels without touching this file). */
+const STUDIO_SUB = /^[a-z][a-zA-Z]*(?::[a-z][a-zA-Z]*){0,3}$/;
 
 /** Absolute path of a dropped File (File.path was removed in Electron 32). Returns '' for non-file objects. */
 function pathForFile(file) {
@@ -236,6 +239,51 @@ const api = {
       set: (p) => invoke('publishing:mediaHost:set', p),
       test: () => invoke('publishing:mediaHost:test'),
     },
+  },
+  studio: {
+    capabilities: () => invoke('studio:capabilities'),
+    preview: (p) => invoke('studio:preview', p),
+    cancel: (requestId) => invoke('studio:cancel', { requestId }),
+    usage: (p) => invoke('studio:usage', p ?? {}),
+    settings: {
+      get: () => invoke('studio:settings:get'),
+      set: (patch) => invoke('studio:settings:set', patch),
+    },
+    voice: {
+      get: (accountId) => invoke('studio:voice:get', { accountId }),
+      derive: (p) => invoke('studio:voice:derive', p),
+      save: (p) => invoke('studio:voice:save', p),
+    },
+    captions: {
+      generate: (p) => invoke('studio:captions:generate', p),
+      save: (p) => invoke('studio:captions:save', p),
+    },
+    hashtags: {
+      suggest: (p) => invoke('studio:hashtags:suggest', p),
+    },
+    ideas: {
+      generate: (p) => invoke('studio:ideas:generate', p),
+      toDrafts: (p) => invoke('studio:ideas:toDrafts', p),
+    },
+    repurpose: {
+      run: (p) => invoke('studio:repurpose', p),
+      toDraft: (p) => invoke('studio:repurpose:toDraft', p),
+    },
+    replies: {
+      inbox: (p) => invoke('studio:replies:inbox', p ?? {}),
+      refresh: (p) => invoke('studio:replies:refresh', p ?? {}),
+      suggest: (p) => invoke('studio:replies:suggest', p),
+      send: (p) => invoke('studio:replies:send', p),
+      dismiss: (commentId) => invoke('studio:replies:dismiss', { commentId }),
+    },
+    ab: {
+      list: () => invoke('studio:ab:list'),
+      get: (id) => invoke('studio:ab:get', { id }),
+      create: (p) => invoke('studio:ab:create', p),
+      tag: (p) => invoke('studio:ab:tag', p),
+      conclude: (p) => invoke('studio:ab:conclude', p),
+    },
+    call: (sub, payload) => (STUDIO_SUB.test(String(sub)) ? invoke(`studio:${sub}`, payload) : Promise.resolve({ ok: false, error: { code: 'INVALID_PAYLOAD', message: 'Invalid studio channel', hint: null } })),
   },
   app: {
     background: {

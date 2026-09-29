@@ -4,6 +4,8 @@ import { useT, type Key } from '@/lib/i18n';
 import { api, call } from '@/lib/api';
 import { Section, Toggle, Loading } from '@/components/ui';
 import { useAiStatus, AI_STATUS_KEY, type AiStatus, type AiProvider } from '@/hooks/useAi';
+import { AiStudioSettings } from './AiStudioSettings';
+import { STUDIO_KEY } from '@/hooks/useStudio';
 
 type Msg = { kind: 'ok' | 'err'; text: string } | null;
 
@@ -18,7 +20,10 @@ export function AiSection() {
 
   const apply = async (fn: () => Promise<unknown>) => {
     setMsg(null);
-    try { qc.setQueryData(AI_STATUS_KEY, await call<AiStatus>(fn() as never)); } catch (e) { setMsg({ kind: 'err', text: (e as Error).message }); }
+    try {
+      qc.setQueryData(AI_STATUS_KEY, await call<AiStatus>(fn() as never));
+      qc.invalidateQueries({ queryKey: [STUDIO_KEY] }); // provider/model changes alter capabilities and pricing
+    } catch (e) { setMsg({ kind: 'err', text: (e as Error).message }); }
   };
   const test = async () => {
     setBusy(true); setMsg(null);
@@ -45,6 +50,7 @@ export function AiSection() {
             <button className="btn btn-sm" disabled={busy || !s.enabled} onClick={test}>{busy ? t('loading') : t('ai_test')}</button>
             {msg && <span className={`text-xs ${msg.kind === 'ok' ? 'text-pos' : 'text-neg'}`}>{msg.text}</span>}
           </div>
+          <AiStudioSettings provider={s.provider} enabled={s.enabled} />
         </div>
         <div className="text-xs text-ink-2 border-t border-line pt-3">{t('ai_privacy')}</div>
       </div>

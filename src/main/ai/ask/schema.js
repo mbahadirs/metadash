@@ -33,6 +33,10 @@ const NOTES = {
   planner_targets: "One row per planned post × account (join planner_posts on post_id; account_id = accounts.ig_id). platform = instagram | facebook | threads. format: Instagram image/carousel/reel/story, Facebook text/link/photo/album/video/reel, Threads text/image/video/carousel. state = idle | queued | hosting | container | ready | handed_off (scheduled on Facebook itself) | publishing | commenting | published | failed | canceled | missed | paused. media_key = media.media_id of the published post once synced (join media on media_id to get its performance). published_at epoch ms.",
   planner_assets: 'Media files in the planner library. kind = image | video; bytes, width/height px, duration_ms, fps. created_at epoch ms.',
   planner_post_assets: "Which media files a planned post uses (post_id → planner_posts.id, asset_id → planner_assets.id); role = media | cover; position = order in a carousel.",
+  brand_voice: "Per-account brand voice used by the AI studio (account_id = accounts.ig_id). brief = the editable voice description; profile = JSON style stats; source = manual | ai | ai_edited; ai_disabled = 1 means the account opted out of AI.",
+  caption_variants: "AI caption variants for a planned post (post_id → planner_posts.id). label A/B/C, lang tr|en, angle = the variant's approach (question-hook, story, benefit…); chosen = 1 for the one used.",
+  ab_tests: "Caption A/B experiments. This is variant tagging across separate posts (not a true split test). variable = what differs (caption_hook | length | emoji | cta | hashtags | other); metric = reach_lift | er | save_rate | views_lift; status = running | concluded; conclusion = free text. created_at/concluded_at epoch ms.",
+  ab_test_items: "Posts assigned to an A/B test arm (test_id → ab_tests.id; arm = 'A' | 'B' | …). media_key = media.media_id of the published post (join media / media_latest for results); target_id → planner_targets.id when it came from the Planner.",
   planner_audit: "Planner history: one row per action (created, edited, approved, scheduled, published, failed, …). at epoch ms; actor = user | worker | system | client; detail = JSON.",
 };
 

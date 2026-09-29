@@ -189,3 +189,61 @@ export interface PublishMissedEvent { count: number }
 
 /** mdmedia:// URL for a planner asset (main: planner/mediaRequest.js). */
 export const mediaUrl = (assetId: number, variant: 'file' | 'thumb' = 'file') => `mdmedia://asset/${assetId}${variant === 'thumb' ? '/thumb' : ''}`;
+
+// ---------------------------------------------------------------- v1.5 AI studio (main: ai/studio/*, ipc/studio.handlers.js)
+export type AiProviderId = 'anthropic' | 'openai' | 'gemini' | 'ollama';
+export type Tri = boolean | 'unknown';
+export type StudioFeature = 'voice' | 'caption' | 'hashtags' | 'ideas' | 'repurpose' | 'reply' | 'abtest' | 'commentary' | 'anomaly' | 'ask' | 'test';
+export interface AiUsage { inputTokens: number; outputTokens: number }
+export interface PriceInfo { inPerM: number; outPerM: number; source: 'override' | 'list' | 'estimate' | 'local' }
+export interface StudioCapabilities {
+  enabled: boolean; provider: AiProviderId; model: string;
+  vision: Tri; visionDisabledByUser: boolean; tools: Tri; jsonMode: boolean; nativeSchema: boolean; structuredModes: ('schema' | 'tool' | 'json')[]; local: boolean;
+  pricingKnown: boolean; price: PriceInfo | null; monthToDateUsd: number; budgetUsd: number | null; showCost: boolean; keepHistory: boolean;
+}
+/** Every generate result carries these (costUsd null = unknown price; 0 for Ollama). */
+export interface StudioCost { usage: AiUsage; costUsd: number | null; generationId: number | null; provider?: AiProviderId; model?: string }
+export interface SendPreviewItem { kind: 'text' | 'image' | 'table'; label: string; chars?: number; count?: number; thumb?: string; ids?: (string | number)[] }
+export interface SendPreview { feature: string; items: SendPreviewItem[]; estInputTokens: number; estOutputTokens: number; estCostUsd: number | null; pricingKnown: boolean; local: boolean }
+export interface UsageGroup { calls: number; inputTokens: number; outputTokens: number; images: number; usd: number | null; unknownCost: number; errors: number }
+export interface UsageSummary {
+  from: number; to: number; totalUsd: number; calls: number; inputTokens: number; outputTokens: number; images: number; unknownCostCalls: number; errors: number;
+  byFeature: (UsageGroup & { feature: StudioFeature | string })[]; byModel: (UsageGroup & { provider: AiProviderId | null; model: string | null })[];
+  budgetUsd: number | null; overBudget: boolean;
+}
+export interface PricingOverrides { [provider: string]: { [model: string]: { inPerM: number; outPerM: number } } }
+export interface PriceRow { provider: AiProviderId; model: string; inPerM: number; outPerM: number; source: 'override' | 'list' | 'estimate' }
+export interface StudioSettings {
+  keepHistory: boolean; showCost: boolean; vision: boolean; pricing: PricingOverrides; monthlyBudgetUsd: number | null;
+  anonymizeCommenters: boolean; captionLangs: ('tr' | 'en')[]; prices: PriceRow[];
+}
+export type StudioSettingsPatch = Partial<Omit<StudioSettings, 'prices'>>;
+export interface BrandVoiceProfile {
+  tone?: string[]; formality?: string; avgLength?: number; emojiRate?: number; emojiSet?: string[]; hashtagHabit?: { avgCount: number; placement: string };
+  ctaPatterns?: string[]; hooks?: string[]; doList?: string[]; dontList?: string[]; languages?: string[]; pronoun?: 'sen' | 'siz'; sampleMediaIds?: string[];
+  [extra: string]: unknown;
+}
+export interface BrandVoice {
+  accountId: string; brief: string; profile: BrandVoiceProfile | null; source: 'manual' | 'ai' | 'ai_edited'; derivedFrom: number | null; derivedAt: number | null;
+  provider: string | null; model: string | null; aiDisabled: boolean; updatedAt: number; stats?: Record<string, unknown>;
+}
+export interface CaptionVariant { label: string; lang: 'tr' | 'en'; angle: string; text: string; hashtags: string[]; charCounts: Partial<Record<'instagram' | 'facebook' | 'threads', number>>; issues: Issue[] }
+export interface CaptionGenerateInput { requestId?: string; postId?: number; accountIds: string[]; assetIds?: number[]; notes?: string; langs: ('tr' | 'en')[]; variants?: number; platforms?: ('instagram' | 'facebook' | 'threads')[] }
+export interface CaptionGenerateResult extends StudioCost { variants: CaptionVariant[]; visionUsed: boolean }
+export interface HashtagStat { tag: string; posts: number; lift: number; avgReach: number | null; avgEr: number | null; lastUsedAt: number | null; score: number }
+export interface HashtagSuggestResult { tested: HashtagStat[]; overused: HashtagStat[]; stale: HashtagStat[]; untested: { tag: string; reason: string }[]; usage?: AiUsage; costUsd?: number | null }
+export interface ContentIdea { id: string; title: string; format: string; pillar: string; hook: string; captionDraft: string; suggestedDate: string | null; rationale: string; basedOn: string[] }
+export interface IdeasGenerateInput { requestId?: string; accountId: string; month: string; count?: number; pillars?: string[]; langs: ('tr' | 'en')[]; includeSpecialDays?: boolean }
+export interface IdeasGenerateResult extends StudioCost { ideas: ContentIdea[] }
+export type RepurposeTarget = 'carousel' | 'threads' | 'facebook' | 'story';
+export interface RepurposeInput { requestId?: string; source: { mediaId: string } | { postId: number }; to: RepurposeTarget; lang: 'tr' | 'en'; transcript?: string }
+export interface InboxItem {
+  commentId: string; mediaId: string; accountId: string; username: string; text: string; createdAt: number; likeCount: number;
+  caption: string | null; permalink: string | null; thumb: string | null; reply: { status: string; suggestion: string | null } | null;
+}
+export interface ReplySuggestResult extends StudioCost { category: 'question' | 'praise' | 'complaint' | 'spam' | 'other'; suggestions: string[] }
+export type AbVariable = 'caption_hook' | 'length' | 'emoji' | 'cta' | 'hashtags' | 'other';
+export type AbMetric = 'reach_lift' | 'er' | 'save_rate' | 'views_lift';
+export interface AbCreateInput { name: string; hypothesis?: string; variable: AbVariable; metric: AbMetric; arms: { arm: string; targetIds?: number[]; mediaKeys?: string[]; captionVariantIds?: number[] }[] }
+export interface StudioProgressEvent { requestId: string; feature: string; phase: 'preparing' | 'sending' | 'validating' | 'done' }
+export interface StudioChangedEvent { kind: 'voice' | 'inbox' | 'ab' | 'usage' | 'ideas' | string; accountIds?: string[]; postIds?: number[]; ids?: (string | number)[] }

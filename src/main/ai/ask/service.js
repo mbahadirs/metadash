@@ -6,6 +6,7 @@ import { runToolLoop } from '../toolLoop.js';
 import { askSystemPrompt } from '../prompts.js';
 import { buildSchemaDescription } from './schema.js';
 import { ASK_TOOLS, createAskExecutor } from './tools.js';
+import { withUsage } from '../usage.js';
 
 const REQUEST_TIMEOUT_MS = 300_000;
 const MAX_STEPS = 8;
@@ -56,7 +57,8 @@ function register(requestId) {
 
 /**
  * Answers a natural-language question by letting the model query the local DB (read-only, guarded).
- * Returns { answer (markdown), steps, truncated, refusal, provider, model }. `deps.provider` is injectable for tests.
+ * Returns { answer (markdown), steps, truncated, refusal, provider, model, usage, generationId, costUsd } (the call is
+ * recorded in ai_generations, counts only). `deps.provider` is injectable for tests.
  */
 export async function askData({ requestId, question, history, period, lang } = {}, deps = {}) {
   const cfg = assertAiEnabled();
@@ -67,7 +69,7 @@ export async function askData({ requestId, question, history, period, lang } = {
   const { controller, release } = register(requestId);
   const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]);
   const meta = { provider: provider.id, model: provider.model };
-  try {
+  const loop = () => withUsage({ feature: 'ask', ...meta, sentSummary: { chars: q.length, historyTurns: historyTurns(history).length } }, async () => {
     const res = await runToolLoop({
       provider,
       system: askSystemPrompt(language, buildSchemaDescription()),
@@ -81,7 +83,10 @@ export async function askData({ requestId, question, history, period, lang } = {
       maxSteps: MAX_STEPS,
       signal,
     });
-    return { answer: res.text, steps: executor.steps(), truncated: res.truncated, refusal: false, ...meta };
+    return { answer: res.text, steps: executor.steps(), truncated: res.truncated, refusal: false, ...meta, usage: res.usage };
+  });
+  try {
+    return await loop();
   } catch (err) {
     if (controller.signal.aborted) throw new AiError('ai_cancelled', { cause: err });
     if (err instanceof AiError && err.key === 'ai_refusal') return { answer: err.message, steps: executor.steps(), truncated: false, refusal: true, ...meta };

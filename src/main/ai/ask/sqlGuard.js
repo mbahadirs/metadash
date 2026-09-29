@@ -7,7 +7,8 @@ import { assertReadOnly } from '../../export/csv.js';
  * False positives (e.g. the word "token" inside a string literal) are acceptable: the model gets the error and rephrases.
  */
 // planner_uploads holds presigned media URLs; planner_approval_packs holds the packs' HMAC keys (v1.4).
-export const EXCLUDED_TABLES = ['settings', 'profiles', 'planner_uploads', 'planner_approval_packs'];
+// ai_generations may hold stored model output; comment_replies holds reply drafts and send errors (v1.5).
+export const EXCLUDED_TABLES = ['settings', 'profiles', 'planner_uploads', 'planner_approval_packs', 'ai_generations', 'comment_replies'];
 export const SQL_MAX = 4000;
 
 const BLOCKED_WORDS = new Set([...EXCLUDED_TABLES, 'load_extension', 'recursive']);

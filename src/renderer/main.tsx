@@ -20,6 +20,7 @@ import { PresentationPage, PresentationRun } from './routes/Presentation';
 import { SettingsPage } from './routes/Settings';
 import { AskPage } from './routes/Ask';
 import { PlannerPage } from './routes/Planner';
+import { StudioPage } from './routes/Studio';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 0, refetchOnWindowFocus: false } } });
 
@@ -52,6 +53,7 @@ function App() {
           <Route path="/presentation" element={<PresentationPage />} />
           <Route path="/planner" element={<PlannerPage />} />
           <Route path="/ask" element={<AskPage />} />
+          <Route path="/studio" element={<StudioPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
