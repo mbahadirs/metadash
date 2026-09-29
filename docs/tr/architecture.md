@@ -47,7 +47,14 @@ Vite ile `dist/renderer`'a derlenen bir React 18 tek sayfa uygulamasıdır; üre
 | `components/` | Yerleşim, veri tablosu, gönderi kartı/paneli, dönem seçici, Excel/PDF düğmeleri, arayüz bileşenleri |
 | `charts/` | Grafik sarmalayıcı (PNG dışa aktarım), zaman serisi, ısı haritası, yaşam eğrisi, sparkline, çubuk liste |
 | `hooks/` | `queries.ts` (her IPC çağrısı için TanStack Query hook'ları), `useSyncEvents.ts` (ilerleme olayları) |
-| `lib/` | `api.ts` (zarf çözme), `i18n.ts`, biçimlendirme, reklam metriği tanımları, tipler |
+| `lib/` | `api.ts` (zarf çözme), `i18n.ts`, biçimlendirme, reklam metriği tanımları, tipler, `platforms.ts` (platform adları, yedek yetenek tablosu, içerik türleri, profil adresleri), `accountKpis.ts` (platforma göre KPI kutuları ve grafik serileri) |
+
+**Platforma duyarlı arayüz (v1.3).** Renderer, bir platformun neyi gösterebildiğini koda gömmez; `platforms:list` kanalına sorar (`hooks/usePlatforms.ts`: `usePlatforms`, `usePlatformCaps`, `useActivePlatforms`, `usePlatformScope`) ve yanıt gelmeden önce `providers/capabilities.js` ile aynı sabit yetenek tablosunu kullanır.
+
+- `components/PlatformFilter.tsx`: Genel Bakış ve İçerik ekranlarında Tümü / Instagram / Facebook / Threads seçimi. Yalnızca takip edilen hesabı olan platformlar listelenir; tek platform varken bileşen gizlenir. Seçim Zustand store'da tutulur ve `ui.platformFilter` ayarı olarak saklanır; `usePlatformScope()` bunu takip edilen platformlarla kesiştirir (boş = tümü), `usePortfolio()` da `platforms` olarak iletir.
+- `components/PlatformBadge.tsx` ve `Avatar` bileşeninin `platform` özelliği (Facebook/Threads avatarlarında köşe işareti; birden fazla platform takip edilirken Instagram avatarlarında da).
+- Eksik yetenekler "—" ve "… için mevcut değil" ipucuyla gösterilir (Facebook/Threads'te kaydetme oranı, Threads'te erişim) ya da tamamen gizlenir. Hesap sekmeleri yeteneklere göre açılır (Instagram: tüm sekmeler; Facebook: genel bakış/gönderiler/reklamlar; Threads: genel bakış/gönderiler/demografi). Karşılaştır ekranı karışık platformlar için uyarır ve kaydetme oranını devre dışı bırakır; Raporlar seçili hesapların hiçbirinin desteklemediği bölümleri soluk gösterir; Sunum, reklamı olmayan platformlarda reklam slaytlarını çıkarır.
+- Kurulum yedi adımdır: Hoş geldiniz, Meta uygulaması, token (`read_insights` izninin yalnızca Facebook Sayfaları için gerektiği belirtilir), hesaplar (`setup:facebook:*` ile isteğe bağlı **Facebook Sayfaları** listesiyle), reklam hesapları, isteğe bağlı **Threads** adımı (`setup:threads:*`) ve ilk senkronizasyon. Saklanan `setupStep` 0 tabanlıdır (5 = Threads, 6 = ilk senkronizasyon). **Ayarlar → Bağlantılar** Facebook Sayfası listesini ve Threads bağla/yenile/bağlantıyı kes denetimlerini içerir; `token:warning` bantları ilgili yere yönlendirir (`meta` → Kurulum adım 3, `threads` → Ayarlar → Bağlantılar).
 
 ## IPC sözleşmesi
 

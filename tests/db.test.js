@@ -23,12 +23,13 @@ afterAll(() => { closeDb(); fs.rmSync(dir, { recursive: true, force: true }); })
 
 describe('seed + analytics (integration)', () => {
   it('seeds 40 tracked accounts with ad accounts and competitors', () => {
-    expect(listAccounts()).toHaveLength(40);
+    expect(listAccounts({ platforms: ['instagram'] })).toHaveLength(40);
+    expect(listAccounts()).toHaveLength(54); // + 8 demo Facebook Pages and 6 Threads profiles (v1.3)
     expect(seedDemo({}).skipped).toBe(true);
   });
   it('portfolio for 40 accounts computes in under 1 second', () => {
     const t = Date.now();
-    const p = portfolio({ from, to });
+    const p = portfolio({ from, to, platforms: ['instagram'] });
     expect(Date.now() - t).toBeLessThan(5000); // isolated: ~70 ms; generous bound so background load on the machine does not flake the suite
     expect(p.rows).toHaveLength(40);
     expect(p.kpis.totalFollowers.value).toBeGreaterThan(0);

@@ -110,7 +110,8 @@ describe('multi-platform orchestrator', () => {
     expect(d.status).toBe('ok');
     const run = m.sync.listRuns(1)[0];
     expect(run.accountsTotal).toBe(1);
-    const organic = await runAndWait({ scope: 'organic', platforms: ['threads'] }); // threads provider is a stub again
+    m.registry.__setProviderForTests('threads', null); // a disabled platform (restored by afterEach)
+    const organic = await runAndWait({ scope: 'organic', platforms: ['threads'] });
     expect(m.sync.listRuns(1)[0].accountsTotal).toBe(0);
     expect(organic.status).toBe('ok');
   });

@@ -21,8 +21,10 @@ export function AttentionPanel({ anomalies }: { anomalies: Anomaly[] }) {
   const [open, setOpen] = useState<Explained | null>(null);
   if (!anomalies.length) return null;
   const shown = expanded ? anomalies : anomalies.slice(0, COLLAPSED);
-  const fmtVal = (a: Anomaly) => (a.kind === 'reach' ? fmtNum(a.value) : `%${fmtNum(a.value, 2)}`);
-  const fmtMean = (a: Anomaly) => (a.kind === 'reach' ? fmtNum(a.mean) : `%${fmtNum(a.mean, 2)}`);
+  // kind: 'reach' | 'views' (Threads) | 'post_er'.
+  const fmtVal = (a: Anomaly) => (a.kind !== 'post_er' ? fmtNum(a.value) : `%${fmtNum(a.value, 2)}`);
+  const fmtMean = (a: Anomaly) => (a.kind !== 'post_er' ? fmtNum(a.mean) : `%${fmtNum(a.mean, 2)}`);
+  const kindLabel = (a: Anomaly) => ((a.kind as string) === 'views' ? t('views') : a.kind === 'reach' ? t('reach') : 'ER');
 
   const explain = async (a: Anomaly) => {
     setOpen({ anomaly: a });
@@ -40,7 +42,7 @@ export function AttentionPanel({ anomalies }: { anomalies: Anomaly[] }) {
         {shown.map((a) => (
           <div key={`${a.igId}-${a.kind}-${a.date}-${a.mediaId ?? ''}`} className="flex items-center gap-3 h-9 text-sm">
             <button className="font-medium hover:underline" onClick={() => nav(`/account/${a.igId}`)}>@{a.username}</button>
-            <span className={`badge ${a.direction === 'up' ? 'badge-pos' : 'badge-neg'}`}>{a.kind === 'reach' ? t('reach') : 'ER'} {a.direction === 'up' ? '▲' : '▼'} {Math.abs(a.z)}σ</span>
+            <span className={`badge ${a.direction === 'up' ? 'badge-pos' : 'badge-neg'}`}>{kindLabel(a)} {a.direction === 'up' ? '▲' : '▼'} {Math.abs(a.z)}σ</span>
             <span className="text-ink-2 num">{fmtDate(a.date)}</span>
             <span className="num">{fmtVal(a)} <span className="text-ink-2">· {t('anomaly_vs_mean', { m: fmtMean(a) })}</span></span>
             {aiEnabled && <button className="btn btn-ghost btn-sm ml-auto" onClick={() => explain(a)}>✦ {t('ai_explain')}</button>}

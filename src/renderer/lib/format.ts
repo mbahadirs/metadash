@@ -83,6 +83,8 @@ export const WEEKDAYS: Record<'tr' | 'en', string[]> = { tr: weekdayNames('tr'),
 export function mediaTypeLabel(m: { mediaProductType: string; mediaType: string }, lang: 'tr' | 'en'): string {
   if (m.mediaProductType === 'REELS') return 'Reels';
   if (m.mediaProductType === 'STORY') return 'Story';
+  if (m.mediaType === 'LINK') return t('type_link', lang);
+  if (m.mediaType === 'TEXT_POST' || m.mediaType === 'TEXT' || m.mediaType === 'STATUS') return t('type_text', lang);
   if (m.mediaType === 'CAROUSEL_ALBUM') return 'Carousel';
   if (m.mediaType === 'VIDEO') return 'Video';
   return t('type_image', lang);

@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, call } from '@/lib/api';
 import { useAppStore } from '@/store/app';
-import type { BudgetTree, BudgetPacing, PostCompare, MediaDetail, ContentAnalysis, TypeKey, Account, Tag, Portfolio, AccountAnalytics, BestTime, Lifecycle, CompareResult, Media, AdAccount, AdInsights, Blended, Competitor, CompetitorRow, SetupState, TokenHealth, Digest, HealthScore, Note, SyncRun, SyncStatus } from '@/lib/types';
+import { usePlatformScope } from './usePlatforms';
+import type { Platform, BudgetTree, BudgetPacing, PostCompare, MediaDetail, ContentAnalysis, TypeKey, Account, Tag, Portfolio, AccountAnalytics, BestTime, Lifecycle, CompareResult, Media, AdAccount, AdInsights, Blended, Competitor, CompetitorRow, SetupState, TokenHealth, Digest, HealthScore, Note, SyncRun, SyncStatus } from '@/lib/types';
 
 export function usePeriod() {
   return useAppStore((s) => s.period);
@@ -15,10 +16,12 @@ export const useAccount = (igId: string | undefined) =>
 
 export const useTags = () => useQuery<Tag[]>({ queryKey: ['tags'], queryFn: () => call(api.tags.list()) });
 
+/** Portfolio for the top-bar period, tag filter and effective platform filter (platforms omitted = all). */
 export function usePortfolio() {
   const { from, to } = usePeriod();
   const tagIds = useAppStore((s) => s.tagFilter);
-  return useQuery<Portfolio>({ queryKey: ['portfolio', from, to, tagIds], queryFn: () => call(api.analytics.portfolio({ from, to, tagIds })) });
+  const platforms = usePlatformScope();
+  return useQuery<Portfolio>({ queryKey: ['portfolio', from, to, tagIds, platforms], queryFn: () => call(api.analytics.portfolio({ from, to, tagIds, ...(platforms.length ? { platforms } : {}) })) });
 }
 
 export function useAccountAnalytics(igId: string | undefined) {
@@ -44,7 +47,7 @@ export const useMediaDetail = (mediaId: string | null) =>
 export const useComparePosts = (mediaIds: string[]) =>
   useQuery<PostCompare>({ queryKey: ['comparePosts', mediaIds], queryFn: () => call(api.analytics.comparePosts({ mediaIds })), enabled: mediaIds.length >= 2 });
 
-export function useContentAnalysis(params: { igIds?: string[]; typeKeys?: TypeKey[]; recentDays?: number }, enabled = true) {
+export function useContentAnalysis(params: { igIds?: string[]; typeKeys?: TypeKey[]; recentDays?: number; platforms?: Platform[] }, enabled = true) {
   const { from, to } = usePeriod();
   return useQuery<ContentAnalysis>({ queryKey: ['contentAnalysis', from, to, params], queryFn: () => call(api.analytics.contentAnalysis({ from, to, ...params })), enabled });
 }

@@ -1,26 +1,48 @@
 import { getAccount, followersAt, latestFollowers, snapshotSeries, insightSeries, insightSum, latestDemographics } from '../db/queries/accounts.js';
 import { listMedia, aggregateMedia, aggregateByType, commentStats } from '../db/queries/media.js';
 import { listStories, storySummary } from '../db/queries/stories.js';
+import { q } from '../db/index.js';
 import { previousPeriod, rangeMs, pctChange, round, eachDay } from './util.js';
 import { healthScores } from './health.js';
 import { paidFields } from './paid.js';
 import { adAccountForIg, adTotals, listAdAccounts } from '../db/queries/ads.js';
+import { platformOf, capabilitiesFor, primaryMetricFor, kpiKeysFor, chartMetricsFor, dailyMetricsFor, KPI_DAILY_METRIC } from './platform.js';
 
+const kpi = (value, prev) => ({ value, prev, changePct: pctChange(value, prev) });
+
+/** KPI tiles that apply to the account's platform (see platform.js kpiKeysFor); keys not listed are omitted. */
+function buildKpis(igId, platform, { from, to, prev, agg, prevAgg, newFollowers, prevNew }) {
+  const out = {};
+  for (const key of kpiKeysFor(platform)) {
+    if (KPI_DAILY_METRIC[key]) {
+      const metric = KPI_DAILY_METRIC[key];
+      out[key] = kpi(insightSum(igId, from, to, metric), insightSum(igId, prev.from, prev.to, metric));
+    } else if (key === 'er') {
+      out.er = { value: round(agg.avgEr, 2), prev: round(prevAgg.avgEr, 2), changePct: pctChange(agg.avgEr, prevAgg.avgEr) };
+    } else if (key === 'saveRate') {
+      out.saveRate = { value: round((agg.saveRate ?? 0) * 100, 2), prev: round((prevAgg.saveRate ?? 0) * 100, 2), changePct: pctChange(agg.saveRate, prevAgg.saveRate) };
+    } else if (key === 'newFollowers') {
+      out.newFollowers = kpi(newFollowers, prevNew);
+    } else if (key === 'posts') {
+      out.posts = { value: agg.posts ?? 0, prev: prevAgg.posts ?? 0, changePct: pctChange(agg.posts, prevAgg.posts) };
+    }
+  }
+  return out;
+}
+
+/**
+ * Account screen data. Platform-aware: `platform`, `capabilities`, `primaryMetric`, `kpiKeys` (ordered KPI tiles),
+ * `chartMetrics` ([primary, secondary] daily series) and `kpis` holding only the keys in `kpiKeys`.
+ */
 export function accountAnalytics({ igId, from, to }) {
   const account = getAccount(igId);
   if (!account) return null;
+  const platform = platformOf(account);
+  const capabilities = capabilitiesFor(platform);
   const prev = previousPeriod(from, to);
   const { fromMs, toMs } = rangeMs(from, to);
   const prevRange = rangeMs(prev.from, prev.to);
 
-  const sums = (f, t) => ({
-    reach: insightSum(igId, f, t, 'reach'),
-    views: insightSum(igId, f, t, 'views'),
-    profileViews: insightSum(igId, f, t, 'profile_views'),
-    engaged: insightSum(igId, f, t, 'accounts_engaged'),
-  });
-  const cur = sums(from, to);
-  const pre = sums(prev.from, prev.to);
   const agg = aggregateMedia(igId, fromMs, toMs) ?? {};
   const prevAgg = aggregateMedia(igId, prevRange.fromMs, prevRange.toMs) ?? {};
   const followers = latestFollowers(igId);
@@ -30,35 +52,34 @@ export function accountAnalytics({ igId, from, to }) {
   const newFollowers = followers != null && startFollowers != null ? followers - startFollowers : null;
   const prevNew = prevEnd != null && prevStart != null ? prevEnd - prevStart : null;
 
-  const daily = insightSeries(igId, from, to, ['reach', 'views', 'profile_views', 'accounts_engaged']);
-  const dailyMap = new Map(daily.map((d) => [d.date, d]));
-  const series = eachDay(from, to).map((date) => ({ date, reach: 0, views: 0, profile_views: 0, accounts_engaged: 0, ...(dailyMap.get(date) ?? {}) }));
-  const prevDaily = insightSeries(igId, prev.from, prev.to, ['reach', 'accounts_engaged']);
+  const dailyMetrics = dailyMetricsFor(platform);
+  const chartMetrics = chartMetricsFor(platform);
+  const dailyMap = new Map(insightSeries(igId, from, to, dailyMetrics).map((d) => [d.date, d]));
+  const zeros = Object.fromEntries(dailyMetrics.map((m) => [m, 0]));
+  const series = eachDay(from, to).map((date) => ({ date, ...zeros, ...(dailyMap.get(date) ?? {}) }));
+  const prevDaily = insightSeries(igId, prev.from, prev.to, chartMetrics);
   const followerSeries = snapshotSeries(igId, from, to);
   const posts = listMedia({ igIds: [igId], from: fromMs, to: toMs });
   const health = healthScores({ from, to }).find((h) => h.igId === igId) ?? null;
-  const actRef = adAccountForIg(igId);
+  const actRef = capabilities.ads ? adAccountForIg(igId) : null;
   const act = actRef ? listAdAccounts().find((x) => x.actId === actRef.actId) ?? null : null;
   const paid = act ? { ...paidFields(adTotals([act.actId], from, to), act), prev: paidFields(adTotals([act.actId], prev.from, prev.to), act), actId: act.actId, name: act.name } : null;
 
   return {
     account: { ...account, followers },
+    platform,
+    capabilities,
+    primaryMetric: primaryMetricFor(platform),
+    kpiKeys: kpiKeysFor(platform),
+    chartMetrics,
     period: { from, to, prevFrom: prev.from, prevTo: prev.to, days: prev.days },
-    kpis: {
-      reach: { value: cur.reach, prev: pre.reach, changePct: pctChange(cur.reach, pre.reach) },
-      views: { value: cur.views, prev: pre.views, changePct: pctChange(cur.views, pre.views) },
-      profileViews: { value: cur.profileViews, prev: pre.profileViews, changePct: pctChange(cur.profileViews, pre.profileViews) },
-      er: { value: round(agg.avgEr, 2), prev: round(prevAgg.avgEr, 2), changePct: pctChange(agg.avgEr, prevAgg.avgEr) },
-      newFollowers: { value: newFollowers, prev: prevNew, changePct: pctChange(newFollowers, prevNew) },
-      posts: { value: agg.posts ?? 0, prev: prevAgg.posts ?? 0, changePct: pctChange(agg.posts, prevAgg.posts) },
-      saveRate: { value: round((agg.saveRate ?? 0) * 100, 2), prev: round((prevAgg.saveRate ?? 0) * 100, 2), changePct: pctChange(agg.saveRate, prevAgg.saveRate) },
-    },
+    kpis: buildKpis(igId, platform, { from, to, prev, agg, prevAgg, newFollowers, prevNew }),
     series,
     prevSeries: prevDaily,
     followerSeries,
     posts,
-    byType: aggregateByType(igId, fromMs, toMs).map((t) => ({ ...t, avgEr: round(t.avgEr, 2), avgReach: Math.round(t.avgReach ?? 0) })),
-    comments: commentStats(igId, fromMs, toMs),
+    byType: aggregateByType(igId, fromMs, toMs).map((t) => ({ ...t, avgEr: round(t.avgEr, 2), avgReach: capabilities.reach ? Math.round(t.avgReach ?? 0) : null })),
+    comments: commentStats(igId, fromMs, toMs), // empty stats on platforms without comments (capabilities.comments false)
     health,
     paid,
   };
@@ -69,6 +90,17 @@ export function accountStories({ igId, from, to }) {
   return { stories: listStories(igId, fromMs, toMs), summary: storySummary(igId, fromMs, toMs) };
 }
 
+/**
+ * Latest follower demographics. Instagram stores city/country/gender_age; Threads stores separate age and gender
+ * dimensions (plus city/country), returned as `age` and `gender` (empty arrays when absent).
+ */
 export function accountDemographics({ igId }) {
-  return latestDemographics(igId);
+  const base = latestDemographics(igId);
+  if (!base.capturedAt) return { ...base, age: [], gender: [] };
+  const rows = q.all(
+    "SELECT dimension, bucket, value FROM account_demographics WHERE ig_id = ? AND captured_at = ? AND dimension IN ('age', 'gender') ORDER BY value DESC",
+    igId, base.capturedAt,
+  );
+  const pick = (dim) => rows.filter((r) => r.dimension === dim).map(({ bucket, value }) => ({ bucket, value }));
+  return { ...base, age: pick('age').sort((a, b) => a.bucket.localeCompare(b.bucket)), gender: pick('gender') };
 }

@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+Multi-platform, part 1: Facebook Pages and Threads next to Instagram.
+
+### Added
+
+- **Facebook Pages (optional):** track Pages with the existing Meta token (plus the optional `read_insights` permission). Pages are opt-in: pick them in Setup step 4 ("Facebook Pages (optional)") or in **Settings → Connections**. Daily viewers (Meta's page reach), views, post engagements, page views, new followers and unfollows; posts with viewers, views, reactions, comments, shares and clicks. Pages that you can't analyze (missing ANALYZE task) are shown but skipped. A Page can be linked to its own ad account.
+- **Threads (optional):** a separate Threads connection with its own app ID/secret. Connect in the new optional Setup step 6 or in **Settings → Connections** by pasting a short-lived token or an authorization code; the long-lived token is refreshed automatically before it expires, and refresh failures show a "Reconnect Threads" banner. Daily views, likes, replies, reposts, quotes, link clicks and followers; post views, likes, replies, reposts, quotes and shares; audience demographics (age, gender, country, city; 100+ followers). Guide: `docs/threads-setup.md`.
+- **Provider layer** (`src/main/providers`): every platform implements one provider interface (discover, profile, posts, post insights, daily insights, demographics, comments, maintenance) with a capability table and a primary metric (reach, or views for Threads). Metric names fall back through candidate lists and the working name is remembered per platform (`metric_resolution`).
+- **Platform filter:** All / Instagram / Facebook / Threads chips on Overview and Content, shown once more than one platform is tracked and remembered between sessions, plus a per-platform split of followers, reach/views and posts on the Overview (with a note that followers can overlap across platforms).
+- Platform badges on avatars, a "Text" content type for text/link posts, reposts/quotes/clicks columns when present, and **Settings → Connections** with the status of each platform, the Facebook Page list and the Threads connect/refresh/disconnect controls.
+- Demo data includes Facebook Pages and Threads profiles.
+
+### Changed
+
+- **Graph API v26.0** (was v21.0).
+- Screens follow each platform's capabilities instead of showing zeros: missing metrics show "—" with a "Not available for …" tooltip (save rate on Facebook and Threads, reach on Threads). Account tabs follow capabilities (Facebook: overview/posts/ads; Threads: overview/posts/demographics) with platform-specific KPIs and charts (Facebook: viewers + post engagements; Threads: views + likes). Compare warns when accounts from different platforms are mixed and disables save rate; Reports greys out sections that none of the selected accounts support; Presentation skips ad slides for platforms without ads; Competitors lists Instagram accounts only.
+- Setup now has seven steps (the optional Threads step comes before the first sync); the token step explains that `read_insights` is only needed for Facebook Pages.
+- Token warnings name the platform: a Meta problem links to Setup step 3, a Threads problem to Settings → Connections, and a failing Threads token no longer cancels the Instagram/Facebook sync (the run ends as "partial").
+- The unsupported-metrics list in Settings shows the platform of each metric and re-enables it per platform.
+- Account tracking, profile activation and sync errors are now platform-scoped internally (database migration 008).
+
+
 ## [1.2.0] - 2026-09-29
 
 AI features are **beta**: they are off by default, need your own API key (or a local Ollama model) and have been tested against stubbed providers only. Please report problems.

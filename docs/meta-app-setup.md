@@ -115,6 +115,7 @@ If your dashboard has **Use cases** in the left menu:
    | `ads_read` | Ads data (required by the Setup wizard; only used if you link ad accounts) |
    | `business_management` | Pages, Instagram and ad accounts owned by a Business Manager (optional, recommended) |
    | `instagram_manage_comments` | Comments and response-rate metrics (optional) |
+   | `read_insights` | Facebook Page statistics – views, viewers, follows, post insights (optional; only needed if you track Facebook Pages, section 7.2) |
 
 3. It is enough that each row shows "Standard access: Ready". **Do not click "Request advanced access"** – it leads to App Review, which is not needed.
 
@@ -154,7 +155,7 @@ With an app in Development mode, only people who have a role on the app can get 
    instagram_basic, instagram_manage_insights, pages_show_list, pages_read_engagement, ads_read, business_management
    ```
 
-   Add `instagram_manage_comments` as well if you want the comments module. If a permission does not appear, it was not added to the app in section 3.2.
+   Add `instagram_manage_comments` as well if you want the comments module, and `read_insights` if you want to track Facebook Pages (section 7.2). If a permission does not appear, it was not added to the app in section 3.2.
 5. Click **Generate Access Token**. A Facebook login window opens:
    - **"[App] wants to access your information… / Continue as [your name]"** → **Continue**.
    - If asked to **choose a business portfolio**, pick the one containing your Pages.
@@ -215,6 +216,25 @@ me/adaccounts?fields=name,account_status,currency
 
 The long-lived token is valid for 60 days. MetaDash shows the remaining days under Settings → Connection and displays a red warning at the top when Meta returns error 190. To renew: Settings → Connection → **Renew token** (takes you to the Token step) → repeat section 6. Existing data is kept.
 
+### 7.2 Tracking Facebook Pages
+
+MetaDash can also track the Facebook Pages themselves (views, viewers, follows/unfollows, post engagements, Page profile views and per-post views, viewers, reactions, comments, shares and clicks). It uses the same Meta app and token as Instagram; no extra app is needed.
+
+1. **Permission:** add `read_insights` to the app (section 3.2) and include it in the token (section 6), then exchange the token again in MetaDash. `pages_show_list` and `pages_read_engagement` are already required. Without `read_insights`, Pages can be listed but their statistics are refused.
+2. **Your role on each Page must include insights access (the `ANALYZE` task).** Full control, or any Page role/task set that includes "View insights" / "Insights", works. Check it in the Explorer:
+
+   ```
+   me/accounts?fields=name,tasks&limit=100
+   ```
+
+   `tasks` must contain `ANALYZE`. For Pages managed in Business Manager: business.facebook.com → Settings → Accounts → Pages → the Page → People → give yourself a task set that includes insights. Pages without `ANALYZE` are shown with a warning in MetaDash.
+3. **Choose the Pages:** Pages are **not tracked by default**. In MetaDash open the Facebook Pages list (Setup → account selection, or Settings → Connections), tick the Pages you want and save. A Page linked to a tracked Instagram account inherits that account's client name and tags.
+4. The next sync (Update button or the daily automatic update) fetches them. For each Page, MetaDash asks Meta for a **Page access token** at the start of every sync, using your user token; you never paste Page tokens yourself.
+
+Notes:
+- Meta renamed most Page metrics in 2025–2026 ("impressions" became **views**, "reach" became **viewers**, "fans" became **followers**). MetaDash tries the current metric names first and falls back automatically; metrics that Meta no longer supports are listed under Settings and can be re-enabled there later.
+- Page insights can be requested for at most 90 days back, so the first sync fills at most the last 90 days.
+
 ---
 
 ## 8. Troubleshooting
@@ -236,6 +256,8 @@ The long-lived token is valid for 60 days. MetaDash shows the remaining days und
 | "2500 An active access token must be used" | Token was truncated when pasting | Copy the whole token from the Explorer |
 | Instagram account belongs to another Business Manager | Wrong portfolio selected | Pick the correct portfolio in the login window; if needed connect the app to that portfolio (section 3.3) |
 | Stuck on "phone verification / 2FA" while creating the app | Developer account not verified | Enable 2FA in Accounts Center, verify your phone, try again |
+| Facebook Page skipped: "could not get an access token for the Page" | You no longer manage the Page, or the Page was not selected in the login window | Check Page access (section 1.3); in facebook.com → Settings → Business integrations add the Page to the app, generate a new token and exchange it again |
+| Facebook Page skipped: "role does not include the ANALYZE task" / code 10 on `/insights` | Your Page role has no insights access, or `read_insights` is missing from the token | Section 7.2 steps 1–2 |
 
 When a metric is rejected by Meta (error code 100 for a specific metric), MetaDash drops it from future requests and lists it under Settings, where you can re-enable it later.
 
@@ -274,3 +296,4 @@ App settings → Basic → **Reset** to generate a new secret, enter it in MetaD
 - Business Suite settings (Instagram–Page–ad account links): https://business.facebook.com/settings/
 - Permissions reference: https://developers.facebook.com/docs/permissions/
 - Instagram API with Facebook Login: https://developers.facebook.com/docs/instagram-platform/instagram-api-with-facebook-login/
+- Page Insights metrics reference: https://developers.facebook.com/docs/graph-api/reference/insights

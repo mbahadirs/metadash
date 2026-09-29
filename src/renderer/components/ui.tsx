@@ -2,7 +2,9 @@ import { type ReactNode, useState, useEffect } from 'react';
 import { fmtPct, fmtNum } from '@/lib/format';
 import { useT } from '@/lib/i18n';
 import { ApiCallError } from '@/lib/api';
-import type { Kpi as KpiT } from '@/lib/types';
+import type { Kpi as KpiT, Platform } from '@/lib/types';
+import { useMultiPlatform } from '@/hooks/usePlatforms';
+import { PlatformIcon } from './PlatformBadge';
 
 export function Delta({ value, digits = 1, suffix }: { value: number | null | undefined; digits?: number; suffix?: string }) {
   const t = useT();
@@ -78,12 +80,26 @@ export function KpiStrip({ children }: { children: ReactNode }) {
   return <div className="kpi-strip">{children}</div>;
 }
 
-export function Avatar({ username, url, color, size = 28 }: { username: string; url?: string | null; color?: string | null; size?: number }) {
+/**
+ * Round avatar. With `platform`, a small platform mark sits in the bottom-right corner: always for Facebook and
+ * Threads, and for Instagram only while several platforms are tracked (single-platform installs stay unchanged).
+ */
+export function Avatar({ username, url, color, size = 28, platform }: { username: string; url?: string | null; color?: string | null; size?: number; platform?: Platform | null }) {
+  const multi = useMultiPlatform();
   const initials = username.slice(0, 2).toUpperCase();
-  return url ? (
+  const img = url ? (
     <img src={url} alt={username} width={size} height={size} className="rounded-full object-cover flex-none" style={{ width: size, height: size }} />
   ) : (
     <div className="rounded-full flex items-center justify-center flex-none font-medium text-white" style={{ width: size, height: size, background: color ?? '#4F7CFF', fontSize: size * 0.38 }} aria-label={username}>{initials}</div>
+  );
+  const showBadge = !!platform && (platform !== 'instagram' || multi);
+  if (!showBadge) return img;
+  const badge = Math.max(10, Math.round(size * 0.42));
+  return (
+    <span className="relative inline-flex flex-none" style={{ width: size, height: size }}>
+      {img}
+      <span className="absolute rounded-full" style={{ right: -2, bottom: -2, padding: 1, background: 'var(--surface-1)', lineHeight: 0 }}><PlatformIcon platform={platform!} size={badge} /></span>
+    </span>
   );
 }
 

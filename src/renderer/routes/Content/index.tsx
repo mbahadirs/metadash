@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { ColumnDef, SortingState, RowSelectionState } from '@tanstack/react-table';
 import { useContent, useContentAnalysis, useAccounts, useTags } from '@/hooks/queries';
@@ -15,6 +15,9 @@ import { ContentAnalysisView } from './Analysis';
 import { ExcelButton } from '@/components/ExcelButton';
 import { mediaSheet } from '@/lib/xlsx';
 import { adMetricList, fmtAdMetric, adMetricLabel } from '@/lib/adMetrics';
+import { PlatformFilter } from '@/components/PlatformFilter';
+import { usePlatformCaps, usePlatformScope } from '@/hooks/usePlatforms';
+import { PLATFORM_LABELS, platformOf } from '@/lib/platforms';
 
 export function ContentPage() {
   const t = useT();
@@ -36,30 +39,42 @@ export function ContentPage() {
   const [open, setOpen] = useState<string | null>(null);
   const exportRef = useRef<((name: string) => import('@/components/ExcelButton').XlsxSheet) | null>(null);
 
+  const scope = usePlatformScope();
+  const pc = usePlatformCaps();
+  const scopedAccounts = useMemo(() => (accounts.data ?? []).filter((a) => !scope.length || scope.includes(platformOf(a))), [accounts.data, scope]);
   const accountIds = useMemo(() => {
     if (igIds.length) return igIds;
-    if (tagIds.length) return (accounts.data ?? []).filter((a) => a.tagIds.some((tg) => tagIds.includes(tg))).map((a) => a.igId);
+    if (tagIds.length) return scopedAccounts.filter((a) => a.tagIds.some((tg) => tagIds.includes(tg))).map((a) => a.igId);
+    // A platform filter narrows to that platform's accounts; a sentinel keeps "no accounts" from meaning "all".
+    if (scope.length) return scopedAccounts.length ? scopedAccounts.map((a) => a.igId) : ['-'];
     return undefined;
-  }, [igIds, tagIds, accounts.data]);
-  const q = useContent({ igIds: accountIds, filters: { typeKeys: typeKeys.length ? typeKeys : undefined, hashtag: hashtag || undefined, minReach: minReach ? Number(minReach) : undefined, search: search || undefined, onlyPaid: onlyPaid || undefined } });
-  const analysis = useContentAnalysis({ igIds: accountIds, typeKeys: typeKeys.length ? typeKeys : undefined }, view === 'analysis');
-  const hasPaid = useMemo(() => (q.data ?? []).some((m) => (m.spend ?? 0) > 0), [q.data]);
+  }, [igIds, tagIds, scopedAccounts, scope]);
+  useEffect(() => { if (igIds.length && !scopedAccounts.some((a) => a.igId === igIds[0])) setIgIds([]); }, [scopedAccounts]); // eslint-disable-line react-hooks/exhaustive-deps
+  const q = useContent({ igIds: accountIds, filters: { platforms: scope.length ? scope : undefined, typeKeys: typeKeys.length ? typeKeys : undefined, hashtag: hashtag || undefined, minReach: minReach ? Number(minReach) : undefined, search: search || undefined, onlyPaid: onlyPaid || undefined } });
+  const analysis = useContentAnalysis({ igIds: accountIds, typeKeys: typeKeys.length ? typeKeys : undefined, ...(scope.length ? { platforms: scope } : {}) }, view === 'analysis');
+  const rows = useMemo(() => (q.data ?? []).filter((m) => !scope.length || scope.includes(platformOf(m))), [q.data, scope]);
+  const hasPaid = useMemo(() => rows.some((m) => (m.spend ?? 0) > 0), [rows]);
+  const extra = useMemo(() => ({ reposts: rows.some((m) => m.reposts != null), quotes: rows.some((m) => m.quotes != null), clicks: rows.some((m) => m.clicks != null) }), [rows]);
+  const na = (m: Media, cap: 'saveRate' | 'reach', v: string) => (pc.caps(platformOf(m))[cap] ? v : <span className="text-ink-2" title={t('na_for_platform', { p: PLATFORM_LABELS[platformOf(m)] })}>—</span>);
 
   const columns = useMemo<ColumnDef<Media, any>[]>(() => [ // eslint-disable-line @typescript-eslint/no-explicit-any
     { id: 'select', size: 36, enableSorting: false, header: ({ table }) => <input type="checkbox" checked={table.getIsAllRowsSelected()} onChange={table.getToggleAllRowsSelectedHandler()} aria-label={t('select_all')} />, cell: ({ row }) => <input type="checkbox" checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} onClick={(e) => e.stopPropagation()} /> },
     { id: 'thumb', size: 44, enableSorting: false, header: '', cell: ({ row }) => <PostThumb mediaId={row.original.mediaId} thumbnailPath={row.original.thumbnailPath} mediaType={row.original.mediaType} mediaProductType={row.original.mediaProductType} size={28} /> },
-    { id: 'username', header: t('account'), accessorKey: 'username', size: 160, cell: ({ row }) => <Link to={`/account/${row.original.igId}`} className="flex items-center gap-2 no-underline text-ink-1 hover:text-accent" onClick={(e) => e.stopPropagation()}><Avatar username={row.original.username} url={row.original.profilePicUrl} color={row.original.accountColor} size={20} />@{row.original.username}</Link> },
+    { id: 'username', header: t('account'), accessorKey: 'username', size: 160, cell: ({ row }) => <Link to={`/account/${row.original.igId}`} className="flex items-center gap-2 no-underline text-ink-1 hover:text-accent" onClick={(e) => e.stopPropagation()}><Avatar username={row.original.username} url={row.original.profilePicUrl} color={row.original.accountColor} size={20} platform={row.original.platform} />@{row.original.username}</Link> },
     { id: 'postedAt', header: t('date'), accessorKey: 'postedAt', size: 90, cell: ({ getValue }) => fmtDate(getValue() as number) },
     { id: 'type', header: t('type'), accessorFn: (r) => mediaTypeLabel(r, lang), size: 80 },
     { id: 'caption', header: t('caption'), accessorKey: 'caption', enableSorting: false, cell: ({ getValue }) => <span className="block max-w-[300px] truncate" title={String(getValue() ?? '')}>{String(getValue() ?? '').slice(0, 60)}</span> },
-    { id: 'reach', header: t('reach'), accessorKey: 'reach', meta: { align: 'right' }, cell: ({ getValue }) => fmtNum(getValue() as number) },
+    { id: 'reach', header: t('reach'), accessorKey: 'reach', meta: { align: 'right' }, cell: ({ row, getValue }) => na(row.original, 'reach', fmtNum(getValue() as number)) },
     { id: 'views', header: t('views'), accessorKey: 'views', meta: { align: 'right' }, cell: ({ getValue }) => fmtNum(getValue() as number) },
     { id: 'likes', header: t('likes'), accessorKey: 'likes', meta: { align: 'right' }, cell: ({ getValue }) => fmtNum(getValue() as number) },
     { id: 'comments', header: t('comments'), accessorKey: 'comments', meta: { align: 'right' }, cell: ({ getValue }) => fmtNum(getValue() as number) },
-    { id: 'saved', header: t('saved'), accessorKey: 'saved', meta: { align: 'right' }, cell: ({ getValue }) => fmtNum(getValue() as number) },
+    { id: 'saved', header: t('saved'), accessorKey: 'saved', meta: { align: 'right' }, cell: ({ row, getValue }) => na(row.original, 'saveRate', fmtNum(getValue() as number)) },
     { id: 'shares', header: t('shares'), accessorKey: 'shares', meta: { align: 'right' }, cell: ({ getValue }) => fmtNum(getValue() as number) },
+    ...(extra.reposts ? [{ id: 'reposts', header: t('reposts'), accessorKey: 'reposts', meta: { align: 'right' }, cell: ({ getValue }: { getValue: () => unknown }) => fmtNum(getValue() as number) }] : []),
+    ...(extra.quotes ? [{ id: 'quotes', header: t('quotes'), accessorKey: 'quotes', meta: { align: 'right' }, cell: ({ getValue }: { getValue: () => unknown }) => fmtNum(getValue() as number) }] : []),
+    ...(extra.clicks ? [{ id: 'clicks', header: t('clicks'), accessorKey: 'clicks', meta: { align: 'right' }, cell: ({ getValue }: { getValue: () => unknown }) => fmtNum(getValue() as number) }] : []),
     { id: 'er', header: t('er_short'), accessorKey: 'engagementRate', meta: { align: 'right' }, cell: ({ getValue }) => fmtPct(getValue() as number, 2) },
-    { id: 'saveRate', header: t('save_rate'), accessorKey: 'saveRate', meta: { align: 'right' }, cell: ({ getValue }) => fmtPct(getValue() as number, 2) },
+    { id: 'saveRate', header: t('save_rate'), accessorKey: 'saveRate', meta: { align: 'right' }, cell: ({ row, getValue }) => na(row.original, 'saveRate', fmtPct(getValue() as number, 2)) },
     ...(hasPaid && showAdCols ? ([
       { id: 'paidImpressions', header: t('paid_impressions'), accessorKey: 'paidImpressions', meta: { align: 'right', xlsx: 'int' }, cell: ({ getValue }) => fmtNum(getValue() as number) },
       { id: 'totalImpressions', header: t('total_impressions'), accessorKey: 'totalImpressions', meta: { align: 'right', xlsx: 'int' }, cell: ({ row }) => <div className="leading-tight">{fmtNum(row.original.totalImpressions)}<div className="text-xs text-ink-2">{row.original.paidImpressionShare != null ? `${t('paid_share_short')} ${fmtPct(row.original.paidImpressionShare, 0)}` : ''}</div></div> },
@@ -67,10 +82,10 @@ export function ContentPage() {
       { id: 'totalReach', header: t('total_reach'), accessorKey: 'totalReach', meta: { align: 'right', xlsx: 'int' }, cell: ({ row }) => <div className="leading-tight">{fmtNum(row.original.totalReach)}<div className="text-xs text-ink-2">{row.original.paidReachShare != null ? `${t('paid_share_short')} ${fmtPct(row.original.paidReachShare, 0)}` : ''}</div></div> },
       ...adMetricList('post').map((m) => ({ id: m.key, header: adMetricLabel(m), accessorKey: m.key, meta: { align: 'right', xlsx: m.type }, cell: ({ row }: { row: { original: Media } }) => ((row.original.spend ?? 0) > 0 ? <div className="leading-tight">{fmtAdMetric(m, row.original)}{m.sub && row.original[m.sub as 'paidResultType'] ? <div className="text-xs text-ink-2">{String(row.original[m.sub as 'paidResultType'])}</div> : null}</div> : <span className="text-ink-2">—</span>) })),
     ] as ColumnDef<Media, any>[]) : []), // eslint-disable-line @typescript-eslint/no-explicit-any
-  ], [t, lang, hasPaid, showAdCols]);
+  ], [t, lang, hasPaid, showAdCols, extra, pc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedIds = Object.keys(selection).filter((k) => selection[k]);
-  const exportSheet = () => { const sheet = exportRef.current?.('x'); const order = sheet ? (sheet.rows as Record<string, unknown>[]).map((r) => r.mediaId as string) : []; const byId = new Map((q.data ?? []).map((m) => [m.mediaId, m])); const rows = order.length ? order.map((id) => byId.get(id)!).filter(Boolean) : (q.data ?? []); return mediaSheet(t('nav_content'), rows); };
+  const exportSheet = () => { const sheet = exportRef.current?.('x'); const order = sheet ? (sheet.rows as Record<string, unknown>[]).map((r) => r.mediaId as string) : []; const byId = new Map(rows.map((m) => [m.mediaId, m])); const ordered = order.length ? order.map((id) => byId.get(id)!).filter(Boolean) : rows; return mediaSheet(t('nav_content'), ordered); };
 
   return (
     <div className="flex flex-col h-full gap-3">
@@ -79,8 +94,9 @@ export function ContentPage() {
         <span className="w-px h-5 bg-line mx-1" />
         <select className="input w-52" value={igIds[0] ?? ''} onChange={(e) => setIgIds(e.target.value ? [e.target.value] : [])}>
           <option value="">{t('accounts')}: {t('all')}</option>
-          {(accounts.data ?? []).map((a) => <option key={a.igId} value={a.igId}>@{a.username}</option>)}
+          {scopedAccounts.map((a) => <option key={a.igId} value={a.igId}>@{a.username}{platformOf(a) !== 'instagram' ? ` · ${PLATFORM_LABELS[platformOf(a)]}` : ''}</option>)}
         </select>
+        <PlatformFilter />
         <TypeFilter value={typeKeys} onChange={setTypeKeys} />
         <span className="w-px h-5 bg-line mx-1" />
         <input className="input w-36" placeholder={`#${t('hashtag').toLowerCase()}`} value={hashtag} onChange={(e) => setHashtag(e.target.value)} />
@@ -99,12 +115,12 @@ export function ContentPage() {
         <>
           <div className="panel flex-1 min-h-0 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-3 h-10 border-b border-line flex-none">
-              <span className="text-sm text-ink-2 num">{q.data?.length ?? 0} {t('posts').toLowerCase()}{hasPaid ? ` · ${(q.data ?? []).filter((m) => (m.spend ?? 0) > 0).length} ${t('paid_posts').toLowerCase()}` : ''}</span>
+              <span className="text-sm text-ink-2 num">{rows.length} {t('posts').toLowerCase()}{hasPaid ? ` · ${rows.filter((m) => (m.spend ?? 0) > 0).length} ${t('paid_posts').toLowerCase()}` : ''}</span>
               <ExcelButton name="content" title={t('nav_content')} getData={exportSheet} />
             </div>
             <div className="flex-1 min-h-0">
             {q.isLoading ? <Loading /> : q.error ? <ErrorState error={q.error} /> : (
-              <DataTable data={q.data ?? []} columns={columns} sorting={sorting} onSortingChange={setSorting} getRowId={(r) => r.mediaId} rowSelection={selection} onRowSelectionChange={setSelection}
+              <DataTable data={rows} columns={columns} sorting={sorting} onSortingChange={setSorting} getRowId={(r) => r.mediaId} rowSelection={selection} onRowSelectionChange={setSelection}
                 onRowClick={(r) => setOpen(r.mediaId)} selectedId={open} virtual height="100%" empty={t('no_data')} onExportReady={(fn) => { exportRef.current = fn; }} />
             )}
             </div>

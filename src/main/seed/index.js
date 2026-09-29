@@ -12,26 +12,15 @@ import { setSetting } from '../db/queries/settings.js';
 import { materializeLatest } from '../analytics/engagement.js';
 import { fmtDate } from '../analytics/util.js';
 import { analyzeCaption } from '../sync/caption.js';
+import { rng, pick, between, gauss } from './random.js';
+import { seedPlatformAccounts, extendPlatformDay, PLATFORM_DEMO_COUNTS } from './platforms.js';
+import { platformOfKey } from '../providers/capabilities.js';
 import { BRANDS, CAPTIONS, CITIES, COUNTRIES, AGE_BUCKETS, COMPETITOR_NAMES, COMMENTERS, COMMENT_TEXTS, CAMPAIGN_NAMES, ADSET_NAMES, AD_NAMES } from './data.js';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
 const DAYS = 120;
 const CAPTURE_AGES = [1, 3, 6, 12, 24, 48, 96, 168, 336, 720];
-
-/** Deterministic PRNG so the demo looks the same on every machine. */
-function rng(seed) {
-  let s = seed >>> 0;
-  return () => {
-    s += 0x6d2b79f5;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-const pick = (r, arr) => arr[Math.floor(r() * arr.length)];
-const between = (r, a, b) => a + r() * (b - a);
-const gauss = (r) => (r() + r() + r() + r() - 2) / 1.2;
 
 export function isSeeded() {
   return !!q.get("SELECT 1 FROM profiles WHERE token_ref LIKE 'demo%' LIMIT 1");
@@ -44,11 +33,14 @@ export function canLoadDemo() {
 
 export function clearAll() {
   const db = getDb();
-  const tables = ['sync_errors', 'sync_runs', 'notes', 'ad_insights_breakdown', 'ad_insights_daily', 'ad_media_links', 'ad_budget_overrides', 'ad_accounts', 'competitor_snapshots', 'competitors', 'comments', 'stories', 'media_latest', 'media_insight_snapshots', 'media', 'account_demographics', 'account_insights_daily', 'account_snapshots', 'account_tags', 'account_logos', 'tags', 'accounts', 'profiles', 'disabled_metrics'];
+  const tables = ['sync_errors', 'sync_runs', 'notes', 'ad_insights_breakdown', 'ad_insights_daily', 'ad_media_links', 'ad_budget_overrides', 'ad_accounts', 'competitor_snapshots', 'competitors', 'comments', 'stories', 'media_latest', 'media_insight_snapshots', 'media', 'account_demographics', 'account_insights_daily', 'account_snapshots', 'account_tags', 'account_logos', 'tags', 'accounts', 'profiles', 'disabled_metrics', 'metric_resolution'];
   db.transaction(() => { for (const t of tables) db.exec(`DELETE FROM ${t}`); })();
 }
 
-/** Seeds the database as if 40 accounts had been connected and synced for 120 days. */
+/**
+ * Seeds the database as if 40 Instagram accounts, 8 Facebook Pages and 6 Threads profiles had been connected and synced
+ * for 120 days. Facebook/Threads use their own PRNG streams after the Instagram seed, so Instagram data is unchanged.
+ */
 export function seedDemo({ reset = false, onProgress } = {}) {
   const db = getDb();
   if (reset) clearAll();
@@ -81,19 +73,22 @@ export function seedDemo({ reset = false, onProgress } = {}) {
   db.transaction(() => seedAds(r, profileId, today))();
   report('Competitors');
   db.transaction(() => seedCompetitors(r, today))();
+  const threadsProfileId = upsertProfile({ label: 'Demo Threads', appId: '987654321098765', tokenRef: 'demo:threads', tokenExpiresAt: Date.now() + 50 * DAY, platform: 'threads', refreshedAt: Date.now() - 2 * DAY });
+  db.transaction(() => seedPlatformAccounts({ metaProfileId: profileId, threadsProfileId, now, onProgress: report }))();
+  const totalAccounts = BRANDS.length + PLATFORM_DEMO_COUNTS.facebook + PLATFORM_DEMO_COUNTS.threads;
   report('Sync history');
   db.transaction(() => {
     for (let d = 6; d >= 0; d -= 1) {
       const at = Date.now() - d * DAY - 3 * HOUR;
-      const id = createRun(d % 3 === 0 ? 'full' : d % 3 === 1 ? 'organic' : 'stories', 40);
-      updateRun(id, { finishedAt: at + 4 * 60_000, status: 'ok', accountsDone: 40, apiCalls: 1200 + Math.round(r() * 300), errorSummary: 'Demo mode: sample run' });
+      const id = createRun(d % 3 === 0 ? 'full' : d % 3 === 1 ? 'organic' : 'stories', totalAccounts);
+      updateRun(id, { finishedAt: at + 4 * 60_000, status: 'ok', accountsDone: totalAccounts, apiCalls: 1200 + Math.round(r() * 300), errorSummary: 'Demo mode: sample run' });
       q.run('UPDATE sync_runs SET started_at = ? WHERE id = ?', at, id);
     }
   })();
   setSetting('setupStep', 6);
   setSetting('setupComplete', true);
   setSetting('demoMode', true);
-  return { skipped: false, ms: Date.now() - started, accounts: BRANDS.length };
+  return { skipped: false, ms: Date.now() - started, accounts: BRANDS.length, facebookPages: PLATFORM_DEMO_COUNTS.facebook, threadsProfiles: PLATFORM_DEMO_COUNTS.threads };
 }
 
 function seedAccount(r, { index, username, name, client, sector, profileId, now, today }) {
@@ -308,7 +303,10 @@ function seedCompetitors(r, today) {
   }
 }
 
-/** Rolls the demo dataset forward: a new snapshot + insights day for each account (used by demo sync). */
+/**
+ * Rolls the demo dataset forward: a new snapshot + insights day for each account (used by demo sync).
+ * Account keys may belong to any platform (fb-… / th-… prefixes); each gets its own platform's daily metrics.
+ */
 export function extendDemoDay(igIds) {
   const r = rng(Date.now() % 100_000);
   const now = new Date();
@@ -319,16 +317,22 @@ export function extendDemoDay(igIds) {
       if (!last) continue;
       const followers = Math.round(last.followers * (1 + between(r, -0.001, 0.004)));
       insertSnapshot({ igId, date, followers, follows: last.follows, mediaCount: last.media_count, capturedAt: now.getTime() });
-      const lastReach = q.get("SELECT value FROM account_insights_daily WHERE ig_id = ? AND metric = 'reach' ORDER BY date DESC LIMIT 1", igId)?.value ?? followers * 0.3;
-      const reach = Math.round(lastReach * (1 + gauss(r) * 0.2));
-      upsertInsightDaily(igId, date, 'reach', reach);
-      upsertInsightDaily(igId, date, 'views', Math.round(reach * 1.8));
-      upsertInsightDaily(igId, date, 'profile_views', Math.round(reach * 0.04));
-      upsertInsightDaily(igId, date, 'accounts_engaged', Math.round(reach * 0.07));
+      const platform = platformOfKey(igId);
+      if (platform === 'instagram') extendInstagramDay(igId, r, date, followers);
+      else extendPlatformDay(igId, platform, r, date);
       markSynced(igId, now.getTime());
     }
   });
   tx();
+}
+
+function extendInstagramDay(igId, r, date, followers) {
+  const lastReach = q.get("SELECT value FROM account_insights_daily WHERE ig_id = ? AND metric = 'reach' ORDER BY date DESC LIMIT 1", igId)?.value ?? followers * 0.3;
+  const reach = Math.round(lastReach * (1 + gauss(r) * 0.2));
+  upsertInsightDaily(igId, date, 'reach', reach);
+  upsertInsightDaily(igId, date, 'views', Math.round(reach * 1.8));
+  upsertInsightDaily(igId, date, 'profile_views', Math.round(reach * 0.04));
+  upsertInsightDaily(igId, date, 'accounts_engaged', Math.round(reach * 0.07));
 }
 
 export { addHours };

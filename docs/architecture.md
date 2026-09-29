@@ -47,7 +47,14 @@ A React 18 single-page app built by Vite into `dist/renderer`, loaded with `load
 | `components/` | Layout, data table, post card/drawer, period picker, Excel/PDF buttons, UI primitives |
 | `charts/` | Chart wrapper (PNG export), time series, heatmap, lifecycle, sparkline, bar list |
 | `hooks/` | `queries.ts` (TanStack Query hooks per IPC call), `useSyncEvents.ts` (progress events) |
-| `lib/` | `api.ts` (envelope unwrapping), `i18n.ts`, formatting, ad metric definitions, types |
+| `lib/` | `api.ts` (envelope unwrapping), `i18n.ts`, formatting, ad metric definitions, types, `platforms.ts` (platform labels, fallback capabilities, type keys, profile URLs), `accountKpis.ts` (KPI tiles and chart series per platform) |
+
+**Platform-aware UI (v1.3).** The renderer never hardcodes what a platform can show; it asks `platforms:list` (`hooks/usePlatforms.ts`: `usePlatforms`, `usePlatformCaps`, `useActivePlatforms`, `usePlatformScope`) and falls back to the same static capability table as `providers/capabilities.js`.
+
+- `components/PlatformFilter.tsx`: All / Instagram / Facebook / Threads chips on Overview and Content. Only platforms with tracked accounts are offered and the control is hidden while only one platform exists. The selection lives in the Zustand store and is persisted as the `ui.platformFilter` setting; `usePlatformScope()` intersects it with the tracked platforms (empty = all) and `usePortfolio()` passes it as `platforms`.
+- `components/PlatformBadge.tsx` and the `platform` prop of `Avatar` (a corner mark on Facebook/Threads avatars, and on Instagram ones too once several platforms are tracked).
+- Missing capabilities show "—" with a "Not available for …" tooltip (save rate on Facebook/Threads, reach on Threads) or hide the element entirely. Account tabs follow capabilities (Instagram: all tabs; Facebook: overview/posts/ads; Threads: overview/posts/demographics). Compare warns about mixed platforms and disables save rate; Reports greys out sections none of the selected accounts support; Presentation drops ad slides for platforms without ads.
+- Setup has seven steps: Welcome, Meta app, token (notes that `read_insights` is only needed for Facebook Pages), accounts (with an optional **Facebook Pages** list via `setup:facebook:*`), ad accounts, an optional **Threads** step (`setup:threads:*`) and the first sync. The persisted `setupStep` is 0-based (5 = Threads, 6 = first sync). **Settings → Connections** repeats the Facebook Page list and the Threads connect/refresh/disconnect controls; `token:warning` banners deep-link to the matching place (`meta` → Setup step 3, `threads` → Settings → Connections).
 
 ## IPC contract
 

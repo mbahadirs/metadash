@@ -62,7 +62,7 @@ describe('askData', () => {
   });
 
   it('a tool error becomes a step error and the loop continues', async () => {
-    const p = fakeProvider([sqlCall('t1', 'SELECT * FROM settings'), sqlCall('t2', 'SELECT COUNT(*) AS n FROM accounts'), { text: 'There are 40 accounts.', stopReason: 'end' }]);
+    const p = fakeProvider([sqlCall('t1', 'SELECT * FROM settings'), sqlCall('t2', "SELECT COUNT(*) AS n FROM accounts WHERE platform = 'instagram'"), { text: 'There are 40 accounts.', stopReason: 'end' }]);
     const res = await askData({ question: 'How many?', lang: 'tr' }, { provider: p });
     expect(res.answer).toBe('There are 40 accounts.');
     expect(res.steps).toHaveLength(2);

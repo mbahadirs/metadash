@@ -4,33 +4,47 @@ import { contentAnalysis, comparePosts } from '../analytics/content.js';
 import { blended } from '../analytics/blended.js';
 import { weeklyDigest } from '../analytics/weeklyDigest.js';
 import { healthScores } from '../analytics/health.js';
-import { listMedia } from '../db/queries/media.js';
+import { listMedia, mediaTypeKey } from '../db/queries/media.js';
+import { getAccount } from '../db/queries/accounts.js';
 import { adObjects, adBreakdown } from '../db/queries/ads.js';
 import { rangeMs } from '../analytics/util.js';
-import { makeL, weekdays } from './reportI18n.js';
+import { makeL, weekdays, kpiLabelKey, metricLabelKey } from './reportI18n.js';
+import { capabilitiesFor, dailyMetricsFor, platformLabel } from '../analytics/platform.js';
 import { msg } from '../i18n.js';
 
 /** Ad metric columns (post/account rows), localized via L. */
 const adXlsx = (L) => [{ key: 'paidCurrency', label: L('currency'), type: 'text' }, { key: 'paidImpressions', label: L('ad_impressions'), type: 'int' }, { key: 'paidResults', label: L('results'), type: 'int' }, { key: 'paidResultType', label: L('result_type'), type: 'text' }, { key: 'costPerResult', label: L('cost_per_result'), type: 'money' }, { key: 'spend', label: L('amount_spent'), type: 'money' }, { key: 'paidReach', label: L('paid_reach'), type: 'int' }, { key: 'paidFrequency', label: L('frequency'), type: 'float' }, { key: 'paidCpc', label: 'CPC', type: 'money' }, { key: 'paidCtr', label: 'CTR %', type: 'percent' }, { key: 'paidCpm', label: 'CPM', type: 'money' }, { key: 'paidPostEngagement', label: L('post_engagement'), type: 'int' }, { key: 'costPerPostEngagement', label: L('cost_per_post_engagement'), type: 'money' }, { key: 'paidPageEngagement', label: L('page_engagement'), type: 'int' }, { key: 'costPerPageEngagement', label: L('cost_per_page_engagement'), type: 'money' }];
 const adXlsxAcc = (L) => { const a = adXlsx(L); return [a[0], ...a.slice(1, 5), { key: 'monthlyBudget', label: L('monthly_budget'), type: 'money' }, ...a.slice(5)]; };
 
-const TYPE = (p) => (p.mediaProductType === 'REELS' ? 'reels' : p.mediaType === 'CAROUSEL_ALBUM' ? 'carousel' : p.mediaType === 'VIDEO' ? 'video' : 'image');
+const TYPE = (p) => mediaTypeKey(p);
 
-function postColumns(L, { account = true, deltas = false, paid = true } = {}) {
+/**
+ * Post sheet columns. `account` lists (several accounts, possibly several platforms) get a platform column and every
+ * metric; a single-platform sheet (`platform`) drops metrics that platform does not have.
+ */
+function postColumns(L, { account = true, deltas = false, paid = true, platform = null } = {}) {
+  const caps = platform ? capabilitiesFor(platform) : { reach: true, saveRate: true };
+  const reach = caps.reach;
+  const saves = caps.saveRate;
+  const threads = !platform || platform === 'threads';
+  const clicks = !platform || platform === 'facebook';
   return [
-    ...(account ? [{ key: 'username', label: L('account'), type: 'text' }] : []),
+    ...(account ? [{ key: 'username', label: L('account'), type: 'text' }, { key: 'platform', label: L('platform'), type: 'text' }] : []),
     { key: 'postedAt', label: L('date'), type: 'datetime' }, { key: 'type', label: L('type'), type: 'text' }, { key: 'caption', label: L('caption'), type: 'text' },
     { key: 'permalink', label: 'URL', type: 'text' },
-    { key: 'reach', label: L('reach'), type: 'int' }, ...(deltas ? [{ key: 'vsReach', label: `${L('reach')} Δ%`, type: 'percent' }] : []),
+    ...(reach ? [{ key: 'reach', label: L('reach'), type: 'int' }, ...(deltas ? [{ key: 'vsReach', label: `${L('reach')} Δ%`, type: 'percent' }] : [])] : []),
     { key: 'views', label: L('views'), type: 'int' }, { key: 'likes', label: L('likes'), type: 'int' }, { key: 'comments', label: L('comments'), type: 'int' },
-    { key: 'saved', label: L('saves'), type: 'int' }, ...(deltas ? [{ key: 'vsSaved', label: `${L('saves')} Δ%`, type: 'percent' }] : []),
-    { key: 'shares', label: L('shares'), type: 'int' }, { key: 'engagementRate', label: 'ER %', type: 'percent' }, ...(deltas ? [{ key: 'vsEr', label: 'ER Δ%', type: 'percent' }] : []),
-    { key: 'saveRate', label: `${L('save_rate')} %`, type: 'percent' },
+    ...(saves ? [{ key: 'saved', label: L('saves'), type: 'int' }, ...(deltas ? [{ key: 'vsSaved', label: `${L('saves')} Δ%`, type: 'percent' }] : [])] : []),
+    { key: 'shares', label: L('shares'), type: 'int' },
+    ...(threads ? [{ key: 'reposts', label: L('reposts'), type: 'int' }, { key: 'quotes', label: L('quotes'), type: 'int' }] : []),
+    ...(clicks ? [{ key: 'clicks', label: L('link_clicks'), type: 'int' }] : []),
+    { key: 'engagementRate', label: 'ER %', type: 'percent' }, ...(deltas ? [{ key: 'vsEr', label: 'ER Δ%', type: 'percent' }] : []),
+    ...(saves ? [{ key: 'saveRate', label: `${L('save_rate')} %`, type: 'percent' }] : []),
     { key: 'hashtagCount', label: 'Hashtag', type: 'int' }, { key: 'captionLength', label: `${L('caption')} (${L('chars_short')})`, type: 'int' },
     ...(paid ? [{ key: 'totalImpressions', label: L('total_impressions'), type: 'int' }, { key: 'paidImpressionShare', label: `${L('paid_impression_share')} %`, type: 'percent' }, { key: 'totalReach', label: L('total_reach'), type: 'int' }, { key: 'paidReachShare', label: `${L('paid_share')} %`, type: 'percent' }, { key: 'paidClicks', label: L('clicks'), type: 'int' }, ...adXlsx(L)] : []),
   ];
 }
-const postRows = (posts, L) => posts.map((p) => ({ ...p, type: L(TYPE(p)) }));
+const postRows = (posts, L) => posts.map((p) => ({ ...p, type: L(TYPE(p)), platform: platformLabel(p.platform ?? 'instagram') }));
 
 function kpiSheet(L, kpis, labels) {
   return { name: L('summary'), columns: [{ key: 'metric', label: L('type'), type: 'text' }, { key: 'value', label: L('value'), type: 'float' }, { key: 'prev', label: L('prev'), type: 'float' }, { key: 'changePct', label: 'Δ%', type: 'percent' }], rows: Object.entries(labels).map(([k, label]) => ({ metric: label, value: kpis[k]?.value ?? null, prev: kpis[k]?.prev ?? null, changePct: kpis[k]?.changePct ?? null })) };
@@ -40,19 +54,22 @@ function accountSheets(L, igId, from, to) {
   const a = accountAnalytics({ igId, from, to });
   if (!a) return [];
   const u = a.account.username;
+  const { platform, capabilities: caps } = a;
   const { fromMs, toMs } = rangeMs(from, to);
   const sheets = [];
-  sheets.push({ ...kpiSheet(L, a.kpis, { reach: L('reach'), views: L('views'), profileViews: L('profile_views'), er: L('er'), saveRate: L('save_rate'), newFollowers: L('new_followers'), posts: L('posts') }), name: `${u} · ${L('summary')}` });
-  sheets.push({ name: `${u} · ${L('daily')}`, columns: [{ key: 'date', label: L('date'), type: 'date' }, { key: 'reach', label: L('reach'), type: 'int' }, { key: 'views', label: L('views'), type: 'int' }, { key: 'profile_views', label: L('profile_views'), type: 'int' }, { key: 'accounts_engaged', label: L('engaged'), type: 'int' }, { key: 'followers', label: L('followers'), type: 'int' }], rows: a.series.map((d) => ({ ...d, followers: a.followerSeries.find((f) => f.date === d.date)?.followers ?? null })) });
-  sheets.push({ name: `${u} · ${L('posts')}`, columns: postColumns(L, { account: false }), rows: postRows(listMedia({ igIds: [igId], from: fromMs, to: toMs, sort: 'date' }), L) });
+  sheets.push({ ...kpiSheet(L, a.kpis, Object.fromEntries(a.kpiKeys.map((k) => [k, L(kpiLabelKey(k, platform))]))), name: `${u} · ${L('summary')}` });
+  const dailyCols = dailyMetricsFor(platform).filter((m) => m !== 'unfollows').map((m) => ({ key: m, label: L(metricLabelKey(m, platform)), type: 'int' }));
+  sheets.push({ name: `${u} · ${L('daily')}`, columns: [{ key: 'date', label: L('date'), type: 'date' }, ...dailyCols, { key: 'followers', label: L('followers'), type: 'int' }], rows: a.series.map((d) => ({ ...d, followers: a.followerSeries.find((f) => f.date === d.date)?.followers ?? null })) });
+  sheets.push({ name: `${u} · ${L('posts')}`, columns: postColumns(L, { account: false, platform }), rows: postRows(listMedia({ igIds: [igId], from: fromMs, to: toMs, sort: 'date' }), L) });
   const ca = contentAnalysis({ from, to, igIds: [igId] });
-  sheets.push({ name: `${u} · ${L('type')}`, columns: [{ key: 'type', label: L('type'), type: 'text' }, { key: 'posts', label: L('posts'), type: 'int' }, { key: 'totalReach', label: L('reach'), type: 'int' }, { key: 'avgReach', label: L('avg_reach'), type: 'int' }, { key: 'avgViews', label: L('avg_views'), type: 'int' }, { key: 'avgLikes', label: L('avg_likes'), type: 'int' }, { key: 'avgSaved', label: L('avg_saved'), type: 'int' }, { key: 'avgEr', label: L('avg_er'), type: 'percent' }, { key: 'avgSaveRate', label: L('save_rate'), type: 'percent' }, { key: 'spend', label: L('ad_spend'), type: 'money' }], rows: ca.types.map((t) => ({ ...t, type: L(t.typeKey) })) });
-  if (ca.hashtags.length) sheets.push({ name: `${u} · Hashtag`, columns: [{ key: 'tag', label: L('hashtag'), type: 'text' }, { key: 'posts', label: L('usage'), type: 'int' }, { key: 'avgReach', label: L('avg_reach'), type: 'int' }, { key: 'avgEr', label: L('avg_er'), type: 'percent' }, { key: 'avgSaved', label: L('avg_saved'), type: 'int' }], rows: ca.hashtags });
-  const st = accountStories({ igId, from, to });
+  const typeCols = [{ key: 'type', label: L('type'), type: 'text' }, { key: 'posts', label: L('posts'), type: 'int' }, ...(caps.reach ? [{ key: 'totalReach', label: L('reach'), type: 'int' }, { key: 'avgReach', label: L('avg_reach'), type: 'int' }] : []), { key: 'avgViews', label: L('avg_views'), type: 'int' }, { key: 'avgLikes', label: L('avg_likes'), type: 'int' }, ...(caps.saveRate ? [{ key: 'avgSaved', label: L('avg_saved'), type: 'int' }] : []), { key: 'avgEr', label: L('avg_er'), type: 'percent' }, ...(caps.saveRate ? [{ key: 'avgSaveRate', label: L('save_rate'), type: 'percent' }] : []), { key: 'spend', label: L('ad_spend'), type: 'money' }];
+  sheets.push({ name: `${u} · ${L('type')}`, columns: typeCols, rows: ca.types.map((t) => ({ ...t, type: L(t.typeKey) })) });
+  if (ca.hashtags.length) sheets.push({ name: `${u} · Hashtag`, columns: [{ key: 'tag', label: L('hashtag'), type: 'text' }, { key: 'posts', label: L('usage'), type: 'int' }, ...(caps.reach ? [{ key: 'avgReach', label: L('avg_reach'), type: 'int' }] : []), { key: 'avgEr', label: L('avg_er'), type: 'percent' }, ...(caps.saveRate ? [{ key: 'avgSaved', label: L('avg_saved'), type: 'int' }] : [])], rows: ca.hashtags });
+  const st = caps.stories ? accountStories({ igId, from, to }) : { stories: [] };
   if (st.stories.length) sheets.push({ name: `${u} · Story`, columns: [{ key: 'postedAt', label: L('date'), type: 'datetime' }, { key: 'mediaType', label: L('type'), type: 'text' }, { key: 'reach', label: L('reach'), type: 'int' }, { key: 'views', label: L('views'), type: 'int' }, { key: 'replies', label: L('replies'), type: 'int' }, { key: 'navForward', label: L('nav_forward'), type: 'int' }, { key: 'navBack', label: L('nav_back'), type: 'int' }, { key: 'navExit', label: L('nav_exit'), type: 'int' }, { key: 'completionRate', label: L('completion'), type: 'percent' }], rows: st.stories.map((s) => ({ ...s, completionRate: s.completionRate != null ? s.completionRate * 100 : null })) });
-  const d = accountDemographics({ igId });
-  if (d.capturedAt) sheets.push({ name: `${u} · ${L('demographics')}`, columns: [{ key: 'dimension', label: L('dimension'), type: 'text' }, { key: 'bucket', label: L('value'), type: 'text' }, { key: 'value', label: L('followers'), type: 'int' }], rows: [...d.city.map((x) => ({ dimension: L('city'), ...x })), ...d.genderAge.map((x) => ({ dimension: L('gender_age'), ...x })), ...d.country.map((x) => ({ dimension: L('country'), ...x }))] });
-  const b = blended({ igId, from, to });
+  const d = caps.demographics ? accountDemographics({ igId }) : { capturedAt: null };
+  if (d.capturedAt) sheets.push({ name: `${u} · ${L('demographics')}`, columns: [{ key: 'dimension', label: L('dimension'), type: 'text' }, { key: 'bucket', label: L('value'), type: 'text' }, { key: 'value', label: L('followers'), type: 'int' }], rows: [...d.city.map((x) => ({ dimension: L('city'), ...x })), ...d.genderAge.map((x) => ({ dimension: L('gender_age'), ...x })), ...d.age.map((x) => ({ dimension: L('age'), ...x })), ...d.gender.map((x) => ({ dimension: L('gender'), ...x })), ...d.country.map((x) => ({ dimension: L('country'), ...x }))] });
+  const b = caps.ads ? blended({ igId, from, to }) : { adAccount: null };
   if (b.adAccount) {
     sheets.push({ name: `${u} · ${L('ad')}`, columns: [{ key: 'date', label: L('date'), type: 'date' }, { key: 'organicReach', label: L('organic_reach'), type: 'int' }, { key: 'paidReach', label: L('paid_reach'), type: 'int' }, { key: 'impressions', label: L('impressions'), type: 'int' }, { key: 'spend', label: `${L('spend')} (${b.adAccount.currency})`, type: 'money' }], rows: b.series });
     if (b.campaigns.length) sheets.push({ name: `${u} · ${L('campaigns')}`, columns: adColumns(L, b.adAccount.currency), rows: b.campaigns });
@@ -76,25 +93,26 @@ export function reportSheets(template, params) {
     case 'custom': {
       const sheets = igIds.flatMap((id) => accountSheets(L, id, from, to));
       if (igIds.length > 1) {
-        const rows = igIds.map((id) => accountAnalytics({ igId: id, from, to })).filter(Boolean).map((a) => ({ username: a.account.username, clientName: a.account.clientName, followers: a.account.followers, newFollowers: a.kpis.newFollowers.value, reach: a.kpis.reach.value, reachChange: a.kpis.reach.changePct, views: a.kpis.views.value, er: a.kpis.er.value, erChange: a.kpis.er.changePct, saveRate: a.kpis.saveRate.value, posts: a.kpis.posts.value, ...(a.paid ?? {}) }));
-        sheets.unshift({ name: L('accounts_table'), columns: [{ key: 'username', label: L('account'), type: 'text' }, { key: 'clientName', label: L('client'), type: 'text' }, { key: 'followers', label: L('followers'), type: 'int' }, { key: 'newFollowers', label: L('new_followers'), type: 'int' }, { key: 'reach', label: L('reach'), type: 'int' }, { key: 'reachChange', label: `${L('reach')} Δ%`, type: 'percent' }, { key: 'views', label: L('views'), type: 'int' }, { key: 'er', label: 'ER %', type: 'percent' }, { key: 'erChange', label: 'ER Δ%', type: 'percent' }, { key: 'saveRate', label: L('save_rate'), type: 'percent' }, { key: 'posts', label: L('posts'), type: 'int' }, ...adXlsxAcc(L)], rows });
+        const rows = igIds.map((id) => accountAnalytics({ igId: id, from, to })).filter(Boolean).map((a) => ({ username: a.account.username, platform: platformLabel(a.platform), clientName: a.account.clientName, followers: a.account.followers, newFollowers: a.kpis.newFollowers?.value, reach: a.kpis.reach?.value ?? null, reachChange: a.kpis.reach?.changePct ?? null, views: a.kpis.views?.value, er: a.kpis.er?.value, erChange: a.kpis.er?.changePct, saveRate: a.kpis.saveRate?.value ?? null, posts: a.kpis.posts?.value, ...(a.paid ?? {}) }));
+        sheets.unshift({ name: L('accounts_table'), columns: [{ key: 'username', label: L('account'), type: 'text' }, { key: 'platform', label: L('platform'), type: 'text' }, { key: 'clientName', label: L('client'), type: 'text' }, { key: 'followers', label: L('followers'), type: 'int' }, { key: 'newFollowers', label: L('new_followers'), type: 'int' }, { key: 'reach', label: L('reach'), type: 'int' }, { key: 'reachChange', label: `${L('reach')} Δ%`, type: 'percent' }, { key: 'views', label: L('views'), type: 'int' }, { key: 'er', label: 'ER %', type: 'percent' }, { key: 'erChange', label: 'ER Δ%', type: 'percent' }, { key: 'saveRate', label: L('save_rate'), type: 'percent' }, { key: 'posts', label: L('posts'), type: 'int' }, ...adXlsxAcc(L)], rows });
       }
       if (params.basket?.length) sheets.push(...basketSheets(L, params.basket, lang));
       return sheets;
     }
     case 'portfolio': {
-      const p = portfolio({ from, to, tagIds: params.tagIds });
+      const p = portfolio({ from, to, tagIds: params.tagIds, platforms: params.platforms });
       const { fromMs, toMs } = rangeMs(from, to);
-      const health = new Map(healthScores({ from, to }).map((h) => [h.igId, h]));
+      const health = new Map(healthScores({ from, to, platforms: params.platforms }).map((h) => [h.igId, h]));
       return [
-        kpiSheet(L, p.kpis, { totalFollowers: L('followers'), netFollowers: L('net_followers'), totalReach: L('reach'), avgEr: L('avg_er'), totalSpend: L('spend'), totalPosts: L('posts') }),
-        { name: L('league'), columns: [{ key: 'username', label: L('account'), type: 'text' }, { key: 'clientName', label: L('client'), type: 'text' }, { key: 'followers', label: L('followers'), type: 'int' }, { key: 'followersChange', label: L('change'), type: 'int' }, { key: 'followersChangePct', label: `${L('change')} %`, type: 'percent' }, { key: 'reach', label: L('reach'), type: 'int' }, { key: 'reachChangePct', label: `${L('reach')} Δ%`, type: 'percent' }, { key: 'posts', label: L('posts'), type: 'int' }, { key: 'er', label: 'ER %', type: 'percent' }, { key: 'erChangePct', label: 'ER Δ%', type: 'percent' }, { key: 'saveRate', label: L('save_rate'), type: 'percent' }, { key: 'health', label: L('health'), type: 'int' }, { key: 'growthPct', label: L('growth'), type: 'int' }, { key: 'engagementPct', label: L('engagement'), type: 'int' }, { key: 'consistencyPct', label: L('consistency'), type: 'int' }, { key: 'responsePct', label: L('response'), type: 'int' }, { key: 'daysSincePost', label: L('days_since_post'), type: 'int' }, { key: 'totalReach', label: L('total_reach'), type: 'int' }, ...adXlsxAcc(L)], rows: p.rows.map((r) => ({ ...r, growthPct: health.get(r.igId)?.components.growth.pct, engagementPct: health.get(r.igId)?.components.engagement.pct, consistencyPct: health.get(r.igId)?.components.consistency.pct, responsePct: health.get(r.igId)?.components.response.pct })) },
+        kpiSheet(L, p.kpis, { totalFollowers: L('followers'), netFollowers: L('net_followers'), totalReach: L('reach'), ...(p.platforms.includes('threads') ? { totalViews: L('views') } : {}), avgEr: L('avg_er'), totalSpend: L('spend'), totalPosts: L('posts') }),
+        { name: L('league'), columns: [{ key: 'username', label: L('account'), type: 'text' }, { key: 'platform', label: L('platform'), type: 'text' }, { key: 'clientName', label: L('client'), type: 'text' }, { key: 'followers', label: L('followers'), type: 'int' }, { key: 'followersChange', label: L('change'), type: 'int' }, { key: 'followersChangePct', label: `${L('change')} %`, type: 'percent' }, { key: 'reach', label: L('reach'), type: 'int' }, { key: 'reachChangePct', label: `${L('reach')} Δ%`, type: 'percent' }, { key: 'views', label: L('views'), type: 'int' }, { key: 'posts', label: L('posts'), type: 'int' }, { key: 'er', label: 'ER %', type: 'percent' }, { key: 'erChangePct', label: 'ER Δ%', type: 'percent' }, { key: 'saveRate', label: L('save_rate'), type: 'percent' }, { key: 'health', label: L('health'), type: 'int' }, { key: 'growthPct', label: L('growth'), type: 'int' }, { key: 'engagementPct', label: L('engagement'), type: 'int' }, { key: 'consistencyPct', label: L('consistency'), type: 'int' }, { key: 'responsePct', label: L('response'), type: 'int' }, { key: 'daysSincePost', label: L('days_since_post'), type: 'int' }, { key: 'totalReach', label: L('total_reach'), type: 'int' }, ...adXlsxAcc(L)], rows: p.rows.map((r) => ({ ...r, platform: platformLabel(r.platform), growthPct: health.get(r.igId)?.components.growth.pct, engagementPct: health.get(r.igId)?.components.engagement.pct, consistencyPct: health.get(r.igId)?.components.consistency.pct, responsePct: health.get(r.igId)?.components.response?.pct ?? null })) },
         { name: L('posts'), columns: postColumns(L), rows: postRows(listMedia({ from: fromMs, to: toMs, igIds: p.rows.map((r) => r.igId), sort: 'reach' }), L) },
-        { name: L('anomalies'), columns: [{ key: 'username', label: L('account'), type: 'text' }, { key: 'kind', label: L('type'), type: 'text' }, { key: 'date', label: L('date'), type: 'date' }, { key: 'value', label: L('value'), type: 'float' }, { key: 'mean', label: L('mean'), type: 'float' }, { key: 'sigma', label: 'σ', type: 'float' }, { key: 'z', label: 'z', type: 'float' }, { key: 'direction', label: L('direction'), type: 'text' }], rows: p.attention.anomalies },
+        { name: L('anomalies'), columns: [{ key: 'username', label: L('account'), type: 'text' }, { key: 'platform', label: L('platform'), type: 'text' }, { key: 'kind', label: L('type'), type: 'text' }, { key: 'date', label: L('date'), type: 'date' }, { key: 'value', label: L('value'), type: 'float' }, { key: 'mean', label: L('mean'), type: 'float' }, { key: 'sigma', label: 'σ', type: 'float' }, { key: 'z', label: 'z', type: 'float' }, { key: 'direction', label: L('direction'), type: 'text' }], rows: p.attention.anomalies.map((x) => ({ ...x, platform: platformLabel(x.platform ?? 'instagram') })) },
       ];
     }
     case 'campaign': {
       const igId = igIds[0];
+      if (!capabilitiesFor(getAccount(igId)?.platform ?? 'instagram').ads) return accountSheets(L, igId, from, to);
       const b = blended({ igId, from, to });
       const { fromMs, toMs } = rangeMs(from, to);
       const cur = b.adAccount?.currency ?? 'TRY';
@@ -107,7 +125,7 @@ export function reportSheets(template, params) {
       return sheets;
     }
     case 'weekly': {
-      const d = weeklyDigest({ weekOf: params.weekOf ?? to, tagIds: params.tagIds, lang });
+      const d = weeklyDigest({ weekOf: params.weekOf ?? to, tagIds: params.tagIds, platforms: params.platforms, lang });
       return [
         { name: L('weekly_digest'), columns: [{ key: 'sentence', label: L('weekly_digest'), type: 'text' }], rows: d.sentences.map((s) => ({ sentence: s })) },
         kpiSheet(L, d.kpis, { totalReach: L('reach'), netFollowers: L('net_followers'), avgEr: L('avg_er'), totalPosts: L('posts'), totalSpend: L('spend') }),

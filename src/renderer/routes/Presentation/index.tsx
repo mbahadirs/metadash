@@ -13,6 +13,10 @@ import { BarList } from '@/charts/BarList';
 import { PostThumb } from '@/components/PostThumb';
 import { TypeBadge, typeLabel } from '@/components/TypeFilter';
 import { useBranding } from '@/hooks/useBranding';
+import { usePlatformCaps } from '@/hooks/usePlatforms';
+import { PLATFORM_LABELS, isPlatform, platformOf, typeKeyOf as mediaTypeKey, type AccountAnalyticsV13 } from '@/lib/platforms';
+import { accountChart, accountKpiDefs } from '@/lib/accountKpis';
+import type { PlatformCapabilities } from '@/lib/types';
 
 const SLIDES = ['cover', 'kpi', 'growth', 'content', 'top', 'spotlight', 'recent', 'hashtags', 'besttime', 'ads', 'campaigns', 'breakdown', 'blended', 'boosted', 'basket', 'next'] as const;
 type SlideId = (typeof SLIDES)[number];
@@ -27,6 +31,9 @@ export function PresentationPage() {
   const [igId, setIgId] = useState('');
   const [notes, setNotes] = useState('');
   const [enabled, setEnabled] = useState<Record<SlideId, boolean>>(() => Object.fromEntries(SLIDES.map((s) => [s, true])) as Record<SlideId, boolean>);
+  const pc = usePlatformCaps();
+  const selected = (accounts.data ?? []).find((a) => a.igId === igId);
+  const na = (s: SlideId) => !!selected && !slideSupported(s, pc.caps(platformOf(selected)));
   useEffect(() => {
     const saved = (settings.data as { 'ui.presentationSlides'?: Record<string, boolean>; 'ui.presentationNotes'?: string } | undefined);
     if (saved?.['ui.presentationSlides']) setEnabled((e) => ({ ...e, ...saved['ui.presentationSlides'] }));
@@ -35,7 +42,7 @@ export function PresentationPage() {
   const start = async () => {
     await call(api.settings.set('ui.presentationSlides', enabled)).catch(() => {});
     await call(api.settings.set('ui.presentationNotes', notes)).catch(() => {});
-    const slides = SLIDES.filter((s) => enabled[s]).join(',');
+    const slides = SLIDES.filter((s) => enabled[s] && !na(s)).join(',');
     nav(`/presentation/run?igId=${igId}&slides=${slides}&notes=${encodeURIComponent(notes)}`);
   };
   return (
@@ -44,7 +51,7 @@ export function PresentationPage() {
         <Section title={t('nav_presentation')}>
           <div className="space-y-4">
             <label className="block"><div className="text-xs text-ink-2 mb-1">{t('account')}</div>
-              <select className="input" value={igId} onChange={(e) => setIgId(e.target.value)}><option value="">—</option>{(accounts.data ?? []).map((a) => <option key={a.igId} value={a.igId}>@{a.username}{a.clientName ? ` · ${a.clientName}` : ''}</option>)}</select></label>
+              <select className="input" value={igId} onChange={(e) => setIgId(e.target.value)}><option value="">—</option>{(accounts.data ?? []).map((a) => <option key={a.igId} value={a.igId}>@{a.username}{a.clientName ? ` · ${a.clientName}` : ''}{platformOf(a) !== 'instagram' ? ` · ${PLATFORM_LABELS[platformOf(a)]}` : ''}</option>)}</select></label>
             <div className="text-xs text-ink-2">{t('date')}: {period.from} – {period.to}</div>
             <label className="block"><div className="text-xs text-ink-2 mb-1">{t('next_steps')}</div><textarea className="input" rows={5} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('next_steps_placeholder')} /></label>
             <div className="text-xs text-ink-2">{t('presentation_hint')}</div>
@@ -55,7 +62,7 @@ export function PresentationPage() {
       <div className="col-span-5">
         <Section title={`${t('slides')} · ${SLIDES.filter((s) => enabled[s]).length}/${SLIDES.length}`} right={<button className="btn btn-ghost btn-sm" onClick={() => setEnabled(Object.fromEntries(SLIDES.map((s) => [s, true])) as Record<SlideId, boolean>)}>{t('select_all')}</button>}>
           <div className="space-y-2">{SLIDES.map((s, i) => (
-            <div key={s} className="flex items-center gap-3"><span className="w-5 text-xs text-ink-2 num text-right">{i + 1}</span><Toggle checked={enabled[s]} onChange={(v) => setEnabled({ ...enabled, [s]: v })} label={t(`slide_${s}` as Key)} />{AD_SLIDES.includes(s) && <span className="badge badge-muted">{t('ads')}</span>}</div>
+            <div key={s} className="flex items-center gap-3"><span className="w-5 text-xs text-ink-2 num text-right">{i + 1}</span><span className={na(s) ? 'opacity-40 pointer-events-none' : ''} title={na(s) ? t('na_for_platform', { p: PLATFORM_LABELS[platformOf(selected)] }) : undefined}><Toggle checked={enabled[s] && !na(s)} onChange={(v) => setEnabled({ ...enabled, [s]: v })} label={t(`slide_${s}` as Key)} /></span>{AD_SLIDES.includes(s) && <span className="badge badge-muted">{t('ads')}</span>}{na(s) && <span className="text-xs text-ink-2">N/A</span>}</div>
           ))}</div>
         </Section>
       </div>
@@ -83,8 +90,12 @@ export function PresentationRun() {
   const [i, setI] = useState(0);
   const [dir, setDir] = useState<'fwd' | 'back'>('fwd');
   const go = (n: number) => { setDir(n >= i ? 'fwd' : 'back'); setI(n); };
-  const hasAds = !!bl.data?.adAccount;
-  const slides = useMemo(() => SLIDES.filter((s) => wanted.includes(s) && (hasAds || !AD_SLIDES.includes(s)) && (s !== 'boosted' || (ca.data?.summary.paidPosts ?? 0) > 0) && (s !== 'basket' || basket.length > 0)), [wanted, hasAds, ca.data, basket.length]);
+  const pc = usePlatformCaps();
+  const ad = a.data as AccountAnalyticsV13 | null | undefined;
+  const platform = isPlatform(ad?.platform) ? ad!.platform! : platformOf(ad?.account ?? { igId });
+  const caps: PlatformCapabilities = ad?.capabilities ?? pc.caps(platform);
+  const hasAds = caps.ads && !!bl.data?.adAccount;
+  const slides = useMemo(() => SLIDES.filter((s) => wanted.includes(s) && slideSupported(s, caps) && (hasAds || !AD_SLIDES.includes(s)) && (s !== 'boosted' || (ca.data?.summary.paidPosts ?? 0) > 0) && (s !== 'basket' || basket.length > 0)), [wanted, hasAds, ca.data, basket.length, caps]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { setDir('fwd'); setI((x) => Math.min(slides.length - 1, x + 1)); }
@@ -98,33 +109,31 @@ export function PresentationRun() {
     return () => window.removeEventListener('keydown', onKey);
   }, [slides.length, nav]);
   if (a.isLoading || !a.data || bl.isLoading || ca.isLoading) return <div className="h-full flex items-center justify-center bg-surface-0"><Loading /></div>;
-  const d = a.data;
+  const d = a.data as AccountAnalyticsV13;
   const acc = d.account;
+  const primary: 'reach' | 'views' = caps.reach ? 'reach' : 'views';
+  const kpiDefs = accountKpiDefs(d, platform, caps, t, { posts: true, maxExtra: 0 }).slice(0, 6);
+  const chart = accountChart(platform, t);
   const slide = slides[Math.min(i, slides.length - 1)];
   const cur = bl.data?.adAccount?.currency ?? 'USD';
-  const top = [...d.posts].sort((x, y) => (y.reach ?? 0) - (x.reach ?? 0)).slice(0, 6);
+  const top = [...d.posts].sort((x, y) => (y[primary] ?? 0) - (x[primary] ?? 0)).slice(0, 6);
 
   return (
     <div className="h-full bg-surface-0 flex flex-col select-none" onClick={() => { setDir('fwd'); setI((x) => Math.min(slides.length - 1, x + 1)); }}>
       <div key={`${slide}-${i}`} className={`flex-1 min-h-0 px-16 py-12 flex flex-col max-w-[1500px] w-full mx-auto ${dir === 'fwd' ? 'slide-enter' : 'slide-enter-back'}`}>
         {slide === 'cover' && (
-          <Center>{branding && (branding.agencyName || branding.logo) && <div className="flex items-center gap-4 mb-12 pb-4" style={{ borderBottom: `2px solid ${branding.accent}` }}>{branding.logo && <img src={branding.logo} alt="" className="h-12 max-w-[240px] object-contain" />}{branding.agencyName && <span className="text-xl font-semibold">{branding.agencyName}</span>}</div>}<div className="flex items-center gap-8"><Avatar username={acc.username} url={acc.profilePicUrl} color={acc.color} size={120} />
+          <Center>{branding && (branding.agencyName || branding.logo) && <div className="flex items-center gap-4 mb-12 pb-4" style={{ borderBottom: `2px solid ${branding.accent}` }}>{branding.logo && <img src={branding.logo} alt="" className="h-12 max-w-[240px] object-contain" />}{branding.agencyName && <span className="text-xl font-semibold">{branding.agencyName}</span>}</div>}<div className="flex items-center gap-8"><Avatar username={acc.username} url={acc.profilePicUrl} color={acc.color} size={120} platform={acc.platform} />
             <div><div className="text-3xl font-semibold">{acc.name ?? acc.username}</div><div className="text-xl text-ink-2 mt-2">@{acc.username}{acc.clientName ? ` · ${acc.clientName}` : ''}</div><div className="text-lg text-ink-2 mt-6">{fmtDate(period.from, { day: 'numeric', month: 'long' })} – {fmtDate(period.to, { day: 'numeric', month: 'long', year: 'numeric' })}</div></div></div></Center>
         )}
         {slide === 'kpi' && (
           <Center><Title>{t('overview')}</Title><div className="grid grid-cols-3 gap-x-12 gap-y-10">
-            <Big label={t('reach')} value={fmtCompact(d.kpis.reach.value)} change={d.kpis.reach.changePct} />
-            <Big label={t('views')} value={fmtCompact(d.kpis.views.value)} change={d.kpis.views.changePct} />
-            <Big label={t('profile_views')} value={fmtCompact(d.kpis.profileViews.value)} change={d.kpis.profileViews.changePct} />
-            <Big label={t('er')} value={fmtPct(d.kpis.er.value, 2)} change={d.kpis.er.changePct} />
-            <Big label={t('new_followers')} value={(d.kpis.newFollowers.value ?? 0) >= 0 ? '+' + fmtNum(d.kpis.newFollowers.value) : fmtNum(d.kpis.newFollowers.value)} change={d.kpis.newFollowers.changePct} />
-            <Big label={t('posts')} value={fmtNum(d.kpis.posts.value)} change={d.kpis.posts.changePct} />
+            {kpiDefs.map((k) => <Big key={k.key} label={k.label} value={k.format(k.kpi.value)} change={k.kpi.changePct} />)}
           </div></Center>
         )}
         {slide === 'growth' && (
           <><Title>{t('chart_followers')} <span className="text-ink-2 font-normal num">· {fmtNum(acc.followers)} {t('followers').toLowerCase()}</span></Title>
             <div className="flex-1 min-h-0"><TimeSeries data={d.followerSeries} legend={false} series={[{ key: 'followers', name: t('followers'), color: acc.color ?? '#4F7CFF', type: 'area' }]} /></div>
-            <div className="flex-1 min-h-0 mt-6"><TimeSeries data={d.series} series={[{ key: 'reach', name: t('reach'), color: '#4F7CFF', type: 'area' }, { key: 'accounts_engaged', name: t('engaged'), color: '#3FBF8F', axis: 'right' }]} /></div></>
+            <div className="flex-1 min-h-0 mt-6"><TimeSeries data={d.series} series={chart.series} /></div></>
         )}
         {slide === 'content' && ca.data && (
           <><Title>{t('content_analysis')} <span className="text-ink-2 font-normal num">· {ca.data.summary.posts} {t('posts').toLowerCase()} · {t('avg_er')} {fmtPct(ca.data.summary.avgEr, 2)}</span></Title>
@@ -244,11 +253,13 @@ function contentInsights(ca: NonNullable<ReturnType<typeof useContentAnalysis>['
   return out;
 }
 
+/** Slides that need a platform capability (ads slides also need a linked ad account at run time). */
+function slideSupported(s: SlideId, caps: PlatformCapabilities): boolean {
+  return caps.ads || !AD_SLIDES.includes(s);
+}
+
 function typeKeyOf(p: Media): TypeKey {
-  if (p.mediaProductType === 'REELS') return 'reels';
-  if (p.mediaType === 'CAROUSEL_ALBUM') return 'carousel';
-  if (p.mediaType === 'VIDEO') return 'video';
-  return 'image';
+  return mediaTypeKey(p);
 }
 
 function Center({ children }: { children: ReactNode }) {

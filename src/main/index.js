@@ -56,7 +56,7 @@ async function runSmoke(win) {
   win.webContents.on('console-message', (_e, level, message) => { if (level >= 2) errors.push(message); });
   win.webContents.on('did-fail-load', (_e, code, desc) => { console.error('did-fail-load', code, desc); app.exit(2); });
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const routes = (process.env.METADASH_SMOKE_ROUTES ?? '/,/account/17840000,/content,/compare,/ads,/competitors,/reports,/presentation,/settings,/setup').split(',');
+  const routes = (process.env.METADASH_SMOKE_ROUTES ?? '/,/account/17840000,/account/fb-1000000000000001,/account/th-2500000000000001,/content,/compare,/ads,/competitors,/reports,/presentation,/settings,/setup').split(',');
   win.webContents.once('did-finish-load', async () => {
     await sleep(1500);
     const ok = await win.webContents.executeJavaScript('!!document.querySelector("[data-app-ready]")');

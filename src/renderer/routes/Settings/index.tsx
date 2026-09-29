@@ -15,6 +15,9 @@ import { NotificationsSection } from './NotificationsSection';
 import { AiSection } from './AiSection';
 import { BrandingSection } from './BrandingSection';
 import { ClientLogoCell, useClientLogoFlags } from './ClientLogoCell';
+import { ConnectionsSection } from './ConnectionsSection';
+import { PlatformBadge } from '@/components/PlatformBadge';
+import type { DisabledMetric } from '@/lib/types';
 
 const SERIES_COLORS = ['#4F7CFF', '#3FBF8F', '#E8B44A', '#C06CE8', '#E5605F', '#48C3D6'];
 
@@ -29,7 +32,12 @@ export function SettingsPage() {
   const s = (settings.data ?? {}) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   const [msg, setMsg] = useState<string | null>(null);
   const focus = (useLocation().state as { focus?: string } | null)?.focus;
-  useEffect(() => { if (focus === 'ai' && !settings.isLoading) document.getElementById('ai-assistant')?.scrollIntoView({ block: 'start' }); }, [focus, settings.isLoading]);
+  const hash = useLocation().hash;
+  useEffect(() => {
+    if (settings.isLoading) return;
+    const target = focus === 'ai' ? 'ai-assistant' : focus === 'connections' || hash === '#connections' ? 'connections' : null;
+    if (target) document.getElementById(target)?.scrollIntoView({ block: 'start' });
+  }, [focus, hash, settings.isLoading]);
 
   if (settings.isLoading) return <Loading />;
   return (
@@ -43,6 +51,8 @@ export function SettingsPage() {
           </div>
         )}
       </Section>
+
+      <div id="connections" className="scroll-mt-4"><ConnectionsSection /></div>
 
       <Section title={t('sync_settings')}>
         <div className="space-y-4">
@@ -105,7 +115,9 @@ export function SettingsPage() {
 function MetricsSection() {
   const t = useT();
   const qc = useQueryClient();
-  const [disabled, setDisabled] = useState<{ metric: string; scope: string; reason: string; disabledAt: number }[]>([]);
+  const [disabled, setDisabled] = useState<DisabledMetric[]>([]);
+  // Instagram keeps the legacy string argument; other platforms re-enable by (metric, platform, scope).
+  const enable = async (d: DisabledMetric) => setDisabled(await call<DisabledMetric[]>(api.sync.enableMetric(!d.platform || d.platform === 'instagram' ? d.metric : { metric: d.metric, platform: d.platform, scope: d.scope })));
   const [sets, setSets] = useState<Record<string, Record<string, string[]>> | null>(null);
   const settings = useSettings();
   const overrides = ((settings.data ?? {}) as Record<string, any>).metricOverrides as Record<string, Record<string, string[]>> | null; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -123,7 +135,7 @@ function MetricsSection() {
       <div className="space-y-4 text-sm">
         <div><div className="text-ink-2 text-xs mb-1">{t('unsupported_metrics')}</div>
           {disabled.length === 0 ? <div className="text-ink-2">{t('none')}</div> : disabled.map((d) => (
-            <div key={d.metric} className="flex items-center justify-between h-8 border-b border-line"><span><code>{d.metric}</code> <span className="text-ink-2 text-xs">({d.scope}) {d.reason?.slice(0, 80)}</span></span><button className="btn btn-sm" onClick={async () => setDisabled(await call(api.sync.enableMetric(d.metric)))}>{t('re_enable')}</button></div>
+            <div key={`${d.platform ?? 'instagram'}:${d.scope}:${d.metric}`} className="flex items-center justify-between gap-2 min-h-8 py-1 border-b border-line"><span className="flex items-center gap-2 min-w-0"><PlatformBadge platform={d.platform ?? 'instagram'} /><code>{d.metric}</code> <span className="text-ink-2 text-xs truncate">({d.scope}) {d.reason?.slice(0, 80)}</span></span><button className="btn btn-sm flex-none" onClick={() => enable(d)}>{t('re_enable')}</button></div>
           ))}
         </div>
         {sets && (
@@ -149,7 +161,7 @@ function AccountsSection() {
         <thead><tr><th>{t('account')}</th><th>{t('client')}</th><th>{t('client_logo')}</th><th>{t('color')}</th><th>{t('tags')}</th><th>{t('last_sync')}</th><th>{t('tracked')}</th></tr></thead>
         <tbody>{(accounts.data ?? []).map((a) => (
           <tr key={a.igId} className={a.isTracked ? '' : 'opacity-50'}>
-            <td><span className="flex items-center gap-2"><Avatar username={a.username} url={a.profilePicUrl} color={a.color} size={22} />@{a.username}</span></td>
+            <td><span className="flex items-center gap-2"><Avatar username={a.username} url={a.profilePicUrl} color={a.color} size={22} platform={a.platform} />@{a.username}</span></td>
             <td><input className="input h-7 text-xs w-44" defaultValue={a.clientName ?? ''} onBlur={(e) => e.target.value !== (a.clientName ?? '') && update.mutate({ igId: a.igId, patch: { clientName: e.target.value } })} /></td>
             <td><ClientLogoCell igId={a.igId} has={!!logoFlags.data?.[a.igId]} /></td>
             <td><div className="flex gap-1">{SERIES_COLORS.map((c) => <button key={c} className="w-4 h-4 rounded-full border" style={{ background: c, borderColor: a.color === c ? 'var(--ink-1)' : 'transparent' }} onClick={() => update.mutate({ igId: a.igId, patch: { color: c } })} aria-label={c} />)}</div></td>

@@ -10,6 +10,12 @@ import { Section, Toggle, Loading, Avatar, TagChip } from '@/components/ui';
 import { PostThumb } from '@/components/PostThumb';
 import { ExcelButton } from '@/components/ExcelButton';
 import { AiCommentaryButton } from './AiCommentaryButton';
+import { usePlatformCaps } from '@/hooks/usePlatforms';
+import { platformOf } from '@/lib/platforms';
+import type { PlatformCapabilities } from '@/lib/types';
+
+/** Report sections that depend on a platform capability (htmlReport drops them per account; the UI greys them out). */
+const SECTION_CAPS: Record<string, keyof PlatformCapabilities> = { stories: 'stories', demographics: 'demographics', competitors: 'competitors', ads: 'ads', blended: 'ads', campaigns: 'ads', breakdown: 'ads', boosted: 'ads' };
 
 type Template = 'monthly' | 'weekly_client' | 'custom' | 'portfolio' | 'campaign' | 'weekly' | 'basket';
 type PeriodPreset = 'topbar' | 'today' | 'yesterday' | 7 | 30 | 28 | 'this_month' | 'last_month' | 'custom';
@@ -84,7 +90,11 @@ export function ReportsPage() {
     return { from: customFrom, to: customTo };
   }, [periodPreset, period, customFrom, customTo]);
   const available = sectionDefs[template] ?? [];
-  const buildParams = () => ({ igIds: needsAccount ? igIds : undefined, igId: needsAccount ? igIds[0] : undefined, from: range.from, to: range.to, weekOf: range.to, tagIds, coverTitle: coverTitle || undefined, logoDataUrl: logo?.dataUrl, sections, basket, lang, commentary });
+  const pc = usePlatformCaps();
+  const selectedPlatforms = useMemo(() => [...new Set((accounts.data ?? []).filter((a) => igIds.includes(a.igId)).map((a) => platformOf(a)))], [accounts.data, igIds]);
+  // A section is N/A when none of the selected accounts' platforms supports it.
+  const sectionNa = (sec: string) => needsAccount && selectedPlatforms.length > 0 && !!SECTION_CAPS[sec] && !selectedPlatforms.some((p) => pc.caps(p)[SECTION_CAPS[sec]]);
+  const buildParams = () => ({ igIds: needsAccount ? igIds : undefined, igId: needsAccount ? igIds[0] : undefined, from: range.from, to: range.to, weekOf: range.to, tagIds, coverTitle: coverTitle || undefined, logoDataUrl: logo?.dataUrl, sections: { ...sections, ...Object.fromEntries(available.filter(sectionNa).map((x) => [x, false])) }, basket, lang, commentary });
   const ready = (!needsAccount || igIds.length > 0) && range.from <= range.to && (template !== 'basket' || basket.length > 0);
 
   useEffect(() => {
@@ -179,7 +189,7 @@ export function ReportsPage() {
             <input className="input mb-2" placeholder={t('search')} value={search} onChange={(e) => setSearch(e.target.value)} />
             <div className="max-h-56 overflow-auto -mx-2">{list.map((a) => { const on = igIds.includes(a.igId); return (
               <button key={a.igId} className={`w-full flex items-center gap-2 px-2 h-8 text-left hover:bg-surface-2 ${on ? 'bg-surface-2' : ''}`} onClick={() => toggleAccount(a.igId)}>
-                <input type={single ? 'radio' : 'checkbox'} readOnly checked={on} className="pointer-events-none" /><Avatar username={a.username} url={a.profilePicUrl} color={a.color} size={18} /><span className="truncate">@{a.username}</span><span className="text-xs text-ink-2 truncate">{a.clientName}</span>
+                <input type={single ? 'radio' : 'checkbox'} readOnly checked={on} className="pointer-events-none" /><Avatar username={a.username} url={a.profilePicUrl} color={a.color} size={18} platform={a.platform} /><span className="truncate">@{a.username}</span><span className="text-xs text-ink-2 truncate">{a.clientName}</span>
               </button>
             ); })}</div>
             {!single && igIds.length > 0 && <button className="btn btn-ghost btn-sm mt-1" onClick={() => setIgIds([])}>{t('clear')}</button>}
@@ -201,7 +211,9 @@ export function ReportsPage() {
               <div className="flex items-center justify-between gap-2 mb-1"><label htmlFor="report-commentary" className="text-xs text-ink-2 flex-none">{t('commentary')}</label><AiCommentaryButton getParams={() => ({ template, igIds: needsAccount ? igIds : undefined, igId: needsAccount ? igIds[0] : undefined, from: range.from, to: range.to, weekOf: range.to, tagIds, basket, lang })} current={commentary} onText={setCommentary} disabled={!ready} /></div>
               <textarea id="report-commentary" className="input" rows={commentary.length > 300 ? 10 : 4} value={commentary} onChange={(e) => setCommentary(e.target.value)} placeholder={t('commentary_placeholder')} />
             </div>
-            <div><div className="text-xs text-ink-2 mb-2">{t('sections')}</div><div className="grid grid-cols-2 gap-1.5">{available.map((s) => <Toggle key={s} checked={sections[s] !== false} onChange={(v) => setSections({ ...sections, [s]: v })} label={t(`sec_${s}` as Key)} />)}</div></div>
+            <div><div className="text-xs text-ink-2 mb-2">{t('sections')}</div><div className="grid grid-cols-2 gap-1.5">{available.map((s) => sectionNa(s)
+              ? <div key={s} className="opacity-40 cursor-not-allowed" title={t('section_na')} aria-disabled><div className="pointer-events-none"><Toggle checked={false} onChange={() => {}} label={`${t(`sec_${s}` as Key)} (N/A)`} /></div></div>
+              : <Toggle key={s} checked={sections[s] !== false} onChange={(v) => setSections({ ...sections, [s]: v })} label={t(`sec_${s}` as Key)} />)}</div></div>
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-line">
               <button className="btn btn-primary" disabled={busy !== null || !ready} onClick={() => run(['html'])}>{busy === 'html' ? t('loading') : t('export_html')}</button>
               <button className="btn" disabled={busy !== null || !ready} onClick={() => run(['pdf'])}>{busy === 'pdf' ? t('loading') : t('export_pdf')}</button>

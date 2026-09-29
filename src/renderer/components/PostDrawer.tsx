@@ -13,6 +13,8 @@ import { LifecycleChart } from '@/charts/LifecycleChart';
 import { TimeSeries } from '@/charts/TimeSeries';
 import { Icon } from './Icons';
 import { AdMetricGrid } from './AdMetricCells';
+import { usePlatformCaps } from '@/hooks/usePlatforms';
+import { PLATFORM_LABELS, platformOf } from '@/lib/platforms';
 
 /** Right-hand slide-over with the full post analysis. Esc closes. */
 export function PostDrawer({ mediaId, onClose }: { mediaId: string | null; onClose: () => void }) {
@@ -39,19 +41,22 @@ function PostDrawerBody({ mediaId, onClose }: { mediaId: string; onClose: () => 
   const lang = useAppStore((s) => s.lang);
   const { basket, toggleBasket } = useAppStore();
   const q = useMediaDetail(mediaId);
+  const pc = usePlatformCaps();
   if (q.isLoading || !q.data) return <div className="p-8"><Loading /></div>;
   const d = q.data;
   const m = d.media;
   const inBasket = basket.includes(m.mediaId);
   const bench = d.benchmark;
   const typeName = t(`type_${m.typeKey}` as 'type_image');
-  const reachSeries = d.lifecycle.series.reach ?? [];
+  const reachSeries = d.lifecycle.series.reach?.length ? d.lifecycle.series.reach : (d.lifecycle.series.views ?? []); // Threads: no reach, views curve
   const finalReach = reachSeries[reachSeries.length - 1]?.value ?? 0;
   const curve = reachSeries.map((p) => ({ ageHours: p.ageHours, ratio: finalReach ? p.value / finalReach : null }));
   const cur = d.paid?.currency ?? 'USD';
 
-  const tiles: { key: keyof MediaDetail['deltas']; label: string; value: string; tip?: string }[] = [
-    { key: 'reach', label: t('reach'), value: fmtNum(m.reach) },
+  const platform = platformOf(m);
+  const caps = pc.caps(platform);
+  const allTiles: { key: keyof MediaDetail['deltas']; label: string; value: string; tip?: string }[] = [
+    { key: 'reach', label: platform === 'facebook' ? t('viewers') : t('reach'), value: fmtNum(m.reach), tip: platform === 'facebook' ? t('viewers_tip') : undefined },
     { key: 'views', label: t('views'), value: fmtNum(m.views), tip: m.typeKey === 'reels' ? t('reels_views_tip') : undefined },
     { key: 'likes', label: t('likes'), value: fmtNum(m.likes) },
     { key: 'comments', label: t('comments'), value: fmtNum(m.comments) },
@@ -60,17 +65,21 @@ function PostDrawerBody({ mediaId, onClose }: { mediaId: string; onClose: () => 
     { key: 'engagementRate', label: t('er'), value: fmtPct(m.engagementRate, 2), tip: t('er_formula') },
     { key: 'saveRate', label: t('save_rate'), value: fmtPct(m.saveRate, 2), tip: t('save_rate_formula') },
   ];
+  // Hide tiles the platform cannot report instead of showing zeros.
+  const tiles = allTiles.filter((x) => (x.key !== 'reach' || caps.reach) && ((x.key !== 'saved' && x.key !== 'saveRate') || caps.saveRate));
+  const extras = ([['reposts', t('reposts')], ['quotes', t('quotes')], ['clicks', t('clicks')]] as const).filter(([k]) => m[k] != null);
+  const openLabel = platform === 'facebook' ? t('open_in_facebook') : platform === 'threads' ? t('open_in_threads') : t('open_in_instagram');
 
   return (
     <>
       <header className="flex items-center gap-3 px-6 h-14 border-b border-line flex-none">
-        <Avatar username={m.username} url={m.profilePicUrl} color={m.accountColor} size={28} />
+        <Avatar username={m.username} url={m.profilePicUrl} color={m.accountColor} size={28} platform={m.platform} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2"><Link to={`/account/${m.igId}`} className="font-medium no-underline text-ink-1 hover:text-accent" onClick={onClose}>@{m.username}</Link><TypeBadge typeKey={m.typeKey} />{(m.spend ?? 0) > 0 && <span className="badge badge-warn">{t('ad_spend')}</span>}</div>
           <div className="text-xs text-ink-2 num">{fmtDateTime(m.postedAt)} · {WEEKDAYS[lang][m.postedWeekday]} {m.postedHour}:00</div>
         </div>
         <button className={`btn btn-sm ${inBasket ? 'btn-primary' : ''}`} onClick={() => toggleBasket(m.mediaId)}>{inBasket ? '✓ ' : '+ '}{t('report_basket')}</button>
-        {m.permalink && <button className="btn btn-sm" onClick={() => api.system.openExternal(m.permalink!)}>{t('open_in_instagram')} <Icon.external /></button>}
+        {m.permalink && <button className="btn btn-sm" onClick={() => api.system.openExternal(m.permalink!)}>{openLabel} <Icon.external /></button>}
         <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label={t('close')}>✕</button>
       </header>
 
@@ -117,7 +126,14 @@ function PostDrawerBody({ mediaId, onClose }: { mediaId: string; onClose: () => 
                   <div className="text-xs num mt-0.5 flex items-center gap-1"><Delta value={d.deltas[tile.key]} />{bench && <span className="text-ink-2">{tile.key === 'engagementRate' || tile.key === 'saveRate' ? fmtPct(bench[tile.key], 2) : fmtNum(bench[tile.key])}</span>}</div>
                 </div>
               ))}
+              {extras.map(([k, label]) => (
+                <div key={k} className="bg-surface-1 p-3">
+                  <div className="text-xs text-ink-2">{label}</div>
+                  <div className="text-xl font-semibold num leading-tight mt-0.5">{fmtNum(m[k])}</div>
+                </div>
+              ))}
             </div>
+            {!caps.saveRate && <div className="text-xs text-ink-2 mt-1">{t('save_rate')}: {t('na_for_platform', { p: PLATFORM_LABELS[platform] })}</div>}
           </section>
 
           <section className="grid grid-cols-12 gap-5">

@@ -26,6 +26,11 @@ import { useContentAnalysis } from '@/hooks/queries';
 import type { TypeKey } from '@/lib/types';
 import { Icon } from '@/components/Icons';
 import { useRunSync } from '@/hooks/useSyncEvents';
+import { usePlatformCaps } from '@/hooks/usePlatforms';
+import { TYPE_KEYS_BY_PLATFORM, isPlatform, platformOf, profileUrl, typeKeyOf, type AccountAnalyticsV13 } from '@/lib/platforms';
+import { accountChart, accountKpiDefs } from '@/lib/accountKpis';
+import { PlatformBadge } from '@/components/PlatformBadge';
+import type { Platform, PlatformCapabilities } from '@/lib/types';
 
 type Tab = 'overview' | 'posts' | 'stories' | 'demographics' | 'competitors' | 'ads';
 
@@ -35,16 +40,28 @@ export function AccountPage() {
   const lang = useAppStore((s) => s.lang);
   const q = useAccountAnalytics(igId);
   const runSync = useRunSync();
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tabState, setTab] = useState<Tab>('overview');
+  const pc = usePlatformCaps();
   if (q.isLoading) return <Loading />;
   if (q.error) return <ErrorState error={q.error} />;
   if (!q.data) return <EmptyState title={t('no_data')} />;
-  const a = q.data;
+  const a = q.data as AccountAnalyticsV13;
   const acc = a.account;
+  const platform: Platform = isPlatform(a.platform) ? a.platform : platformOf(acc);
+  const caps: PlatformCapabilities = a.capabilities ?? pc.caps(platform);
+  // Tabs by capability: IG all; Facebook overview/posts/ads; Threads overview/posts/demographics.
   const tabs = [
-    { id: 'overview' as Tab, label: t('overview') }, { id: 'posts' as Tab, label: t('posts') }, { id: 'stories' as Tab, label: t('stories') },
-    { id: 'demographics' as Tab, label: t('demographics') }, { id: 'competitors' as Tab, label: t('competitors') }, { id: 'ads' as Tab, label: t('ads') },
+    { id: 'overview' as Tab, label: t('overview') }, { id: 'posts' as Tab, label: t('posts') },
+    ...(caps.stories ? [{ id: 'stories' as Tab, label: t('stories') }] : []),
+    ...(caps.demographics ? [{ id: 'demographics' as Tab, label: t('demographics') }] : []),
+    ...(caps.competitors ? [{ id: 'competitors' as Tab, label: t('competitors') }] : []),
+    ...(caps.ads ? [{ id: 'ads' as Tab, label: t('ads') }] : []),
   ];
+  const tab: Tab = tabs.some((x) => x.id === tabState) ? tabState : 'overview';
+  const kpiDefs = accountKpiDefs(a, platform, caps, t);
+  const chart = accountChart(platform, t);
+  const openLabel = platform === 'facebook' ? t('open_in_facebook') : platform === 'threads' ? t('open_in_threads') : t('open_in_instagram');
+  const health = a.health ? { ...a.health, keys: (['growth', 'engagement', 'consistency', 'response'] as const).filter((k) => a.health!.components[k] && (k !== 'response' || caps.comments)) } : null;
   const prevMap = new Map(a.prevSeries.map((d, i) => [i, d]));
   const prevLookup = (label: string, key: string) => {
     const idx = a.series.findIndex((d) => d.date === label);
@@ -56,14 +73,14 @@ export function AccountPage() {
     <div className="space-y-5">
       <header className="flex items-start justify-between gap-6">
         <div className="flex items-start gap-4">
-          <Avatar username={acc.username} url={acc.profilePicUrl} color={acc.color} size={56} />
+          <Avatar username={acc.username} url={acc.profilePicUrl} color={acc.color} size={56} platform={acc.platform} />
           <div>
-            <div className="flex items-center gap-2"><h1 className="text-xl font-semibold m-0">@{acc.username}</h1>{acc.clientName && <span className="badge badge-muted">{acc.clientName}</span>}{a.health && <span className="flex items-center gap-1 text-xs text-ink-2">{t('health_score')} <HealthBadge score={a.health.score} /></span>}</div>
+            <div className="flex items-center gap-2"><h1 className="text-xl font-semibold m-0">@{acc.username}</h1>{platform !== 'instagram' && <PlatformBadge platform={platform} />}{acc.clientName && <span className="badge badge-muted">{acc.clientName}</span>}{a.health && <span className="flex items-center gap-1 text-xs text-ink-2">{t('health_score')} <HealthBadge score={a.health.score} /></span>}</div>
             <div className="text-ink-2 mt-0.5">{acc.name}{acc.biography ? ` · ${acc.biography}` : ''}</div>
             <div className="text-sm mt-1 num flex items-center gap-3">
               <span><strong>{fmtNum(acc.followers)}</strong> {t('followers').toLowerCase()}</span>
               <span className="text-ink-2">{fmtNum(acc.mediaCount)} {t('posts').toLowerCase()}</span>
-              <button className="btn btn-ghost btn-sm text-accent" onClick={() => api.system.openExternal(`https://www.instagram.com/${acc.username}/`)}>{t('open_in_instagram')} <Icon.external /></button>
+              <button className="btn btn-ghost btn-sm text-accent" onClick={() => api.system.openExternal(profileUrl({ ...acc, platform }))}>{openLabel} <Icon.external /></button>
             </div>
           </div>
         </div>
@@ -74,23 +91,18 @@ export function AccountPage() {
       </header>
 
       <KpiStrip>
-        <Kpi label={t('reach')} kpi={a.kpis.reach} format={fmtCompact} />
-        <Kpi label={t('views')} kpi={a.kpis.views} format={fmtCompact} />
-        <Kpi label={t('profile_views')} kpi={a.kpis.profileViews} format={fmtCompact} />
-        <Kpi label={t('er')} kpi={a.kpis.er} format={(v) => fmtPct(v, 2)} tip={t('er_formula')} />
-        <Kpi label={t('save_rate')} kpi={a.kpis.saveRate} format={(v) => fmtPct(v, 2)} tip={t('save_rate_formula')} />
-        <Kpi label={t('new_followers')} kpi={a.kpis.newFollowers} format={(v) => (v == null ? '—' : (v >= 0 ? '+' : '') + fmtNum(v))} />
+        {kpiDefs.map((k) => <Kpi key={k.key} label={k.label} kpi={k.kpi} format={k.format} tip={k.tip} />)}
       </KpiStrip>
-      <OrgPaidStrip igId={acc.igId} organicReach={a.kpis.reach.value ?? 0} organicViews={a.kpis.views.value ?? 0} />
-      {a.paid && <PaidStrip paid={a.paid} />}
+      {caps.ads && <OrgPaidStrip igId={acc.igId} organicReach={a.kpis.reach?.value ?? 0} organicViews={a.kpis.views?.value ?? 0} />}
+      {caps.ads && a.paid && <PaidStrip paid={a.paid} />}
 
       <Tabs tabs={tabs} value={tab} onChange={setTab} />
 
       {tab === 'overview' && (
         <div className="grid grid-cols-12 gap-5">
           <div className="col-span-12 xl:col-span-8">
-            <ChartWrapper id={`reach-${acc.igId}`} title={t('chart_reach_engaged')} height={280}>
-              <TimeSeries data={a.series} prevLookup={prevLookup} series={[{ key: 'reach', name: t('reach'), color: '#4F7CFF', type: 'area' }, { key: 'accounts_engaged', name: t('engaged'), color: '#3FBF8F', axis: 'right' }]} />
+            <ChartWrapper id={`reach-${acc.igId}`} title={chart.title} height={280}>
+              <TimeSeries data={a.series} prevLookup={prevLookup} series={chart.series} />
             </ChartWrapper>
           </div>
           <div className="col-span-12 xl:col-span-4">
@@ -102,19 +114,19 @@ export function AccountPage() {
           <div className="col-span-12 xl:col-span-5">
             <Section title={t('content_types')} right={<ExcelButton name="content-types" getData={() => ({ name: t('content_types'), columns: [{ key: 'type', label: t('type'), type: 'text' }, { key: 'posts', label: t('posts'), type: 'int' }, { key: 'avgReach', label: t('reach'), type: 'int' }, { key: 'avgLikes', label: t('likes'), type: 'int' }, { key: 'avgComments', label: t('comments'), type: 'int' }, { key: 'avgSaved', label: t('saved'), type: 'int' }, { key: 'avgEr', label: t('er_short'), type: 'percent' }], rows: a.byType.map((r) => ({ ...r, type: mediaTypeLabel({ mediaProductType: r.productType, mediaType: r.mediaType }, lang) })) })} />}>
               <table className="table -m-4 w-[calc(100%+2rem)]">
-                <thead><tr><th>{t('type')}</th><th className="num">{t('posts')}</th><th className="num">{t('reach')}</th><th className="num">{t('likes')}</th><th className="num">{t('saved')}</th><th className="num">{t('er_short')}</th></tr></thead>
-                <tbody>{a.byType.map((r) => <tr key={r.productType + r.mediaType}><td>{mediaTypeLabel({ mediaProductType: r.productType, mediaType: r.mediaType }, lang)}</td><td className="num">{r.posts}</td><td className="num">{fmtNum(r.avgReach)}</td><td className="num">{fmtNum(r.avgLikes)}</td><td className="num">{fmtNum(r.avgSaved)}</td><td className="num">{fmtPct(r.avgEr, 2)}</td></tr>)}
+                <thead><tr><th>{t('type')}</th><th className="num">{t('posts')}</th>{caps.reach && <th className="num">{platform === 'facebook' ? t('viewers') : t('reach')}</th>}<th className="num">{t('likes')}</th>{caps.saveRate ? <th className="num">{t('saved')}</th> : <th className="num">{t('comments')}</th>}<th className="num">{t('er_short')}</th></tr></thead>
+                <tbody>{a.byType.map((r) => <tr key={r.productType + r.mediaType}><td>{mediaTypeLabel({ mediaProductType: r.productType, mediaType: r.mediaType }, lang)}</td><td className="num">{r.posts}</td>{caps.reach && <td className="num">{fmtNum(r.avgReach)}</td>}<td className="num">{fmtNum(r.avgLikes)}</td><td className="num">{fmtNum(caps.saveRate ? r.avgSaved : r.avgComments)}</td><td className="num">{fmtPct(r.avgEr, 2)}</td></tr>)}
                 {!a.byType.length && <tr><td colSpan={6} className="text-ink-2 text-center">{t('no_posts')}</td></tr>}</tbody>
               </table>
               <div className="text-xs text-ink-2 mt-4">{t('per_post_avg_note')}</div>
             </Section>
             <div className="mt-5"><LifecyclePanel igId={acc.igId} /></div>
           </div>
-          {a.health && (
-            <div className="col-span-12">{(() => { const h = a.health!; return (
+          {health && (
+            <div className="col-span-12">{(() => { const h = health; return (
               <Section title={<span>{t('health_score')} <InfoTip text={t('health_formula')} /></span>}>
-                <div className="grid grid-cols-4 gap-4 text-sm">
-                  {(['growth', 'engagement', 'consistency', 'response'] as const).map((k) => (
+                <div className="grid gap-4 text-sm" style={{ gridTemplateColumns: `repeat(${h.keys.length}, minmax(0, 1fr))` }}>
+                  {h.keys.map((k) => (
                     <div key={k}><div className="text-ink-2 text-xs">{k === 'growth' ? t('growth') : k === 'engagement' ? t('er') : k === 'consistency' ? t('consistency') : t('response_rate')}</div>
                       <div className="flex items-baseline gap-2 num"><span className="text-lg font-semibold">{h.components[k].pct}</span><span className="text-ink-2 text-xs">pct · {k === 'consistency' ? `σ ${h.components[k].raw}` : fmtPct(h.components[k].raw, 2)}</span></div>
                       <div className="h-1.5 bg-surface-2 rounded mt-1"><div className="h-full bg-accent rounded" style={{ width: `${h.components[k].pct}%` }} /></div></div>
@@ -126,9 +138,9 @@ export function AccountPage() {
           )}
         </div>
       )}
-      {tab === 'posts' && <PostsPanel posts={a.posts} igId={acc.igId} />}
+      {tab === 'posts' && <PostsPanel posts={a.posts} igId={acc.igId} platform={platform} caps={caps} />}
       {tab === 'stories' && <StoriesPanel igId={acc.igId} />}
-      {tab === 'demographics' && <DemographicsPanel igId={acc.igId} />}
+      {tab === 'demographics' && <DemographicsPanel igId={acc.igId} platform={platform} />}
       {tab === 'competitors' && <CompetitorPanel igId={acc.igId} />}
       {tab === 'ads' && <AdsPanel igId={acc.igId} />}
     </div>
@@ -192,18 +204,21 @@ function LifecyclePanel({ igId }: { igId: string }) {
   );
 }
 
-function PostsPanel({ posts, igId }: { posts: Media[]; igId: string }) {
+function PostsPanel({ posts, igId, platform, caps }: { posts: Media[]; igId: string; platform: Platform; caps: PlatformCapabilities }) {
   const t = useT();
   const lang = useAppStore((s) => s.lang);
   const [view, setView] = useState<'grid' | 'table' | 'analysis'>('grid');
-  const [sort, setSort] = useState<'reach' | 'er' | 'saved' | 'date'>('reach');
+  const primary: 'reach' | 'views' = caps.reach ? 'reach' : 'views';
+  const [sort, setSort] = useState<'reach' | 'views' | 'er' | 'saved' | 'date'>(primary);
+  const sorts = [primary, 'er', ...(caps.saveRate ? ['saved' as const] : []), 'date'] as const;
+  const sortLabel = (s: string) => (s === 'reach' ? t('reach') : s === 'views' ? t('views') : s === 'er' ? t('er_short') : s === 'saved' ? t('saved') : t('date'));
+  const extraCols = ([['reposts', t('reposts')], ['quotes', t('quotes')], ['clicks', t('clicks')]] as const).filter(([k]) => posts.some((p) => p[k] != null));
   const [typeKeys, setTypeKeys] = useState<TypeKey[]>([]);
   const [open, setOpen] = useState<string | null>(null);
   const analysis = useContentAnalysis({ igIds: [igId], typeKeys: typeKeys.length ? typeKeys : undefined }, true);
   const filtered = useMemo(() => posts.filter((p) => {
     if (!typeKeys.length) return true;
-    const key = p.mediaProductType === 'REELS' ? 'reels' : p.mediaType === 'CAROUSEL_ALBUM' ? 'carousel' : p.mediaType === 'VIDEO' ? 'video' : 'image';
-    return typeKeys.includes(key as TypeKey);
+    return typeKeys.includes(typeKeyOf(p));
   }), [posts, typeKeys]);
   const sorted = useMemo(() => [...filtered].sort((a, b) => {
     if (sort === 'date') return b.postedAt - a.postedAt;
@@ -217,18 +232,18 @@ function PostsPanel({ posts, igId }: { posts: Media[]; igId: string }) {
         <div className="flex items-center gap-2">
           <div className="flex gap-1"><button className={`chip ${view === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>{t('grid')}</button><button className={`chip ${view === 'table' ? 'active' : ''}`} onClick={() => setView('table')}>{t('table')}</button><button className={`chip ${view === 'analysis' ? 'active' : ''}`} onClick={() => setView('analysis')}>{t('analysis')}</button></div>
           <span className="w-px h-5 bg-line" />
-          <TypeFilter value={typeKeys} onChange={setTypeKeys} />
+          <TypeFilter value={typeKeys} onChange={setTypeKeys} keys={TYPE_KEYS_BY_PLATFORM[platform]} />
         </div>
         {view !== 'analysis' && (
           <div className="flex items-center gap-2 text-xs text-ink-2"><ExcelButton name="posts" getData={() => mediaSheet(t('posts'), sorted, { account: false })} />{t('sort_by')}
-            {(['reach', 'er', 'saved', 'date'] as const).map((s) => <button key={s} className={`chip ${sort === s ? 'active' : ''}`} onClick={() => setSort(s)}>{s === 'reach' ? t('reach') : s === 'er' ? t('er_short') : s === 'saved' ? t('saved') : t('date')}</button>)}
+            {sorts.map((s) => <button key={s} className={`chip ${sort === s ? 'active' : ''}`} onClick={() => setSort(s)}>{sortLabel(s)}</button>)}
           </div>
         )}
       </div>
 
       {view !== 'analysis' && recent.length > 0 && (
         <Section title={`${t('this_week')} · ${recent.length}`} right={<><span className="text-xs text-ink-2">{t('recent_posts_hint', { d: analysis.data?.period.recentDays ?? 7 })}</span><ExcelButton name="this-week" getData={() => mediaSheet(t('this_week'), recent, { account: false, deltas: true })} /></>}>
-          <div className="-m-4"><RecentPostsTable rows={recent} onOpen={setOpen} showAccount={false} maxHeight={260} /></div>
+          <div className="-m-4"><RecentPostsTable rows={recent} onOpen={setOpen} showAccount={false} maxHeight={260} adColumns={caps.ads} /></div>
         </Section>
       )}
 
@@ -239,12 +254,12 @@ function PostsPanel({ posts, igId }: { posts: Media[]; igId: string }) {
       {view === 'table' && (
         <div className="panel overflow-auto">
           <table className="table">
-            <thead><tr><th></th><th>{t('date')}</th><th>{t('type')}</th><th>{t('caption')}</th><th className="num">{t('reach')}</th><th className="num">{t('views')}</th><th className="num">{t('likes')}</th><th className="num">{t('comments')}</th><th className="num">{t('saved')}</th><th className="num">{t('shares')}</th><th className="num">{t('er_short')}</th><th className="num">{t('save_rate')}</th><th className="num" title={t('impressions_note')}>{t('total_reach')}</th><AdMetricHeaders scope="post" /></tr></thead>
+            <thead><tr><th></th><th>{t('date')}</th><th>{t('type')}</th><th>{t('caption')}</th>{caps.reach && <th className="num">{platform === 'facebook' ? t('viewers') : t('reach')}</th>}<th className="num">{t('views')}</th><th className="num">{t('likes')}</th><th className="num">{platform === 'threads' ? t('replies') : t('comments')}</th>{caps.saveRate && <th className="num">{t('saved')}</th>}<th className="num">{t('shares')}</th>{extraCols.map(([k, label]) => <th key={k} className="num">{label}</th>)}<th className="num">{t('er_short')}</th>{caps.saveRate && <th className="num">{t('save_rate')}</th>}{caps.ads && <><th className="num" title={t('impressions_note')}>{t('total_reach')}</th><AdMetricHeaders scope="post" /></>}</tr></thead>
             <tbody>{sorted.map((m) => (
               <tr key={m.mediaId} className={`clickable ${open === m.mediaId ? 'selected' : ''}`} onClick={() => setOpen(m.mediaId)}>
                 <td><PostThumb mediaId={m.mediaId} thumbnailPath={m.thumbnailPath} mediaType={m.mediaType} mediaProductType={m.mediaProductType} size={28} /></td>
                 <td>{fmtDateTime(m.postedAt)}</td><td>{mediaTypeLabel(m, lang)}</td><td className="max-w-[320px] truncate" title={m.caption ?? ''}>{m.caption}</td>
-                <td className="num">{fmtNum(m.reach)}</td><td className="num">{fmtNum(m.views)}</td><td className="num">{fmtNum(m.likes)}</td><td className="num">{fmtNum(m.comments)}</td><td className="num">{fmtNum(m.saved)}</td><td className="num">{fmtNum(m.shares)}</td><td className="num">{fmtPct(m.engagementRate, 2)}</td><td className="num">{fmtPct(m.saveRate, 2)}</td><td className="num"><div className="leading-tight">{fmtNum(m.totalReach)}<div className="text-xs text-ink-2">{m.paidReach ? `${t('paid_share_short')} ${fmtPct(m.paidReachShare, 0)}` : t('organic')}</div></div></td><AdMetricCells row={m} scope="post" />
+                {caps.reach && <td className="num">{fmtNum(m.reach)}</td>}<td className="num">{fmtNum(m.views)}</td><td className="num">{fmtNum(m.likes)}</td><td className="num">{fmtNum(m.comments)}</td>{caps.saveRate && <td className="num">{fmtNum(m.saved)}</td>}<td className="num">{fmtNum(m.shares)}</td>{extraCols.map(([k]) => <td key={k} className="num">{fmtNum(m[k])}</td>)}<td className="num">{fmtPct(m.engagementRate, 2)}</td>{caps.saveRate && <td className="num">{fmtPct(m.saveRate, 2)}</td>}{caps.ads && <><td className="num"><div className="leading-tight">{fmtNum(m.totalReach)}<div className="text-xs text-ink-2">{m.paidReach ? `${t('paid_share_short')} ${fmtPct(m.paidReachShare, 0)}` : t('organic')}</div></div></td><AdMetricCells row={m} scope="post" /></>}
               </tr>
             ))}
             {!sorted.length && <tr><td colSpan={27} className="text-center text-ink-2" style={{ height: 64 }}>{t('no_posts')}</td></tr>}</tbody>
@@ -285,12 +300,22 @@ function StoriesPanel({ igId }: { igId: string }) {
   );
 }
 
-function DemographicsPanel({ igId }: { igId: string }) {
+function DemographicsPanel({ igId, platform }: { igId: string; platform: Platform }) {
   const t = useT();
   const q = useDemographics(igId);
   if (q.isLoading) return <Loading />;
-  const d = q.data;
-  if (!d || !d.capturedAt) return <EmptyState title={t('no_data')} hint={t('demographics_hint')} />;
+  const d = q.data as (NonNullable<typeof q.data> & { age?: { bucket: string; value: number }[]; gender?: { bucket: string; value: number }[] }) | null | undefined;
+  if (!d || !d.capturedAt) return <EmptyState title={t('no_data')} hint={platform === 'threads' ? t('demographics_threads_hint') : t('demographics_hint')} />;
+  // Threads reports age and gender as separate dimensions (no gender×age cross-tab).
+  if (!d.genderAge?.length && (d.age?.length || d.gender?.length)) return (
+    <div className="grid grid-cols-12 gap-5">
+      <Section title={t('city')} className="col-span-12 lg:col-span-3"><BarList items={(d.city ?? []).slice(0, 10).map((c) => ({ label: c.bucket, value: c.value }))} /></Section>
+      <Section title={t('age')} className="col-span-12 lg:col-span-3"><BarList items={(d.age ?? []).map((c) => ({ label: c.bucket, value: c.value }))} color="#C06CE8" /></Section>
+      <Section title={t('gender')} className="col-span-12 lg:col-span-3"><BarList items={(d.gender ?? []).map((c) => ({ label: c.bucket === 'F' ? t('female') : c.bucket === 'M' ? t('male') : c.bucket === 'U' ? '—' : c.bucket, value: c.value }))} color="#4F7CFF" /></Section>
+      <Section title={t('country')} className="col-span-12 lg:col-span-3"><BarList items={(d.country ?? []).slice(0, 8).map((c) => ({ label: c.bucket, value: c.value }))} color="#3FBF8F" /></Section>
+      <div className="col-span-12 text-xs text-ink-2">{t('data_as_of', { d: fmtDateTime(d.capturedAt) })}</div>
+    </div>
+  );
   const ga = d.genderAge.reduce<Record<string, { F: number; M: number; U: number }>>((acc, b) => {
     const [g, age] = b.bucket.split('.');
     acc[age] = acc[age] ?? { F: 0, M: 0, U: 0 };
@@ -310,7 +335,7 @@ function DemographicsPanel({ igId }: { igId: string }) {
         ))}</div>
       </Section>
       <Section title={t('country')} className="col-span-12 lg:col-span-3"><BarList items={d.country.slice(0, 8).map((c) => ({ label: c.bucket, value: c.value }))} color="#3FBF8F" /></Section>
-      <div className="col-span-12 text-xs text-ink-2">{fmtDateTime(d.capturedAt)} tarihli veri.</div>
+      <div className="col-span-12 text-xs text-ink-2">{t('data_as_of', { d: fmtDateTime(d.capturedAt) })}</div>
     </div>
   );
 }
@@ -349,14 +374,14 @@ function AdsPanel({ igId }: { igId: string }) {
     <div className="space-y-5">
       <KpiStrip>
         <Kpi label={t('spend')} kpi={{ value: b.totals.spend, changePct: b.totals.spendChangePct }} format={(v) => fmtMoney(v, cur)} />
-        <Kpi label={`${t('reach')} (organik)`} kpi={{ value: b.totals.organicReach, changePct: null }} format={fmtCompact} />
-        <Kpi label={`${t('reach')} (reklam)`} kpi={{ value: b.totals.paidReach, changePct: b.totals.paidReachChangePct }} format={fmtCompact} />
+        <Kpi label={t('organic_reach')} kpi={{ value: b.totals.organicReach, changePct: null }} format={fmtCompact} />
+        <Kpi label={t('paid_reach')} kpi={{ value: b.totals.paidReach, changePct: b.totals.paidReachChangePct }} format={fmtCompact} />
         <Kpi label={t('paid_share_short')} kpi={{ value: b.totals.paidShare, changePct: null }} format={(v) => fmtPct(v, 1)} tip={t('paid_share_formula')} />
         <Kpi label="CPM" kpi={{ value: b.totals.cpm, changePct: null }} format={(v) => fmtMoney(v, cur, 2)} />
         <Kpi label={t('cost_per_result')} kpi={{ value: b.totals.costPerResult, changePct: null }} format={(v) => fmtMoney(v, cur, 2)} />
       </KpiStrip>
       <ChartWrapper id={`blended-${igId}`} title={`${t('blended')} · ${b.adAccount.name}`} height={300}>
-        <TimeSeries data={b.series} rightFormat={(v) => fmtMoney(v, cur)} series={[{ key: 'organicReach', name: `${t('reach')} (organik)`, color: '#4F7CFF', type: 'area' }, { key: 'paidReach', name: `${t('reach')} (reklam)`, color: '#C06CE8', type: 'area' }, { key: 'spend', name: t('spend'), color: '#E8B44A', type: 'bar', axis: 'right', format: (v) => fmtMoney(v, cur) }]} />
+        <TimeSeries data={b.series} rightFormat={(v) => fmtMoney(v, cur)} series={[{ key: 'organicReach', name: t('organic_reach'), color: '#4F7CFF', type: 'area' }, { key: 'paidReach', name: t('paid_reach'), color: '#C06CE8', type: 'area' }, { key: 'spend', name: t('spend'), color: '#E8B44A', type: 'bar', axis: 'right', format: (v) => fmtMoney(v, cur) }]} />
       </ChartWrapper>
       <div className="text-right"><Link to="/ads" className="btn">{t('ads')} →</Link></div>
     </div>

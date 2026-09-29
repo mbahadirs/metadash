@@ -7,12 +7,13 @@ import { weeklyDigest } from '../analytics/weeklyDigest.js';
 import { blended } from '../analytics/blended.js';
 import { contentAnalysis, mediaDetail, comparePosts } from '../analytics/content.js';
 import { healthScores } from '../analytics/health.js';
-import { listMedia, getMediaByIds } from '../db/queries/media.js';
+import { listMedia, getMediaByIds, mediaTypeKey } from '../db/queries/media.js';
 import { listCompetitors, competitorSeries } from '../db/queries/competitors.js';
 import { adBreakdown } from '../db/queries/ads.js';
 import { rangeMs, round, previousPeriod, pctChange, mean, fmtDate, toDate } from '../analytics/util.js';
 import { lineChart, barChart, heatmap, sparkline, esc, fmt } from './svgCharts.js';
-import { makeL } from './reportI18n.js';
+import { makeL, kpiLabelKey, metricLabelKey } from './reportI18n.js';
+import { capabilitiesFor, platformLabel, platformsIn } from '../analytics/platform.js';
 import { msg, locale } from '../i18n.js';
 import { resolveBranding, safeLogo } from './branding.js';
 import { brandBar, footerHtml, recolorAccent, BRAND_CSS } from './brandingHtml.js';
@@ -41,7 +42,27 @@ td{padding:7px 10px;border-bottom:1px solid var(--line);height:36px}td.n,th.n{te
 const pct = (v) => (v == null ? '<span class="muted">—</span>' : `<span class="${v >= 0 ? 'pos' : 'neg'}">${v >= 0 ? '▲' : '▼'} ${Math.abs(round(v, 1))}%</span>`);
 const money = (v, cur) => new Intl.NumberFormat(locale(), { style: 'currency', currency: cur ?? 'TRY', maximumFractionDigits: 0 }).format(v ?? 0);
 const dateStr = (d, lang) => new Date(d).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB');
-const TYPE_KEY = (p) => (p.mediaProductType === 'REELS' ? 'reels' : p.mediaType === 'CAROUSEL_ALBUM' ? 'carousel' : p.mediaType === 'VIDEO' ? 'video' : 'image');
+const TYPE_KEY = (p) => mediaTypeKey(p);
+const PALETTE = ['#4F7CFF', '#3FBF8F', '#E8B44A', '#C06CE8', '#E5605F', '#48C3D6'];
+const platformBadge = (L, platform) => `<span class="badge">${esc(L(platform ?? 'instagram'))}</span>`;
+
+/**
+ * Metric columns a list of posts can show, from the platforms present (`fallback` when the list is empty):
+ * reach (IG/FB), saves (IG), reposts (Threads). Instagram-only lists keep the original columns.
+ */
+function postFlags(posts, fallback) {
+  return flagsFor(posts.length ? platformsIn(posts) : fallback);
+}
+
+function flagsFor(list) {
+  const platforms = list?.length ? list : ['instagram'];
+  return {
+    reach: platforms.some((p) => capabilitiesFor(p).reach),
+    saves: platforms.some((p) => capabilitiesFor(p).saveRate),
+    reposts: platforms.includes('threads'),
+    mixed: platforms.length > 1,
+  };
+}
 
 function kpiBox(L, label, value, change, suffix = '', prev = null) {
   return `<div class="kpi"><div class="l">${esc(label)}</div><div class="v">${value}${suffix}</div><div class="d">${change !== null ? `${pct(change)} <span class="muted">${L('vs_prev')}</span>` : ''}${prev != null ? `<span class="muted"> · ${L('prev')}: ${prev}${suffix}</span>` : ''}</div></div>`;
@@ -60,16 +81,28 @@ ${body}
   return recolorAccent(html, b.accent);
 }
 
-function postsGrid(L, lang, posts) {
-  return `<div class="posts">${posts.map((p) => `<div class="post"><div class="muted" style="font-size:12px">@${esc(p.username)} · ${dateStr(p.postedAt, lang)} · ${L(TYPE_KEY(p))}${p.spend ? ` · <span class="badge">${L('ad')} ${money(p.spend, p.paidCurrency ?? 'USD')}</span>` : ''}</div>
-<div class="c">${esc((p.caption ?? '').slice(0, 90))}</div><div class="m"><span>${fmt(p.reach)} ${L('reach').toLowerCase()}</span><span>ER %${round(p.engagementRate, 2) ?? '—'}</span><span>${fmt(p.saved)} ${L('saves').toLowerCase()}</span></div></div>`).join('')}</div>`;
+/** Post card metrics: primary metric (reach, or views on Threads), ER and a platform-specific third value. */
+function postCardMetrics(L, p) {
+  const caps = capabilitiesFor(p.platform ?? 'instagram');
+  const first = caps.reach ? `${fmt(p.reach)} ${L(metricLabelKey('reach', p.platform)).toLowerCase()}` : `${fmt(p.views)} ${L('views').toLowerCase()}`;
+  const third = caps.saveRate ? `${fmt(p.saved)} ${L('saves').toLowerCase()}` : p.platform === 'threads' ? `${fmt(p.reposts)} ${L('reposts').toLowerCase()}` : `${fmt(p.shares)} ${L('shares').toLowerCase()}`;
+  return `<span>${first}</span><span>ER %${round(p.engagementRate, 2) ?? '—'}</span><span>${third}</span>`;
 }
 
-function postsTable(L, lang, posts, { showAccount = true, deltas = false } = {}) {
-  return `<table><thead><tr>${showAccount ? `<th>${L('account')}</th>` : ''}<th>${L('date')}</th><th>${L('type')}</th><th>${L('caption')}</th><th class="n">${L('reach')}</th><th class="n">${L('views')}</th><th class="n">ER</th><th class="n">${L('saves')}</th><th class="n">${L('comments')}</th><th class="n">${L('ad')}</th></tr></thead><tbody>
-${posts.map((p) => `<tr>${showAccount ? `<td>@${esc(p.username)}</td>` : ''}<td class="muted">${dateStr(p.postedAt, lang)}</td><td>${L(p.typeKey ?? TYPE_KEY(p))}</td><td class="muted" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((p.caption ?? '').slice(0, 70))}</td>
-<td class="n">${fmt(p.reach)}${deltas ? `<br>${pct(p.vsReach)}` : ''}</td><td class="n">${fmt(p.views)}</td><td class="n">%${round(p.engagementRate, 2) ?? '—'}${deltas ? `<br>${pct(p.vsEr)}` : ''}</td><td class="n">${fmt(p.saved)}${deltas ? `<br>${pct(p.vsSaved)}` : ''}</td><td class="n">${fmt(p.comments)}</td><td class="n">${p.spend ? money(p.spend, p.paidCurrency ?? 'USD') : '<span class="muted">—</span>'}</td></tr>`).join('')}
-${posts.length ? '' : `<tr><td colspan="10" class="muted">${L('none')}</td></tr>`}</tbody></table>`;
+function postsGrid(L, lang, posts) {
+  const mixed = postFlags(posts).mixed;
+  return `<div class="posts">${posts.map((p) => `<div class="post"><div class="muted" style="font-size:12px">@${esc(p.username)}${mixed ? ` ${platformBadge(L, p.platform)}` : ''} · ${dateStr(p.postedAt, lang)} · ${L(TYPE_KEY(p))}${p.spend ? ` · <span class="badge">${L('ad')} ${money(p.spend, p.paidCurrency ?? 'USD')}</span>` : ''}</div>
+<div class="c">${esc((p.caption ?? '').slice(0, 90))}</div><div class="m">${postCardMetrics(L, p)}</div></div>`).join('')}</div>`;
+}
+
+function postsTable(L, lang, posts, { showAccount = true, deltas = false, platforms } = {}) {
+  const f = postFlags(posts, platforms);
+  const cols = 7 + (showAccount ? 1 : 0) + (f.reach ? 1 : 0) + (f.saves ? 1 : 0) + (f.reposts ? 1 : 0);
+  const na = '<span class="muted">—</span>';
+  return `<table><thead><tr>${showAccount ? `<th>${L('account')}</th>` : ''}<th>${L('date')}</th><th>${L('type')}</th><th>${L('caption')}</th>${f.reach ? `<th class="n">${L('reach')}</th>` : ''}<th class="n">${L('views')}</th><th class="n">ER</th>${f.saves ? `<th class="n">${L('saves')}</th>` : ''}<th class="n">${L('comments')}</th>${f.reposts ? `<th class="n">${L('reposts')}</th>` : ''}<th class="n">${L('ad')}</th></tr></thead><tbody>
+${posts.map((p) => `<tr>${showAccount ? `<td>@${esc(p.username)}${f.mixed ? ` ${platformBadge(L, p.platform)}` : ''}</td>` : ''}<td class="muted">${dateStr(p.postedAt, lang)}</td><td>${L(p.typeKey ?? TYPE_KEY(p))}</td><td class="muted" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc((p.caption ?? '').slice(0, 70))}</td>
+${f.reach ? `<td class="n">${p.reach == null ? na : fmt(p.reach)}${deltas ? `<br>${pct(p.vsReach)}` : ''}</td>` : ''}<td class="n">${fmt(p.views)}</td><td class="n">%${round(p.engagementRate, 2) ?? '—'}${deltas ? `<br>${pct(p.vsEr)}` : ''}</td>${f.saves ? `<td class="n">${p.saved == null && !capabilitiesFor(p.platform ?? 'instagram').saveRate ? na : fmt(p.saved)}${deltas ? `<br>${pct(p.vsSaved)}` : ''}</td>` : ''}<td class="n">${fmt(p.comments)}</td>${f.reposts ? `<td class="n">${p.reposts == null ? na : fmt(p.reposts)}</td>` : ''}<td class="n">${p.spend ? money(p.spend, p.paidCurrency ?? 'USD') : na}</td></tr>`).join('')}
+${posts.length ? '' : `<tr><td colspan="${cols}" class="muted">${L('none')}</td></tr>`}</tbody></table>`;
 }
 
 /** Ad metric columns: [field, label key (or literal via L fallback), type]. */
@@ -92,13 +125,26 @@ function bars(items, format = fmt) {
 
 // ---------- sections ----------
 
+/** KPI tiles in the account's platform order (a.kpiKeys); the headline metrics also show the previous value. */
 function kpiSection(L, a) {
-  return `<h2>${L('summary')}</h2><div class="kpis">${kpiBox(L, L('reach'), fmt(a.kpis.reach.value), a.kpis.reach.changePct, '', fmt(a.kpis.reach.prev))}${kpiBox(L, L('views'), fmt(a.kpis.views.value), a.kpis.views.changePct, '', fmt(a.kpis.views.prev))}${kpiBox(L, L('profile_views'), fmt(a.kpis.profileViews.value), a.kpis.profileViews.changePct)}${kpiBox(L, L('er'), round(a.kpis.er.value, 2) ?? '—', a.kpis.er.changePct, '%', a.kpis.er.prev)}${kpiBox(L, L('save_rate'), round(a.kpis.saveRate.value, 2) ?? '—', a.kpis.saveRate.changePct, '%')}${kpiBox(L, L('new_followers'), fmt(a.kpis.newFollowers.value), a.kpis.newFollowers.changePct)}${kpiBox(L, L('posts'), fmt(a.kpis.posts.value), a.kpis.posts.changePct)}</div>`;
+  const keys = a.kpiKeys ?? Object.keys(a.kpis);
+  const withPrev = new Set([a.primaryMetric ?? 'reach', 'views']);
+  const tile = (k) => {
+    const v = a.kpis[k];
+    if (!v) return '';
+    const label = L(kpiLabelKey(k, a.platform));
+    if (k === 'er') return kpiBox(L, label, round(v.value, 2) ?? '—', v.changePct, '%', v.prev);
+    if (k === 'saveRate') return kpiBox(L, label, round(v.value, 2) ?? '—', v.changePct, '%');
+    return kpiBox(L, label, fmt(v.value), v.changePct, '', withPrev.has(k) ? fmt(v.prev) : null);
+  };
+  return `<h2>${L('summary')}</h2><div class="kpis">${keys.map(tile).join('')}</div>`;
 }
 
 function reachSection(L, a) {
   const labels = a.series.map((d) => d.date.slice(5));
-  return `<h2>${L('reach_engagement')}</h2><div class="panel">${lineChart({ labels, series: [{ name: L('reach'), color: '#4F7CFF', values: a.series.map((d) => d.reach) }, { name: L('engaged'), color: '#3FBF8F', values: a.series.map((d) => d.accounts_engaged) }] })}</div>`;
+  const [m1, m2] = a.chartMetrics ?? ['reach', 'accounts_engaged'];
+  const title = m1 === 'reach' ? 'reach_engagement' : 'views_engagement';
+  return `<h2>${L(title)}</h2><div class="panel">${lineChart({ labels, series: [{ name: L(metricLabelKey(m1, a.platform)), color: '#4F7CFF', values: a.series.map((d) => d[m1]) }, { name: L(metricLabelKey(m2, a.platform)), color: '#3FBF8F', values: a.series.map((d) => d[m2]) }] })}</div>`;
 }
 
 function followersSection(L, a) {
@@ -106,7 +152,8 @@ function followersSection(L, a) {
 }
 
 function typesSection(L, a) {
-  return `<h2>${L('type_breakdown')}</h2><table><thead><tr><th>${L('type')}</th><th class="n">${L('posts')}</th><th class="n">${L('avg_reach')}</th><th class="n">${L('avg_likes')}</th><th class="n">${L('avg_saved')}</th><th class="n">${L('avg_er')}</th></tr></thead><tbody>${a.byType.map((t) => `<tr><td>${L(t.productType === 'REELS' ? 'reels' : t.mediaType === 'CAROUSEL_ALBUM' ? 'carousel' : t.mediaType === 'VIDEO' ? 'video' : 'image')}</td><td class="n">${t.posts}</td><td class="n">${fmt(t.avgReach)}</td><td class="n">${fmt(t.avgLikes)}</td><td class="n">${fmt(t.avgSaved)}</td><td class="n">%${t.avgEr ?? '—'}</td></tr>`).join('')}</tbody></table>`;
+  const caps = a.capabilities ?? capabilitiesFor('instagram');
+  return `<h2>${L('type_breakdown')}</h2><table><thead><tr><th>${L('type')}</th><th class="n">${L('posts')}</th>${caps.reach ? `<th class="n">${L('avg_reach')}</th>` : ''}<th class="n">${L('avg_likes')}</th>${caps.saveRate ? `<th class="n">${L('avg_saved')}</th>` : ''}<th class="n">${L('avg_er')}</th></tr></thead><tbody>${a.byType.map((t) => `<tr><td>${L(mediaTypeKey({ mediaProductType: t.productType, mediaType: t.mediaType }))}</td><td class="n">${t.posts}</td>${caps.reach ? `<td class="n">${fmt(t.avgReach)}</td>` : ''}<td class="n">${fmt(t.avgLikes)}</td>${caps.saveRate ? `<td class="n">${fmt(t.avgSaved)}</td>` : ''}<td class="n">%${t.avgEr ?? '—'}</td></tr>`).join('')}</tbody></table>`;
 }
 
 function bestTimeSection(L, igId, from, to, lang = 'en') {
@@ -120,9 +167,21 @@ function storiesSection(L, igId, from, to) {
   return `<h2>${L('stories')}</h2><div class="kpis">${kpiBox(L, L('story_count'), st.summary.count, null)}${kpiBox(L, L('views'), fmt(st.summary.avgViews), null)}${kpiBox(L, L('completion'), round((st.summary.avgCompletion ?? 0) * 100, 1), null, '%')}${kpiBox(L, L('exit_rate'), round((st.summary.avgExitRate ?? 0) * 100, 1), null, '%')}</div>`;
 }
 
+/** Threads-style demographics: separate age and gender breakdowns (plus city/country). */
+function splitDemographics(L, d) {
+  const genderLabel = (b) => (b === 'F' ? L('female') : b === 'M' ? L('male') : L('gender_unknown'));
+  const panels = [
+    d.city.length ? `<div class="panel"><h4>${L('city')}</h4>${bars(d.city.slice(0, 8).map((c) => ({ label: c.bucket, value: c.value })))}</div>` : '',
+    `<div class="panel"><h4>${L('age')}</h4>${bars(d.age.map((c) => ({ label: c.bucket, value: c.value })))}${d.gender.length ? `<h4>${L('gender')}</h4>${bars(d.gender.map((c) => ({ label: genderLabel(c.bucket), value: c.value })))}` : ''}</div>`,
+    `<div class="panel"><h4>${L('country')}</h4>${bars(d.country.slice(0, 8).map((c) => ({ label: c.bucket, value: c.value })))}</div>`,
+  ];
+  return `<h2>${L('demographics')}</h2><div class="grid3">${panels.join('')}</div>`;
+}
+
 function demographicsSection(L, igId) {
   const d = accountDemographics({ igId });
   if (!d.capturedAt) return '';
+  if (!d.genderAge.length && (d.age.length || d.gender.length)) return splitDemographics(L, d);
   const ga = {};
   for (const b of d.genderAge) { const [g, age] = b.bucket.split('.'); ga[age] = ga[age] ?? { F: 0, M: 0 }; if (g === 'F' || g === 'M') ga[age][g] += b.value; }
   const ages = Object.keys(ga).sort();
@@ -132,8 +191,8 @@ function demographicsSection(L, igId) {
 function healthSection(L, igId, from, to) {
   const h = healthScores({ from, to }).find((x) => x.igId === igId);
   if (!h) return '';
-  const comp = (key, label) => `<div><div class="muted" style="font-size:12px">${label}</div><div style="font-size:18px;font-weight:600">${h.components[key].pct}<span class="muted" style="font-size:12px"> pct</span></div><div class="meter"><div style="width:${h.components[key].pct}%"></div></div></div>`;
-  return `<h2>${L('health_score')}</h2><div class="panel"><div class="comp"><div><div class="score">${h.score}<span class="muted" style="font-size:14px">/100</span></div></div>${comp('growth', L('growth'))}${comp('engagement', L('engagement'))}${comp('consistency', L('consistency'))}${comp('response', L('response'))}</div><div class="note" style="margin-top:8px">${L('health_note')}</div></div>`;
+  const comp = (key, label) => (h.components[key] ? `<div><div class="muted" style="font-size:12px">${label}</div><div style="font-size:18px;font-weight:600">${h.components[key].pct}<span class="muted" style="font-size:12px"> pct</span></div><div class="meter"><div style="width:${h.components[key].pct}%"></div></div></div>` : '');
+  return `<h2>${L('health_score')}</h2><div class="panel"><div class="comp"><div><div class="score">${h.score}<span class="muted" style="font-size:14px">/100</span></div></div>${comp('growth', L('growth'))}${comp('engagement', L('engagement'))}${comp('consistency', L('consistency'))}${comp('response', L('response'))}</div><div class="note" style="margin-top:8px">${L(h.components.response ? 'health_note' : 'health_note_no_response')}</div></div>`;
 }
 
 function competitorsSection(L, igId, from, to, account) {
@@ -171,12 +230,15 @@ function breakdownSection(L, b, from, to) {
 function contentSections(L, lang, ca, { showAccount = true } = {}) {
   const totalReach = Math.max(1, ca.summary.reach);
   const cur = ca.summary.currency ?? 'USD';
+  const f = flagsFor(ca.summary.platforms);
+  const reachTile = f.reach ? kpiBox(L, L('avg_reach'), fmt(ca.summary.avgReach), null) : kpiBox(L, L('avg_views'), fmt(ca.summary.avgViews), null);
+  const th = (key) => `<th class="n">${L(key)}</th>`;
   return `<h2>${L('content_analysis')}</h2>
-<div class="kpis">${kpiBox(L, L('posts'), ca.summary.posts, null)}${kpiBox(L, L('avg_reach'), fmt(ca.summary.avgReach), null)}${kpiBox(L, L('avg_er'), ca.summary.avgEr ?? '—', null, '%')}${kpiBox(L, L('save_rate'), ca.summary.avgSaveRate ?? '—', null, '%')}${kpiBox(L, L('boosted_posts'), ca.summary.paidPosts, null)}${kpiBox(L, L('ad_spend'), money(ca.summary.totalSpend, cur), null)}</div>
-<h3>${L('type_breakdown')}</h3><table><thead><tr><th>${L('type')}</th><th class="n">${L('posts')}</th><th class="n">${L('reach_share')}</th><th class="n">${L('avg_reach')}</th><th class="n">${L('avg_views')}</th><th class="n">${L('avg_likes')}</th><th class="n">${L('avg_saved')}</th><th class="n">${L('avg_er')}</th><th class="n">${L('save_rate')}</th><th class="n">${L('ad')}</th></tr></thead><tbody>
-${ca.types.map((ty) => `<tr><td>${L(ty.typeKey)}</td><td class="n">${ty.posts}</td><td class="n">${Math.round((ty.totalReach / totalReach) * 100)}%</td><td class="n">${fmt(ty.avgReach)}</td><td class="n">${fmt(ty.avgViews)}</td><td class="n">${fmt(ty.avgLikes)}</td><td class="n">${fmt(ty.avgSaved)}</td><td class="n">%${ty.avgEr ?? '—'}</td><td class="n">%${ty.avgSaveRate ?? '—'}</td><td class="n">${ty.spend ? `${money(ty.spend, cur)} · ${ty.paidPosts}` : '—'}</td></tr>`).join('')}</tbody></table>
-<h3>${L('recent_posts', { n: ca.period.recentDays })} · ${ca.recent.length}</h3><div class="note" style="margin-bottom:8px">${L('recent_note')}</div>${postsTable(L, lang, ca.recent, { showAccount, deltas: true })}${adMetricsTable(L, lang, ca.recent, { label: (r) => `@${esc(r.username)} · ${esc((r.caption ?? '').slice(0, 30))}` })}
-${ca.hashtags.length ? `<h3>${L('hashtags')}</h3><table><thead><tr><th>${L('hashtag')}</th><th class="n">${L('usage')}</th><th class="n">${L('avg_reach')}</th><th class="n">${L('avg_er')}</th><th class="n">${L('avg_saved')}</th></tr></thead><tbody>${ca.hashtags.slice(0, 12).map((h) => `<tr><td>${esc(h.tag)}</td><td class="n">${h.posts}</td><td class="n">${fmt(h.avgReach)}</td><td class="n">%${h.avgEr ?? '—'}</td><td class="n">${fmt(h.avgSaved)}</td></tr>`).join('')}</tbody></table>` : ''}`;
+<div class="kpis">${kpiBox(L, L('posts'), ca.summary.posts, null)}${reachTile}${kpiBox(L, L('avg_er'), ca.summary.avgEr ?? '—', null, '%')}${f.saves ? kpiBox(L, L('save_rate'), ca.summary.avgSaveRate ?? '—', null, '%') : ''}${kpiBox(L, L('boosted_posts'), ca.summary.paidPosts, null)}${kpiBox(L, L('ad_spend'), money(ca.summary.totalSpend, cur), null)}</div>
+<h3>${L('type_breakdown')}</h3><table><thead><tr><th>${L('type')}</th>${th('posts')}${f.reach ? th('reach_share') + th('avg_reach') : ''}${th('avg_views')}${th('avg_likes')}${f.saves ? th('avg_saved') : ''}${th('avg_er')}${f.saves ? th('save_rate') : ''}${th('ad')}</tr></thead><tbody>
+${ca.types.map((ty) => `<tr><td>${L(ty.typeKey)}</td><td class="n">${ty.posts}</td>${f.reach ? `<td class="n">${Math.round((ty.totalReach / totalReach) * 100)}%</td><td class="n">${fmt(ty.avgReach)}</td>` : ''}<td class="n">${fmt(ty.avgViews)}</td><td class="n">${fmt(ty.avgLikes)}</td>${f.saves ? `<td class="n">${fmt(ty.avgSaved)}</td>` : ''}<td class="n">%${ty.avgEr ?? '—'}</td>${f.saves ? `<td class="n">%${ty.avgSaveRate ?? '—'}</td>` : ''}<td class="n">${ty.spend ? `${money(ty.spend, cur)} · ${ty.paidPosts}` : '—'}</td></tr>`).join('')}</tbody></table>
+<h3>${L('recent_posts', { n: ca.period.recentDays })} · ${ca.recent.length}</h3><div class="note" style="margin-bottom:8px">${L('recent_note')}</div>${postsTable(L, lang, ca.recent, { showAccount, deltas: true, platforms: ca.summary.platforms })}${adMetricsTable(L, lang, ca.recent, { label: (r) => `@${esc(r.username)} · ${esc((r.caption ?? '').slice(0, 30))}` })}
+${ca.hashtags.length ? `<h3>${L('hashtags')}</h3><table><thead><tr><th>${L('hashtag')}</th>${th('usage')}${f.reach ? th('avg_reach') : ''}${th('avg_er')}${f.saves ? th('avg_saved') : ''}</tr></thead><tbody>${ca.hashtags.slice(0, 12).map((h) => `<tr><td>${esc(h.tag)}</td><td class="n">${h.posts}</td>${f.reach ? `<td class="n">${fmt(h.avgReach)}</td>` : ''}<td class="n">%${h.avgEr ?? '—'}</td>${f.saves ? `<td class="n">${fmt(h.avgSaved)}</td>` : ''}</tr>`).join('')}</tbody></table>` : ''}`;
 }
 
 function basketSection(L, lang, basket) {
@@ -198,37 +260,44 @@ export function clientReport(params) {
   const igIds = params.igIds?.length ? params.igIds : params.igId ? [params.igId] : [];
   if (!igIds.length) throw new Error(msg('no_account_selected', null, lang));
   const L = makeL(lang);
-  const allowed = TEMPLATE_SECTIONS[template] ?? TEMPLATE_SECTIONS.monthly;
-  const inc = (k) => allowed.includes(k) && sections[k] !== false;
   const analyses = igIds.map((igId) => accountAnalytics({ igId, from, to })).filter(Boolean);
   if (!analyses.length) throw new Error(msg('account_not_found', null, lang));
+  // Single account: the template's sections that apply to its platform. Multi: per-account blocks check their own platform.
+  const allowed = analyses.length === 1 ? sectionsFor(template, analyses[0].platform) : TEMPLATE_SECTIONS[template] ?? TEMPLATE_SECTIONS.monthly;
+  const inc = (k) => allowed.includes(k) && sections[k] !== false;
+  const incFor = (a, k) => inc(k) && sectionsFor(template, a.platform).includes(k);
   const prev = previousPeriod(from, to);
   const recentDays = template === 'weekly_client' ? 7 : Math.min(28, prev.days);
   const parts = [];
   const multi = analyses.length > 1;
 
   if (multi) {
-    const sum = (k) => analyses.reduce((s, a) => s + (a.kpis[k].value ?? 0), 0);
-    const sumPrev = (k) => analyses.reduce((s, a) => s + (a.kpis[k].prev ?? 0), 0);
-    const avgEr = mean(analyses.map((a) => a.kpis.er.value));
-    const avgErPrev = mean(analyses.map((a) => a.kpis.er.prev));
-    if (inc('kpis')) parts.push(`<h2>${L('summary')} · ${analyses.length} ${L('accounts')}</h2><div class="kpis">${kpiBox(L, L('reach'), fmt(sum('reach')), pctChange(sum('reach'), sumPrev('reach')))}${kpiBox(L, L('views'), fmt(sum('views')), pctChange(sum('views'), sumPrev('views')))}${kpiBox(L, L('profile_views'), fmt(sum('profileViews')), pctChange(sum('profileViews'), sumPrev('profileViews')))}${kpiBox(L, L('er'), round(avgEr, 2) ?? '—', pctChange(avgEr, avgErPrev), '%')}${kpiBox(L, L('new_followers'), fmt(sum('newFollowers')), pctChange(sum('newFollowers'), sumPrev('newFollowers')))}${kpiBox(L, L('posts'), fmt(sum('posts')), pctChange(sum('posts'), sumPrev('posts')))}</div>
-<h3>${L('accounts_table')}</h3><table><thead><tr><th>${L('account')}</th><th class="n">${L('followers')}</th><th class="n">${L('new_followers')}</th><th class="n">${L('reach')}</th><th class="n">${L('views')}</th><th class="n">ER</th><th class="n">${L('save_rate')}</th><th class="n">${L('posts')}</th></tr></thead><tbody>${analyses.map((a) => `<tr><td>@${esc(a.account.username)}<span class="muted"> ${esc(a.account.clientName ?? '')}</span></td><td class="n">${fmt(a.account.followers)}</td><td class="n">${fmt(a.kpis.newFollowers.value)} ${pct(a.kpis.newFollowers.changePct)}</td><td class="n">${fmt(a.kpis.reach.value)} ${pct(a.kpis.reach.changePct)}</td><td class="n">${fmt(a.kpis.views.value)}</td><td class="n">%${round(a.kpis.er.value, 2) ?? '—'} ${pct(a.kpis.er.changePct)}</td><td class="n">%${round(a.kpis.saveRate.value, 2) ?? '—'}</td><td class="n">${a.kpis.posts.value}</td></tr>`).join('')}</tbody></table>${adMetricsTable(L, lang, analyses.filter((a) => a.paid).map((a) => ({ username: a.account.username, ...a.paid })), { withBudget: true, date: false })}`);
-    if (inc('reach')) parts.push(`<h2>${L('reach')}</h2><div class="panel">${lineChart({ labels: analyses[0].series.map((d) => d.date.slice(5)), series: analyses.slice(0, 6).map((a, i) => ({ name: '@' + a.account.username, color: ['#4F7CFF', '#3FBF8F', '#E8B44A', '#C06CE8', '#E5605F', '#48C3D6'][i], values: a.series.map((d) => d.reach) })) })}</div>`);
+    const sum = (k) => analyses.reduce((s, a) => s + (a.kpis[k]?.value ?? 0), 0);
+    const sumPrev = (k) => analyses.reduce((s, a) => s + (a.kpis[k]?.prev ?? 0), 0);
+    const avgEr = mean(analyses.map((a) => a.kpis.er?.value));
+    const avgErPrev = mean(analyses.map((a) => a.kpis.er?.prev));
+    const f = flagsFor(platformsIn(analyses));
+    const has = (k) => analyses.some((a) => a.kpis[k]);
+    const na = '<span class="muted">—</span>';
+    const total = (k, label) => (has(k) ? kpiBox(L, L(label), fmt(sum(k)), pctChange(sum(k), sumPrev(k))) : '');
+    if (inc('kpis')) parts.push(`<h2>${L('summary')} · ${analyses.length} ${L('accounts')}</h2>${f.mixed ? `<div class="note">${L('mixed_platforms_note')}</div>` : ''}<div class="kpis">${total('reach', 'reach')}${total('views', 'views')}${total('profileViews', 'profile_views')}${kpiBox(L, L('er'), round(avgEr, 2) ?? '—', pctChange(avgEr, avgErPrev), '%')}${total('newFollowers', 'new_followers')}${total('posts', 'posts')}</div>
+<h3>${L('accounts_table')}</h3><table><thead><tr><th>${L('account')}</th><th class="n">${L('followers')}</th><th class="n">${L('new_followers')}</th>${f.reach ? `<th class="n">${L('reach')}</th>` : ''}<th class="n">${L('views')}</th><th class="n">ER</th>${f.saves ? `<th class="n">${L('save_rate')}</th>` : ''}<th class="n">${L('posts')}</th></tr></thead><tbody>${analyses.map((a) => `<tr><td>@${esc(a.account.username)}${f.mixed ? ` ${platformBadge(L, a.platform)}` : ''}<span class="muted"> ${esc(a.account.clientName ?? '')}</span></td><td class="n">${fmt(a.account.followers)}</td><td class="n">${fmt(a.kpis.newFollowers.value)} ${pct(a.kpis.newFollowers.changePct)}</td>${f.reach ? `<td class="n">${a.kpis.reach ? `${fmt(a.kpis.reach.value)} ${pct(a.kpis.reach.changePct)}` : na}</td>` : ''}<td class="n">${fmt(a.kpis.views.value)}</td><td class="n">%${round(a.kpis.er.value, 2) ?? '—'} ${pct(a.kpis.er.changePct)}</td>${f.saves ? `<td class="n">${a.kpis.saveRate ? `%${round(a.kpis.saveRate.value, 2) ?? '—'}` : na}</td>` : ''}<td class="n">${a.kpis.posts.value}</td></tr>`).join('')}</tbody></table>${adMetricsTable(L, lang, analyses.filter((a) => a.paid).map((a) => ({ username: a.account.username, ...a.paid })), { withBudget: true, date: false })}`);
+    if (inc('reach')) parts.push(`<h2>${L(f.mixed && f.reach && analyses.some((a) => a.primaryMetric !== 'reach') ? 'reach_or_views' : f.reach ? 'reach' : 'views')}</h2><div class="panel">${lineChart({ labels: analyses[0].series.map((d) => d.date.slice(5)), series: analyses.slice(0, 6).map((a, i) => ({ name: '@' + a.account.username, color: PALETTE[i], values: a.series.map((d) => d[a.primaryMetric ?? 'reach']) })) })}</div>`);
     if (inc('posts')) parts.push(`<h2>${L('top6')}</h2>${postsGrid(L, lang, listMedia({ igIds, from: rangeMs(from, to).fromMs, to: rangeMs(from, to).toMs, sort: 'reach', limit: 6 }))}`);
     if (inc('content')) parts.push(contentSections(L, lang, contentAnalysis({ from, to, igIds, recentDays }), { showAccount: true }));
     if (inc('basket')) parts.push(basketSection(L, lang, basket));
+    const h3 = (html) => html.replace('<h2>', '<h3>').replace('</h2>', '</h3>');
     for (const a of analyses) {
       const igId = a.account.igId;
-      parts.push(`<h2 style="border-top:1px solid var(--line);padding-top:24px">${L('account_detail')} · @${esc(a.account.username)}</h2>`);
-      if (inc('kpis')) parts.push(kpiSection(L, a).replace('<h2>', '<h3>').replace('</h2>', '</h3>'));
-      if (inc('followers')) parts.push(followersSection(L, a).replace('<h2>', '<h3>').replace('</h2>', '</h3>'));
-      if (inc('types')) parts.push(typesSection(L, a).replace('<h2>', '<h3>').replace('</h2>', '</h3>'));
-      if (inc('besttime')) parts.push(bestTimeSection(L, igId, from, to, lang).replace('<h2>', '<h3>').replace('</h2>', '</h3>'));
-      if (inc('stories')) parts.push(storiesSection(L, igId, from, to).replace('<h2>', '<h3>').replace('</h2>', '</h3>'));
-      if (inc('demographics')) parts.push(demographicsSection(L, igId).replace('<h2>', '<h3>').replace('</h2>', '</h3>'));
-      if (inc('health')) parts.push(healthSection(L, igId, from, to).replace('<h2>', '<h3>').replace('</h2>', '</h3>'));
-      if (inc('ads')) parts.push(adsSection(L, igId, from, to).replace('<h2>', '<h3>').replace('</h2>', '</h3>'));
+      parts.push(`<h2 style="border-top:1px solid var(--line);padding-top:24px">${L('account_detail')} · @${esc(a.account.username)}${f.mixed ? ` ${platformBadge(L, a.platform)}` : ''}</h2>`);
+      if (incFor(a, 'kpis')) parts.push(h3(kpiSection(L, a)));
+      if (incFor(a, 'followers')) parts.push(h3(followersSection(L, a)));
+      if (incFor(a, 'types')) parts.push(h3(typesSection(L, a)));
+      if (incFor(a, 'besttime')) parts.push(h3(bestTimeSection(L, igId, from, to, lang)));
+      if (incFor(a, 'stories')) parts.push(h3(storiesSection(L, igId, from, to)));
+      if (incFor(a, 'demographics')) parts.push(h3(demographicsSection(L, igId)));
+      if (incFor(a, 'health')) parts.push(h3(healthSection(L, igId, from, to)));
+      if (incFor(a, 'ads')) parts.push(h3(adsSection(L, igId, from, to)));
     }
   } else {
     const a = analyses[0];
@@ -236,7 +305,7 @@ export function clientReport(params) {
     if (inc('kpis')) parts.push(kpiSection(L, a));
     if (inc('reach')) parts.push(reachSection(L, a));
     if (inc('followers')) parts.push(followersSection(L, a));
-    if (inc('posts')) parts.push(`<h2>${L('top6')}</h2>${postsGrid(L, lang, [...a.posts].sort((x, y) => (y.reach ?? 0) - (x.reach ?? 0)).slice(0, 6))}`);
+    if (inc('posts')) parts.push(`<h2>${L('top6')}</h2>${postsGrid(L, lang, topPosts(a))}`);
     if (inc('types')) parts.push(typesSection(L, a));
     if (inc('besttime')) parts.push(bestTimeSection(L, igId, from, to, lang));
     if (inc('content')) parts.push(contentSections(L, lang, contentAnalysis({ from, to, igIds: [igId], recentDays }), { showAccount: false }));
@@ -259,18 +328,21 @@ export function clientReport(params) {
 }
 
 /** Portfolio summary — all accounts. */
-export function portfolioReport({ from, to, tagIds, coverTitle, logoDataUrl, branding, lang = 'en', sections = {}, commentary }) {
+export function portfolioReport({ from, to, tagIds, platforms, coverTitle, logoDataUrl, branding, lang = 'en', sections = {}, commentary }) {
   const L = makeL(lang);
   const inc = (k) => sections[k] !== false;
-  const p = portfolio({ from, to, tagIds });
+  const p = portfolio({ from, to, tagIds, platforms });
   const k = p.kpis;
+  const f = flagsFor(p.platforms);
   const parts = [];
-  if (inc('kpis')) parts.push(`<h2>${L('summary')}</h2><div class="kpis">${kpiBox(L, L('followers'), fmt(k.totalFollowers.value), k.totalFollowers.changePct)}${kpiBox(L, L('net_followers'), fmt(k.netFollowers.value), k.netFollowers.changePct)}${kpiBox(L, L('reach'), fmt(k.totalReach.value), k.totalReach.changePct)}${kpiBox(L, L('avg_er'), k.avgEr.value ?? '—', k.avgEr.changePct, '%')}${kpiBox(L, L('spend'), money(k.totalSpend.value, k.totalSpend.currency), k.totalSpend.changePct)}${kpiBox(L, L('posts'), fmt(k.totalPosts.value), k.totalPosts.changePct)}</div>`);
+  const viewsTile = p.platforms.includes('threads') ? kpiBox(L, L('views'), fmt(k.totalViews.value), k.totalViews.changePct) : '';
+  const reachCell = (r) => (r.reach == null ? `<span class="muted">${fmt(r.views)} ${L('views').toLowerCase()}</span>` : fmt(r.reach));
+  if (inc('kpis')) parts.push(`<h2>${L('summary')}</h2><div class="kpis">${kpiBox(L, L('followers'), fmt(k.totalFollowers.value), k.totalFollowers.changePct)}${kpiBox(L, L('net_followers'), fmt(k.netFollowers.value), k.netFollowers.changePct)}${kpiBox(L, L('reach'), fmt(k.totalReach.value), k.totalReach.changePct)}${viewsTile}${kpiBox(L, L('avg_er'), k.avgEr.value ?? '—', k.avgEr.changePct, '%')}${kpiBox(L, L('spend'), money(k.totalSpend.value, k.totalSpend.currency), k.totalSpend.changePct)}${kpiBox(L, L('posts'), fmt(k.totalPosts.value), k.totalPosts.changePct)}</div>`);
   if (inc('league')) parts.push(`<h2>${L('league')}</h2><table><thead><tr><th>${L('account')}</th><th>${L('client')}</th><th class="n">${L('followers')}</th><th class="n">${L('change')}</th><th class="n">${L('reach')}</th><th class="n">ER</th><th class="n">${L('save_rate')}</th><th class="n">${L('health')}</th><th>${L('last30')}</th></tr></thead><tbody>
-${[...p.rows].sort((a, b) => (b.reach ?? 0) - (a.reach ?? 0)).map((r) => `<tr><td>@${esc(r.username)}</td><td class="muted">${esc(r.clientName ?? '')}</td><td class="n">${fmt(r.followers)}</td><td class="n">${pct(r.followersChangePct)}</td><td class="n">${fmt(r.reach)}</td><td class="n">%${r.er ?? '—'}</td><td class="n">%${r.saveRate ?? '—'}</td><td class="n">${r.health ?? '—'}</td><td>${sparkline(r.sparkline, { color: r.color })}</td></tr>`).join('')}</tbody></table>${adMetricsTable(L, lang, p.rows, { withBudget: true, date: false })}`);
+${[...p.rows].sort((a, b) => (b.reach ?? 0) - (a.reach ?? 0)).map((r) => `<tr><td>@${esc(r.username)}${f.mixed ? ` ${platformBadge(L, r.platform)}` : ''}</td><td class="muted">${esc(r.clientName ?? '')}</td><td class="n">${fmt(r.followers)}</td><td class="n">${pct(r.followersChangePct)}</td><td class="n">${reachCell(r)}</td><td class="n">%${r.er ?? '—'}</td><td class="n">%${r.saveRate ?? '—'}</td><td class="n">${r.health ?? '—'}</td><td>${sparkline(r.sparkline, { color: r.color })}</td></tr>`).join('')}</tbody></table>${adMetricsTable(L, lang, p.rows, { withBudget: true, date: false })}`);
   if (inc('top10')) parts.push(`<h2>${L('top10')}</h2>${postsTable(L, lang, listMedia({ from: rangeMs(from, to).fromMs, to: rangeMs(from, to).toMs, igIds: p.rows.map((r) => r.igId), sort: 'reach', limit: 10 }))}`);
-  if (inc('attention')) parts.push(`<h2>${L('attention')}</h2><div class="grid2"><div class="panel"><h3>${L('silent')}</h3>${p.attention.silent.length ? p.attention.silent.map((s) => `<div>@${esc(s.username)} <span class="muted">${s.daysSincePost ?? '—'} ${L('days')}</span></div>`).join('') : `<div class="muted">${L('none')}</div>`}</div><div class="panel"><h3>${L('anomalies')}</h3>${p.attention.anomalies.length ? p.attention.anomalies.slice(0, 10).map((a) => `<div>@${esc(a.username)} <span class="${a.direction === 'up' ? 'pos' : 'neg'}">${a.kind === 'reach' ? L('reach') : 'ER'} ${a.direction === 'up' ? '▲' : '▼'} ${a.z}σ</span></div>`).join('') : `<div class="muted">${L('none')}</div>`}</div></div>`);
-  if (inc('content')) parts.push(contentSections(L, lang, contentAnalysis({ from, to, igIds: p.rows.map((r) => r.igId) })));
+  if (inc('attention')) parts.push(`<h2>${L('attention')}</h2><div class="grid2"><div class="panel"><h3>${L('silent')}</h3>${p.attention.silent.length ? p.attention.silent.map((s) => `<div>@${esc(s.username)} <span class="muted">${s.daysSincePost ?? '—'} ${L('days')}</span></div>`).join('') : `<div class="muted">${L('none')}</div>`}</div><div class="panel"><h3>${L('anomalies')}</h3>${p.attention.anomalies.length ? p.attention.anomalies.slice(0, 10).map((a) => `<div>@${esc(a.username)} <span class="${a.direction === 'up' ? 'pos' : 'neg'}">${a.kind === 'post_er' ? 'ER' : L(a.kind)} ${a.direction === 'up' ? '▲' : '▼'} ${a.z}σ</span></div>`).join('') : `<div class="muted">${L('none')}</div>`}</div></div>`);
+  if (inc('content') && p.rows.length) parts.push(contentSections(L, lang, contentAnalysis({ from, to, igIds: p.rows.map((r) => r.igId) })));
   if (inc('commentary')) parts.push(commentarySection(L, commentary));
   return shell({ lang, title: coverTitle || L('portfolio'), subtitle: `${p.rows.length} ${L('accounts')} · ${from} – ${to}`, logoDataUrl, branding, body: parts.join('') });
 }
@@ -280,13 +352,15 @@ export function campaignReport(params) {
   const { from, to, coverTitle, logoDataUrl, branding, lang = 'en', sections = {}, commentary } = params;
   const igId = params.igIds?.[0] ?? params.igId;
   const L = makeL(lang);
-  const inc = (k) => sections[k] !== false;
   const a = accountAnalytics({ igId, from, to });
   if (!a) throw new Error(msg('account_not_found', null, lang));
+  const allowed = sectionsFor('campaign', a.platform);
+  const inc = (k) => allowed.includes(k) && sections[k] !== false;
   const b = blended({ igId, from, to });
   const cur = b.adAccount?.currency ?? 'TRY';
   const parts = [];
-  if (inc('kpis')) parts.push(`<h2>${L('organic_paid')}</h2><div class="kpis">${kpiBox(L, L('organic_reach'), fmt(b.totals.organicReach), a.kpis.reach.changePct)}${kpiBox(L, L('paid_reach'), fmt(b.totals.paidReach), b.totals.paidReachChangePct)}${kpiBox(L, L('spend'), money(b.totals.spend, cur), b.totals.spendChangePct)}${kpiBox(L, L('impressions'), fmt(b.totals.impressions), null)}${kpiBox(L, L('clicks'), fmt(b.totals.clicks), null)}${kpiBox(L, L('results'), fmt(b.totals.results), null)}${kpiBox(L, L('cost_per_result'), b.totals.costPerResult != null ? money(b.totals.costPerResult, cur) : '—', null)}</div>`);
+  if (inc('kpis') && !a.capabilities.ads) parts.push(kpiSection(L, a));
+  else if (inc('kpis')) parts.push(`<h2>${L('organic_paid')}</h2><div class="kpis">${kpiBox(L, L('organic_reach'), fmt(b.totals.organicReach), a.kpis.reach.changePct)}${kpiBox(L, L('paid_reach'), fmt(b.totals.paidReach), b.totals.paidReachChangePct)}${kpiBox(L, L('spend'), money(b.totals.spend, cur), b.totals.spendChangePct)}${kpiBox(L, L('impressions'), fmt(b.totals.impressions), null)}${kpiBox(L, L('clicks'), fmt(b.totals.clicks), null)}${kpiBox(L, L('results'), fmt(b.totals.results), null)}${kpiBox(L, L('cost_per_result'), b.totals.costPerResult != null ? money(b.totals.costPerResult, cur) : '—', null)}</div>`);
   if (inc('blended')) parts.push(`<div class="panel">${lineChart({ labels: b.series.map((d) => d.date.slice(5)), series: [{ name: L('organic_reach'), color: '#4F7CFF', values: b.series.map((d) => d.organicReach) }, { name: L('paid_reach'), color: '#C06CE8', values: b.series.map((d) => d.paidReach) }], dual: { name: `${L('spend')} (${cur})`, color: '#E8B44A', values: b.series.map((d) => d.spend) } })}</div>`);
   if (inc('campaigns')) parts.push(b.campaigns.length ? campaignsTable(L, b) : `<p class="muted">${L('no_ad_account')}</p>`);
   if (inc('breakdown')) parts.push(breakdownSection(L, b, from, to));
@@ -294,7 +368,7 @@ export function campaignReport(params) {
     const boosted = listMedia({ igIds: [igId], from: rangeMs(from, to).fromMs, to: rangeMs(from, to).toMs, onlyPaid: true, sort: 'spend' });
     if (boosted.length) parts.push(`<h2>${L('boosted_posts')} · ${boosted.length}</h2>${postsTable(L, lang, boosted, { showAccount: false })}`);
   }
-  if (inc('posts')) parts.push(`<h2>${L('top6')}</h2>${postsGrid(L, lang, [...a.posts].sort((x, y) => (y.reach ?? 0) - (x.reach ?? 0)).slice(0, 6))}`);
+  if (inc('posts')) parts.push(`<h2>${L('top6')}</h2>${postsGrid(L, lang, topPosts(a))}`);
   if (inc('commentary')) parts.push(commentarySection(L, commentary));
   return shell({ lang, title: coverTitle || `${a.account.name ?? a.account.username} — ${L('campaign')}`, subtitle: `@${a.account.username} · ${from} – ${to}`, logoDataUrl, branding, clientLogo: getClientLogo(igId), body: parts.join('') });
 }
@@ -306,7 +380,12 @@ export function basketReport({ basket, coverTitle, logoDataUrl, branding, lang =
   const cmp = comparePosts({ mediaIds: basket ?? [] });
   if (!cmp.items.length) throw new Error(msg('basket_empty', null, lang));
   const parts = [];
-  const metricRows = [['reach', L('reach'), fmt], ['views', L('views'), fmt], ['likes', L('likes'), fmt], ['comments', L('comments'), fmt], ['saved', L('saves'), fmt], ['shares', L('shares'), fmt], ['engagementRate', 'ER', (v) => `%${round(v, 2) ?? '—'}`], ['saveRate', L('save_rate'), (v) => `%${round(v, 2) ?? '—'}`]];
+  const f = postFlags(cmp.items.map((d) => d.media));
+  const metricRows = [
+    ...(f.reach ? [['reach', L('reach'), fmt]] : []), ['views', L('views'), fmt], ['likes', L('likes'), fmt], ['comments', L('comments'), fmt],
+    ...(f.saves ? [['saved', L('saves'), fmt]] : []), ['shares', L('shares'), fmt], ...(f.reposts ? [['reposts', L('reposts'), fmt], ['quotes', L('quotes'), fmt]] : []),
+    ['engagementRate', 'ER', (v) => `%${round(v, 2) ?? '—'}`], ...(f.saves ? [['saveRate', L('save_rate'), (v) => `%${round(v, 2) ?? '—'}`]] : []),
+  ];
   if (inc('comparison') && cmp.items.length > 1) {
     parts.push(`<h2>${L('comparison')}</h2><table><thead><tr><th></th>${cmp.items.map((d) => `<th class="n">@${esc(d.media.username)}<br><span class="muted">${dateStr(d.media.postedAt, lang)} · ${L(d.media.typeKey)}</span></th>`).join('')}</tr></thead><tbody>
 ${metricRows.map(([k, label, f]) => `<tr><td class="muted">${label}</td>${cmp.items.map((d) => `<td class="n" ${cmp.best[k] === d.media.mediaId ? 'style="color:var(--pos);font-weight:600"' : ''}>${f(d.media[k])}</td>`).join('')}</tr>`).join('')}
@@ -318,7 +397,7 @@ ${metricRows.map(([k, label, f]) => `<tr><td class="muted">${label}</td>${cmp.it
       const m = d.media;
       const tiles = metricRows.map(([k, label, f]) => kpiBox(L, label, f(m[k]), d.deltas[k] ?? null)).join('');
       parts.push(`<h2>@${esc(m.username)} · ${dateStr(m.postedAt, lang)} · ${L(m.typeKey)}</h2>
-<div class="panel"><div style="font-size:14px;line-height:1.6">${esc(m.caption ?? '')}</div><div class="note" style="margin-top:6px">${m.captionLength} ${lang === 'tr' ? 'karakter' : 'chars'} · ${m.hashtagCount} hashtag · ${m.mentionCount} mention · ${d.rank.rank != null ? `${L('reach_rank')}: #${d.rank.rank}/${d.rank.total}` : ''}${m.permalink ? ` · <a href="${esc(m.permalink)}" style="color:var(--accent)">Instagram</a>` : ''}</div></div>
+<div class="panel"><div style="font-size:14px;line-height:1.6">${esc(m.caption ?? '')}</div><div class="note" style="margin-top:6px">${m.captionLength} ${lang === 'tr' ? 'karakter' : 'chars'} · ${m.hashtagCount} hashtag · ${m.mentionCount} mention · ${d.rank.rank != null ? `${L('reach_rank')}: #${d.rank.rank}/${d.rank.total}` : ''}${m.permalink ? ` · <a href="${esc(m.permalink)}" style="color:var(--accent)">${esc(platformLabel(m.platform ?? 'instagram'))}</a>` : ''}</div></div>
 <div class="kpis">${tiles}</div>${d.benchmark ? `<div class="note">${L('bench_note', { n: d.benchmark.posts, t: L(m.typeKey), d: d.benchmark.days })}</div>` : ''}
 ${d.paid ? `<h4>${L('ad')}</h4><div class="kpis">${kpiBox(L, L('spend'), money(d.paid.totals.spend, d.paid.currency), null)}${kpiBox(L, L('paid_reach'), fmt(d.paid.totals.reach), null)}${kpiBox(L, L('impressions'), fmt(d.paid.totals.impressions), null)}${kpiBox(L, L('clicks'), fmt(d.paid.totals.clicks), null)}${kpiBox(L, L('results'), fmt(d.paid.totals.results), null)}${kpiBox(L, L('paid_share'), round(d.derived.paidShare, 1) ?? '—', null, '%')}</div>` : ''}`);
     }
@@ -329,10 +408,10 @@ ${d.paid ? `<h4>${L('ad')}</h4><div class="kpis">${kpiBox(L, L('spend'), money(d
 }
 
 /** Weekly change digest (portfolio). */
-export function weeklyReport({ weekOf, to, tagIds, coverTitle, logoDataUrl, branding, lang = 'en', sections = {}, commentary }) {
+export function weeklyReport({ weekOf, to, tagIds, platforms, coverTitle, logoDataUrl, branding, lang = 'en', sections = {}, commentary }) {
   const L = makeL(lang);
   const inc = (k) => sections[k] !== false;
-  const d = weeklyDigest({ weekOf: weekOf ?? to, tagIds, lang });
+  const d = weeklyDigest({ weekOf: weekOf ?? to, tagIds, platforms, lang });
   const parts = [`<h2>${L('weekly_digest')}</h2><div class="panel" style="font-size:15px;line-height:1.7">${d.sentences.map((s) => `<p style="margin:0 0 8px">${esc(s)}</p>`).join('')}</div>`];
   if (inc('kpis')) parts.push(`<div class="kpis" style="margin-top:16px">${kpiBox(L, L('reach'), fmt(d.kpis.totalReach.value), d.kpis.totalReach.changePct)}${kpiBox(L, L('net_followers'), fmt(d.kpis.netFollowers.value), d.kpis.netFollowers.changePct)}${kpiBox(L, L('avg_er'), d.kpis.avgEr.value ?? '—', d.kpis.avgEr.changePct, '%')}${kpiBox(L, L('posts'), fmt(d.kpis.totalPosts.value), d.kpis.totalPosts.changePct)}</div>`);
   if (inc('posts')) parts.push(`<h2>${L('week_posts')}</h2>${postsGrid(L, lang, d.topPosts)}`);
@@ -349,6 +428,24 @@ export const TEMPLATE_SECTIONS = {
   weekly: ['kpis', 'posts', 'commentary'],
   basket: ['comparison', 'details', 'commentary'],
 };
+
+/** Capability an optional section needs (providers/capabilities.js); sections not listed apply to every platform. */
+export const SECTION_CAPABILITY = Object.freeze({
+  stories: 'stories', demographics: 'demographics', competitors: 'competitors',
+  ads: 'ads', blended: 'ads', campaigns: 'ads', breakdown: 'ads', boosted: 'ads',
+});
+
+/** The template's sections that apply to an account on `platform` (N/A sections dropped; Instagram keeps all). */
+export function sectionsFor(template, platform = 'instagram') {
+  const caps = capabilitiesFor(platform);
+  return (TEMPLATE_SECTIONS[template] ?? TEMPLATE_SECTIONS.monthly).filter((k) => !SECTION_CAPABILITY[k] || caps[SECTION_CAPABILITY[k]]);
+}
+
+/** Top 6 posts of an account by its primary metric (reach; views on Threads). */
+function topPosts(a) {
+  const m = a.primaryMetric ?? 'reach';
+  return [...a.posts].sort((x, y) => (y[m] ?? 0) - (x[m] ?? 0)).slice(0, 6);
+}
 
 export function buildReport(template, params) {
   switch (template) {

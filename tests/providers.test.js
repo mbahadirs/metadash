@@ -22,6 +22,7 @@ import { registerFacebookSetupHandlers, FACEBOOK_SETUP_CHANNELS } from '../src/m
 import { registerThreadsSetupHandlers, THREADS_SETUP_CHANNELS } from '../src/main/ipc/setup.threads.handlers.js';
 import { interactions, erByFollowers } from '../src/main/analytics/engagement.js';
 import { MetaError } from '../src/main/meta/errors.js';
+import { notImplemented } from '../src/main/ipc/notImplemented.js';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'metadash-providers-'));
 beforeAll(() => openDb(path.join(dir, 'data.db')));
@@ -30,12 +31,12 @@ afterAll(() => { closeDb(); fs.rmSync(dir, { recursive: true, force: true }); })
 const invalid = (message) => new MetaError({ code: 100, message });
 
 describe('provider registry', () => {
-  it('lists only enabled providers; facebook/threads are stubs until chunks B/C', () => {
+  it('lists enabled providers in registration order', () => {
     expect(ALL_PLATFORMS).toEqual(['instagram', 'facebook', 'threads']);
-    expect(listProviders().map((p) => p.platform)).toEqual(['instagram']);
+    expect(listProviders().map((p) => p.platform)).toEqual(['instagram', 'facebook', 'threads']);
     expect(getProvider('instagram')).toMatchObject({ platform: 'instagram', auth: 'meta', concurrency: 2, primaryMetric: 'reach', enabled: true });
-    expect(getProvider('facebook')).toBeNull();
-    expect(getProvider('threads')).toBeNull();
+    expect(getProvider('facebook')).toMatchObject({ platform: 'facebook', auth: 'meta', concurrency: 2, primaryMetric: 'reach', enabled: true });
+    expect(getProvider('threads')).toMatchObject({ platform: 'threads', enabled: true });
     expect(getProvider('nope')).toBeNull();
     expect(isPlatformEnabled('instagram')).toBe(true);
   });
@@ -52,10 +53,15 @@ describe('provider registry', () => {
   });
 
   it('test override can enable a platform and be restored', () => {
-    __setProviderForTests('threads', { platform: 'threads', enabled: true, auth: 'threads', concurrency: 1 });
+    __setProviderForTests('facebook', null);
     expect(listProviders().map((p) => p.platform)).toEqual(['instagram', 'threads']);
+    const fake = { platform: 'threads', enabled: true, auth: 'threads', concurrency: 1 };
+    __setProviderForTests('threads', fake);
+    expect(getProvider('threads')).toBe(fake);
+    __setProviderForTests('facebook', undefined);
     __setProviderForTests('threads', undefined);
-    expect(getProvider('threads')).toBeNull();
+    expect(getProvider('facebook')).toMatchObject({ platform: 'facebook', enabled: true });
+    expect(getProvider('threads')).not.toBe(fake);
   });
 });
 
@@ -184,24 +190,23 @@ describe('platforms:list info', () => {
     const rows = listPlatformInfo();
     expect(rows.map((r) => r.platform)).toEqual(['instagram', 'facebook', 'threads']);
     expect(rows[0]).toMatchObject({ label: 'Instagram', enabled: true, auth: 'meta', connected: true, trackedCount: 1, primaryMetric: 'reach' });
-    expect(rows[1]).toMatchObject({ enabled: false, connected: true, trackedCount: 1 });
-    expect(rows[2]).toMatchObject({ enabled: false, auth: 'threads', connected: false, trackedCount: 0, primaryMetric: 'views' });
+    expect(rows[1]).toMatchObject({ enabled: true, connected: true, trackedCount: 1 });
+    expect(rows[2]).toMatchObject({ enabled: true, auth: 'threads', connected: false, trackedCount: 0, primaryMetric: 'views' });
     expect(rows[2].capabilities.reach).toBe(false);
   });
 });
 
-describe('setup stubs', () => {
-  it('registers every Facebook/Threads channel and throws a localized NOT_IMPLEMENTED error', async () => {
+describe('setup channels', () => {
+  it('registers every Facebook/Threads channel; notImplemented() is localized', async () => {
     const handlers = new Map();
     const handle = (channel, fn) => handlers.set(channel, fn);
     registerFacebookSetupHandlers(handle);
     registerThreadsSetupHandlers(handle);
     expect([...handlers.keys()]).toEqual([...FACEBOOK_SETUP_CHANNELS, ...THREADS_SETUP_CHANNELS]);
     expect(THREADS_SETUP_CHANNELS).toContain('setup:threads:exchangeToken');
-    for (const fn of handlers.values()) {
-      expect(() => fn({})).toThrow(/not available/);
-      try { fn({}); } catch (e) { expect(e.code).toBe('NOT_IMPLEMENTED'); }
-    }
+    const e = notImplemented();
+    expect(e.message).toMatch(/not available/);
+    expect(e.code).toBe('NOT_IMPLEMENTED');
   });
 });
 

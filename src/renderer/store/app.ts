@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { daysAgo, isoDate } from '@/lib/format';
-import type { SyncProgress, SyncStatus } from '@/lib/types';
+import type { AuthPlatform, Platform, SyncProgress, SyncStatus } from '@/lib/types';
+
+export interface TokenWarningState { platform: AuthPlatform; message: string }
+const PLATFORM_KEYS: Platform[] = ['instagram', 'facebook', 'threads'];
 
 export type Preset = 'today' | 'yesterday' | 7 | 30 | 'this_month' | 'last_month' | 28 | 90 | 'custom';
 export interface Period { from: string; to: string; preset: Preset }
@@ -11,11 +14,13 @@ interface AppState {
   sidebarCollapsed: boolean;
   period: Period;
   tagFilter: number[];
+  /** Global platform filter (empty = all). Persisted as ui.platformFilter. */
+  platformFilter: Platform[];
   compareIds: string[];
   basket: string[];
   sync: SyncStatus | null;
   progress: SyncProgress | null;
-  tokenWarning: string | null;
+  tokenWarning: TokenWarningState | null;
   online: boolean;
   demo: boolean;
   setLang: (l: 'tr' | 'en') => void;
@@ -24,13 +29,14 @@ interface AppState {
   setPreset: (p: Preset) => void;
   setCustomPeriod: (from: string, to: string) => void;
   setTagFilter: (ids: number[]) => void;
+  setPlatformFilter: (p: Platform[]) => void;
   setCompareIds: (ids: string[]) => void;
   toggleBasket: (mediaId: string) => void;
   addToBasket: (ids: string[]) => void;
   clearBasket: () => void;
   setSync: (s: SyncStatus | null) => void;
   setProgress: (p: SyncProgress | null) => void;
-  setTokenWarning: (m: string | null) => void;
+  setTokenWarning: (w: TokenWarningState | null) => void;
   setOnline: (o: boolean) => void;
   setDemo: (d: boolean) => void;
 }
@@ -63,6 +69,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   sidebarCollapsed: false,
   period: presetPeriod(30),
   tagFilter: [],
+  platformFilter: [],
   compareIds: [],
   basket: [],
   sync: null,
@@ -76,6 +83,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setPreset: (preset) => { set({ period: presetPeriod(preset) }); window.api?.settings?.set('lastPeriod', preset); },
   setCustomPeriod: (from, to) => set({ period: { from, to, preset: 'custom' } }),
   setTagFilter: (tagFilter) => set({ tagFilter }),
+  setPlatformFilter: (platformFilter) => { set({ platformFilter }); try { window.api?.settings?.set('ui.platformFilter', platformFilter); } catch { /* ignore */ } },
   setCompareIds: (compareIds) => set({ compareIds: compareIds.slice(0, 6) }),
   toggleBasket: (id) => { const basket = get().basket.includes(id) ? get().basket.filter((x) => x !== id) : [...get().basket, id]; set({ basket }); persistBasket(basket); },
   addToBasket: (ids) => { const basket = [...new Set([...get().basket, ...ids])]; set({ basket }); persistBasket(basket); },
@@ -92,14 +100,18 @@ export async function hydrateStore() {
   try {
     const res = await window.api.settings.all();
     if (!res?.ok) return;
-    const s = res.data as { lang?: 'tr' | 'en'; theme?: 'dark' | 'light'; lastPeriod?: Preset; demoMode?: boolean; 'ui.basket'?: string[] };
+    const s = res.data as { lang?: 'tr' | 'en'; theme?: 'dark' | 'light'; lastPeriod?: Preset; demoMode?: boolean; 'ui.basket'?: string[]; 'ui.platformFilter'?: unknown };
     const theme = s.theme === 'light' ? 'light' : 'dark';
     const lang = s.lang === 'tr' ? 'tr' : 'en';
     applyTheme(theme);
     applyLang(lang);
-    useAppStore.setState({ lang, theme, period: presetPeriod(s.lastPeriod && s.lastPeriod !== 'custom' ? s.lastPeriod : 30), basket: Array.isArray(s['ui.basket']) ? s['ui.basket'] : [] });
+    useAppStore.setState({ lang, theme, period: presetPeriod(s.lastPeriod && s.lastPeriod !== 'custom' ? s.lastPeriod : 30), basket: Array.isArray(s['ui.basket']) ? s['ui.basket'] : [], platformFilter: parsePlatformFilter(s['ui.platformFilter']) });
   } catch {
     applyTheme('dark');
     applyLang('en');
   }
+}
+
+function parsePlatformFilter(v: unknown): Platform[] {
+  return Array.isArray(v) ? PLATFORM_KEYS.filter((p) => v.includes(p)) : [];
 }

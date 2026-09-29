@@ -44,20 +44,31 @@ function accountReport(params, lang) {
 function accountSummary(igId, from, to) {
   const a = accountAnalytics({ igId, from, to });
   if (!a) return null;
-  const byReach = a.posts.filter((p) => p.reach != null).sort((x, y) => y.reach - x.reach);
+  // Ranked by the platform's primary metric: reach, or views on Threads (no reach there).
+  const m = a.primaryMetric ?? 'reach';
+  const byReach = a.posts.filter((p) => p[m] != null).sort((x, y) => y[m] - x[m]);
   const bottom = byReach.slice(Math.max(TOP_N, byReach.length - TOP_N)).reverse();
   return {
     username: `@${a.account.username}`,
+    platform: a.platform,
+    primaryMetric: m,
+    unavailableMetrics: unavailable(a.capabilities),
     name: a.account.name,
     client: a.account.clientName,
     followers: a.account.followers,
     kpis: Object.fromEntries(Object.entries(a.kpis).map(([k, v]) => [k, { value: v.value, previous: v.prev, changePct: v.changePct }])),
-    contentMix: a.byType.map((t) => ({ type: typeKey({ mediaProductType: t.productType, mediaType: t.mediaType }), posts: t.posts, avgReach: t.avgReach, avgErPct: t.avgEr })),
+    contentMix: a.byType.map((t) => ({ type: typeKey({ mediaProductType: t.productType, mediaType: t.mediaType }), posts: t.posts, avgReach: t.avgReach ?? undefined, avgErPct: t.avgEr })),
     topPosts: byReach.slice(0, TOP_N).map((p) => postSummary(p)),
     bottomPosts: bottom.map((p) => postSummary(p)),
     ads: a.paid ? adsSummary(a.paid) : undefined,
     healthScore: a.health?.score,
   };
+}
+
+/** Metrics the platform does not report, so the model does not read their absence as zero. */
+function unavailable(caps) {
+  const out = [...(caps?.reach ? [] : ['reach']), ...(caps?.saveRate ? [] : ['saves', 'saveRate']), ...(caps?.stories ? [] : ['stories'])];
+  return out.length ? out : undefined;
 }
 
 function adsSummary(paid) {
@@ -85,7 +96,7 @@ function portfolioReport(params, lang) {
   const { from, to } = assertRange(weekly ? fmtDate(subDays(toDate(String(end)), 6)) : params.from, end);
   const tagIds = Array.isArray(params.tagIds) ? params.tagIds.filter(Number.isInteger) : [];
   const p = portfolio({ from, to, tagIds });
-  const accRow = (r) => ({ account: `@${r.username}`, client: r.clientName, followers: r.followers, followersChange: r.followersChange, reach: r.reach, reachChangePct: r.reachChangePct, erPct: r.er, posts: r.posts, adSpend: r.spend || undefined, healthScore: r.health });
+  const accRow = (r) => ({ account: `@${r.username}`, platform: r.platform, client: r.clientName, followers: r.followers, followersChange: r.followersChange, reach: r.reach, reachChangePct: r.reachChangePct, views: r.reach == null ? r.views : undefined, viewsChangePct: r.reach == null ? r.primaryChangePct : undefined, erPct: r.er, posts: r.posts, adSpend: r.spend || undefined, healthScore: r.health });
   const ranked = p.rows.filter((r) => r.reachChangePct != null).sort((x, y) => y.reachChangePct - x.reachChangePct);
   const { fromMs, toMs } = rangeMs(from, to);
   const posts = p.rows.length ? listMedia({ igIds: p.rows.map((r) => r.igId), from: fromMs, to: toMs, sort: 'reach', limit: 5 }) : [];
@@ -94,6 +105,8 @@ function portfolioReport(params, lang) {
     report: header(params.template, from, to, lang),
     portfolio: {
       accounts: p.rows.length,
+      byPlatform: Object.keys(p.kpis.byPlatform ?? {}).length > 1 ? p.kpis.byPlatform : undefined,
+      notes: p.platforms?.includes('threads') ? 'Threads has no reach (views instead); totalReach covers Instagram and Facebook only.' : undefined,
       kpis: {
         totalFollowers: { value: k.totalFollowers.value, changePct: k.totalFollowers.changePct },
         netFollowers: { value: k.netFollowers.value, previous: k.netFollowers.prev, changePct: k.netFollowers.changePct },
@@ -105,7 +118,7 @@ function portfolioReport(params, lang) {
       topAccounts: ranked.slice(0, 5).map(accRow),
       bottomAccounts: ranked.length > 5 ? ranked.slice(Math.max(5, ranked.length - 5)).reverse().map(accRow) : undefined,
       topPosts: posts.map((x) => postSummary(x, { withAccount: true })),
-      anomalies: p.attention.anomalies.slice(0, 5).map((a) => ({ account: `@${a.username}`, metric: a.kind, date: a.date, direction: a.direction, value: a.value, baselineMean: a.mean, z: a.z })),
+      anomalies: p.attention.anomalies.slice(0, 5).map((a) => ({ account: `@${a.username}`, platform: a.platform, metric: a.kind, date: a.date, direction: a.direction, value: a.value, baselineMean: a.mean, z: a.z })),
       silentAccounts: p.attention.silent.length ? { count: p.attention.silent.length, examples: p.attention.silent.slice(0, 5).map((s) => `@${s.username}`) } : undefined,
     },
   });

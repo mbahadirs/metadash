@@ -9,6 +9,8 @@ import { CompareChart } from '@/charts/CompareChart';
 import { Icon } from '@/components/Icons';
 import { useRunSync } from '@/hooks/useSyncEvents';
 import { ExcelButton } from '@/components/ExcelButton';
+import { usePlatformCaps } from '@/hooks/usePlatforms';
+import { platformOf } from '@/lib/platforms';
 
 export function CompetitorsPage() {
   const t = useT();
@@ -21,12 +23,15 @@ export function CompetitorsPage() {
   const remove = useApiMutation<number>((id) => api.competitors.remove(id), ['competitors', 'competitorCompare']);
   const cmp = useCompetitorCompare(igId || undefined);
   const withCompetitors = new Set((all.data ?? []).map((c) => c.linkedIgId));
+  const pc = usePlatformCaps();
+  // Competitor tracking (business_discovery) is Instagram-only.
+  const eligible = (accounts.data ?? []).filter((a) => pc.caps(platformOf(a)).competitors);
 
   return (
     <div className="flex gap-6 h-full">
       <aside className="w-64 flex-none panel flex flex-col">
         <div className="p-3 border-b border-line text-xs text-ink-2">{t('accounts')}</div>
-        <div className="overflow-auto flex-1">{(accounts.data ?? []).map((a) => (
+        <div className="overflow-auto flex-1">{eligible.map((a) => (
           <button key={a.igId} className={`w-full flex items-center gap-2 px-3 h-9 text-left hover:bg-surface-2 ${igId === a.igId ? 'bg-surface-2' : ''}`} onClick={() => setIgId(a.igId)}>
             <Avatar username={a.username} url={a.profilePicUrl} color={a.color} size={20} /><span className="truncate flex-1">@{a.username}</span>
             {withCompetitors.has(a.igId) && <span className="text-xs text-ink-2 num">{(all.data ?? []).filter((c) => c.linkedIgId === a.igId).length}</span>}

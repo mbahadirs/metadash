@@ -120,7 +120,7 @@ export function registerSetupHandlers(handle) {
 
   handle('setup:linkAdAccount', ({ actId, igId }) => { linkAdAccount(actId, igId); return listAdAccounts(); });
 
-  handle('setup:complete', () => { setSetting('setupComplete', true); setSetting('setupStep', 6); return true; });
+  handle('setup:complete', () => { setSetting('setupComplete', true); setSetting('setupStep', 7); return true; });
 
   handle('setup:loadDemo', ({ reset = false } = {}) => {
     if (!canLoadDemo()) throw new Error(msg('demo_real_connected'));

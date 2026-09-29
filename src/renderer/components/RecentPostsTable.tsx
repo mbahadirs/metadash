@@ -21,7 +21,7 @@ export function RecentPostsTable({ rows, onOpen, showAccount = true, maxHeight =
           {rows.map((r) => { const young = Date.now() - r.postedAt < 24 * 3_600_000; const dim = young ? 'opacity-40' : ''; return (
             <tr key={r.mediaId} className="clickable" onClick={() => onOpen(r.mediaId)} title={young ? t('young_post', { h: Math.floor((Date.now() - r.postedAt) / 3_600_000) }) : undefined}>
               <td><PostThumb mediaId={r.mediaId} thumbnailPath={r.thumbnailPath} mediaType={r.mediaType} mediaProductType={r.mediaProductType} size={28} /></td>
-              {showAccount && <td><Link to={`/account/${r.igId}`} className="flex items-center gap-2 no-underline text-ink-1 hover:text-accent" onClick={(e) => e.stopPropagation()}><Avatar username={r.username} url={r.profilePicUrl} color={r.accountColor} size={18} />@{r.username}</Link></td>}
+              {showAccount && <td><Link to={`/account/${r.igId}`} className="flex items-center gap-2 no-underline text-ink-1 hover:text-accent" onClick={(e) => e.stopPropagation()}><Avatar username={r.username} url={r.profilePicUrl} color={r.accountColor} size={18} platform={r.platform} />@{r.username}</Link></td>}
               <td className="text-ink-2">{fmtDateTime(r.postedAt)}<span className="badge badge-muted ml-2">{fmtRelative(r.postedAt)}</span></td>
               <td><TypeBadge typeKey={r.typeKey} /></td>
               <td className="max-w-[260px] truncate" title={r.caption ?? ''}>{r.caption}</td>

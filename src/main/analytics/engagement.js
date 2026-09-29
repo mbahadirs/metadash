@@ -39,5 +39,5 @@ export const METRIC_DEFINITIONS = {
   save_rate: { tr: 'Kaydetme oranı = kaydetme / erişim', en: 'Save rate = saves / reach' },
   growth: { tr: 'Takipçi büyümesi = dönem sonu − dönem başı takipçi', en: 'Follower growth = followers at end − followers at start' },
   consistency: { tr: 'Paylaşım düzenliliği = son 30 gün haftalık gönderi sayısının standart sapması (düşük = düzenli)', en: 'Posting consistency = std. dev. of weekly post count in last 30 days (lower = steadier)' },
-  health: { tr: 'Sağlık skoru = büyüme %30 + etkileşim %30 + düzenlilik %20 + yanıt oranı %20, portföy yüzdeliğine göre', en: 'Health score = growth 30% + engagement 30% + consistency 20% + response rate 20%, percentile-normalised within portfolio' },
+  health: { tr: 'Sağlık skoru = büyüme %30 + etkileşim %30 + düzenlilik %20 + yanıt oranı %20, aynı platformdaki hesaplar içinde yüzdeliğe göre (yorum verisi olmayan Facebook/Threads: %37,5 + %37,5 + %25)', en: 'Health score = growth 30% + engagement 30% + consistency 20% + response rate 20%, percentile-normalised among accounts on the same platform (Facebook/Threads without comment data: 37.5% + 37.5% + 25%)' },
 };

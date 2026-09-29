@@ -93,7 +93,7 @@ describe('run_sql tool', () => {
   it('rejects excluded tables and writes; the DB is untouched', () => {
     expect(() => runSql({ query: 'SELECT * FROM settings', purpose: 'x' })).toThrow();
     expect(() => runSql({ query: 'DELETE FROM accounts', purpose: 'x' })).toThrow();
-    expect(getDb().prepare('SELECT COUNT(*) AS n FROM accounts').get().n).toBe(40);
+    expect(getDb().prepare('SELECT COUNT(*) AS n FROM accounts').get().n).toBe(54); // demo: 40 Instagram + 8 Facebook + 6 Threads
   });
 
   it('surfaces SQL errors and validates input', () => {

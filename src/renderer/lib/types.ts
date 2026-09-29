@@ -29,7 +29,7 @@ export interface Media {
   paidPostEngagement: number | null; paidPageEngagement: number | null; paidResultType: string | null; totalReach: number; totalImpressions: number; paidReachShare: number | null; paidImpressionShare: number | null; costPerResult: number | null;
   paidFrequency: number | null; paidCpc: number | null; paidCtr: number | null; paidCpm: number | null; costPerPostEngagement: number | null; costPerPageEngagement: number | null;
 }
-export type TypeKey = 'image' | 'carousel' | 'video' | 'reels' | 'story'; // D adds 'text' (main already returns it for TEXT_POST/TEXT/LINK/STATUS)
+export type TypeKey = 'image' | 'carousel' | 'video' | 'reels' | 'story' | 'text'; // 'text' = TEXT_POST/TEXT/LINK/STATUS (Facebook, Threads)
 export interface PaidAd { adId: string; adName: string | null; actId: string; accountName: string; currency: string; spend: number; impressions: number; reach: number; clicks: number; results: number; resultType: string | null; firstDate: string | null; lastDate: string | null; ctr: number | null; cpc: number | null; cpm: number | null; costPerResult: number | null }
 export interface MediaDetail {
   media: Media & { typeKey: TypeKey; ageHours: number };

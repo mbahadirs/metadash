@@ -115,6 +115,7 @@ Panonuzun sol menüsünde **Kullanım senaryoları / Use cases** varsa:
    | `ads_read` | Reklam verisi (Kurulum sihirbazı ister; yalnızca reklam hesabı eşlerseniz kullanılır) |
    | `business_management` | Business Manager'a ait Sayfa, Instagram ve reklam hesapları (isteğe bağlı, önerilir) |
    | `instagram_manage_comments` | Yorumlar ve yanıt oranı metrikleri (isteğe bağlı) |
+   | `read_insights` | Facebook Sayfası istatistikleri – görüntülenme, izleyici, takip, gönderi istatistikleri (isteğe bağlı; yalnızca Facebook Sayfalarını takip ediyorsanız gerekli, Bölüm 7.2) |
 
 3. Her satırda "Standart erişim / Standard access: Hazır" görünmesi yeterlidir. **"Gelişmiş erişim talep et / Request advanced access" düğmesine basmayın**; App Review'a götürür ve gerekmez.
 
@@ -154,7 +155,7 @@ Development modundaki bir uygulamayla yalnızca uygulamada rolü olan kişiler t
    instagram_basic, instagram_manage_insights, pages_show_list, pages_read_engagement, ads_read, business_management
    ```
 
-   Yorum modülünü istiyorsanız `instagram_manage_comments` iznini de ekleyin. Bir izin listede çıkmıyorsa Bölüm 3.2'de uygulamaya eklenmemiştir.
+   Yorum modülünü istiyorsanız `instagram_manage_comments`, Facebook Sayfalarını takip etmek istiyorsanız `read_insights` iznini de ekleyin (Bölüm 7.2). Bir izin listede çıkmıyorsa Bölüm 3.2'de uygulamaya eklenmemiştir.
 5. **Erişim Token'ı Oluştur / Generate Access Token**'a basın. Facebook giriş penceresi açılır:
    - **"[Uygulama] bilgilerinize erişmek istiyor… / [adınız] olarak devam et"** → **Devam et / Continue**.
    - **İşletme portföyü seçimi** çıkarsa Sayfalarınızın bulunduğu portföyü seçin.
@@ -215,6 +216,25 @@ me/adaccounts?fields=name,account_status,currency
 
 Uzun ömürlü token 60 gün geçerlidir. MetaDash, Ayarlar → Bağlantı'da kalan günü gösterir ve Meta 190 hatası döndürdüğünde üstte kırmızı bir uyarı çıkarır. Yenilemek için: Ayarlar → Bağlantı → **Token yenile** (sizi Token adımına götürür) → Bölüm 6'yı tekrarlayın. Mevcut veriler korunur.
 
+### 7.2 Facebook Sayfalarını takip etme
+
+MetaDash, Facebook Sayfalarının kendisini de takip edebilir (görüntülenme, izleyici, takip/takipten çıkma, gönderi etkileşimleri, Sayfa profil görüntülenmeleri ve gönderi başına görüntülenme, izleyici, tepki, yorum, paylaşım ve tıklama). Instagram ile aynı Meta uygulamasını ve token'ı kullanır; ek uygulama gerekmez.
+
+1. **İzin:** `read_insights` iznini uygulamaya ekleyin (Bölüm 3.2), token'a dahil edin (Bölüm 6) ve token'ı MetaDash'te yeniden dönüştürün. `pages_show_list` ve `pages_read_engagement` zaten zorunludur. `read_insights` olmadan Sayfalar listelenir ama istatistikleri reddedilir.
+2. **Her Sayfadaki rolünüz istatistik erişimini (`ANALYZE` görevi) içermelidir.** Tam kontrol ya da "İstatistikleri görüntüleme / Insights" içeren herhangi bir Sayfa rolü/görev seti yeterlidir. Explorer'da kontrol edin:
+
+   ```
+   me/accounts?fields=name,tasks&limit=100
+   ```
+
+   `tasks` içinde `ANALYZE` olmalıdır. Business Manager'daki Sayfalar için: business.facebook.com → Ayarlar → Hesaplar → Sayfalar → ilgili Sayfa → Kişiler → kendinize istatistik içeren bir görev seti verin. `ANALYZE` olmayan Sayfalar MetaDash'te uyarıyla gösterilir.
+3. **Sayfaları seçin:** Sayfalar **varsayılan olarak takip edilmez**. MetaDash'te Facebook Sayfaları listesini açın (Kurulum → hesap seçimi ya da Ayarlar → Bağlantılar), istediğiniz Sayfaları işaretleyip kaydedin. Takip edilen bir Instagram hesabına bağlı Sayfa, o hesabın müşteri adını ve etiketlerini devralır.
+4. Bir sonraki senkronizasyon (Güncelle düğmesi ya da günlük otomatik güncelleme) onları çeker. MetaDash her senkronizasyonun başında kullanıcı token'ınızla her Sayfa için Meta'dan bir **Sayfa erişim token'ı** ister; Sayfa token'ı yapıştırmanız gerekmez.
+
+Notlar:
+- Meta, 2025–2026'da Sayfa metriklerinin çoğunu yeniden adlandırdı ("impressions" **görüntülenme / views**, "reach" **izleyici / viewers**, "fans" **takipçi / followers** oldu). MetaDash önce güncel metrik adlarını dener, gerekirse otomatik olarak eskilerine düşer; Meta'nın artık desteklemediği metrikler Ayarlar'da listelenir ve oradan yeniden etkinleştirilebilir.
+- Sayfa istatistikleri en fazla 90 gün geriye istenebilir; bu yüzden ilk senkronizasyon en fazla son 90 günü doldurur.
+
 ---
 
 ## 8. Sorun giderme
@@ -236,6 +256,8 @@ Uzun ömürlü token 60 gün geçerlidir. MetaDash, Ayarlar → Bağlantı'da ka
 | "2500 An active access token must be used" | Token yapıştırılırken kesilmiş | Token'ı Explorer'dan eksiksiz kopyalayın |
 | Instagram hesabı başka bir Business Manager'a ait | Yanlış portföy seçilmiş | Giriş penceresinde doğru portföyü seçin; gerekirse uygulamayı o portföye bağlayın (Bölüm 3.3) |
 | Uygulama oluştururken "telefon doğrulaması / 2FA" ekranında takıldım | Geliştirici hesabı doğrulanmamış | Hesaplar Merkezi'nde 2FA'yı açın, telefonunuzu doğrulayın, tekrar deneyin |
+| Facebook Sayfası atlandı: "Sayfa için erişim token'ı alınamadı" | Sayfayı artık yönetmiyorsunuz ya da giriş penceresinde Sayfa seçilmemiş | Sayfa erişimini kontrol edin (Bölüm 1.3); facebook.com → Ayarlar → İşletme entegrasyonları'nda Sayfayı uygulamaya ekleyin, yeni token üretip tekrar dönüştürün |
+| Facebook Sayfası atlandı: "rolünüz ANALYZE görevini içermiyor" / `/insights` için kod 10 | Sayfa rolünüzde istatistik erişimi yok ya da token'da `read_insights` eksik | Bölüm 7.2, adım 1–2 |
 
 Meta belirli bir metriği reddettiğinde (o metrik için 100 hata kodu), MetaDash onu sonraki isteklerden çıkarır ve Ayarlar'da listeler; oradan daha sonra yeniden etkinleştirebilirsiniz.
 
@@ -274,3 +296,4 @@ Uygulama ayarları → Temel → **Sıfırla / Reset** ile yeni Secret üretin, 
 - Business Suite ayarları (Instagram–Sayfa–reklam hesabı bağlantıları): https://business.facebook.com/settings/
 - İzin referansı: https://developers.facebook.com/docs/permissions/
 - Instagram API with Facebook Login: https://developers.facebook.com/docs/instagram-platform/instagram-api-with-facebook-login/
+- Sayfa istatistik metrikleri referansı: https://developers.facebook.com/docs/graph-api/reference/insights

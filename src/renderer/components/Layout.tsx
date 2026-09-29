@@ -81,8 +81,13 @@ export function Layout() {
 
         {tokenWarning && (
           <div className="bg-neg/15 text-neg px-4 py-2 text-sm flex items-center justify-between">
-            <span>{t('token_invalid')}: {tokenWarning}</span>
-            <div className="flex gap-2"><NavLink to="/settings" className="btn btn-sm">{t('renew_token')}</NavLink><button className="btn btn-ghost btn-sm" onClick={() => setTokenWarning(null)}>✕</button></div>
+            <span>{tokenWarning.platform === 'threads' ? t('token_invalid_threads') : t('token_invalid')}{tokenWarning.message ? `: ${tokenWarning.message}` : ''}</span>
+            <div className="flex gap-2">
+              {tokenWarning.platform === 'threads'
+                ? <NavLink to="/settings" state={{ focus: 'connections' }} className="btn btn-sm" onClick={() => setTokenWarning(null)}>{t('reconnect_threads')}</NavLink>
+                : <NavLink to="/setup?step=3" className="btn btn-sm">{t('renew_token')}</NavLink>}
+              <button className="btn btn-ghost btn-sm" onClick={() => setTokenWarning(null)}>✕</button>
+            </div>
           </div>
         )}
         {stale?.suggest && !dismissed && !running && sync && (

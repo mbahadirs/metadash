@@ -6,7 +6,7 @@ import { mediaLifecycle } from './lifecycle.js';
 import { rangeMs, mean, pctChange, round, fmtDate, toDate } from './util.js';
 
 const BENCH_DAYS = 90;
-const TYPE_ORDER = ['image', 'carousel', 'video', 'reels', 'story'];
+const TYPE_ORDER = ['image', 'carousel', 'video', 'reels', 'text', 'story'];
 
 /** Full detail for one post: metrics, benchmark deltas, rank, lifecycle, paid, comments. */
 export function mediaDetail(mediaId) {
@@ -48,9 +48,9 @@ export function mediaDetail(mediaId) {
 }
 
 /** Content analysis across accounts: type breakdown, recent-week table with benchmark deltas, hashtag performance, top posts. */
-export function contentAnalysis({ from, to, igIds, typeKeys, recentDays = 7 }) {
+export function contentAnalysis({ from, to, igIds, typeKeys, platforms, recentDays = 7 }) {
   const { fromMs, toMs } = rangeMs(from, to);
-  const posts = listMedia({ igIds, from: fromMs, to: toMs, typeKeys, sort: 'date' });
+  const posts = listMedia({ igIds, from: fromMs, to: toMs, typeKeys, platforms, sort: 'date' });
   const byType = {};
   for (const p of posts) {
     const k = mediaTypeKey(p);
@@ -98,6 +98,8 @@ export function contentAnalysis({ from, to, igIds, typeKeys, recentDays = 7 }) {
       avgSaveRate: round(mean(posts.map((p) => p.saveRate)), 2), totalSpend: round(totalSpend, 2), paidPosts: paidPosts.length,
       paidReach: paidPosts.reduce((s, p) => s + (p.paidReach ?? 0), 0), currency: mainCurrency, spendByCurrency,
       accounts: new Set(posts.map((p) => p.igId)).size,
+      platforms: [...new Set(posts.map((p) => p.platform ?? 'instagram'))],
+      avgViews: round(mean(posts.map((p) => p.views)), 0),
     },
     types,
     recent: recent.sort((a, b) => b.postedAt - a.postedAt),

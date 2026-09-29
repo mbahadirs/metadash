@@ -7,7 +7,24 @@ export const REQUIRED_SCOPES = [
   'pages_read_engagement',
   'ads_read',
 ];
-export const OPTIONAL_SCOPES = ['business_management', 'instagram_manage_comments'];
+/** read_insights: Facebook Page insights (optional — only needed when Pages are tracked). */
+export const OPTIONAL_SCOPES = ['business_management', 'instagram_manage_comments', 'read_insights'];
+
+/** Scopes each platform needs on the Meta token (Facebook Pages: list, read posts, read insights). */
+export const PLATFORM_SCOPES = Object.freeze({
+  instagram: REQUIRED_SCOPES,
+  facebook: ['pages_show_list', 'pages_read_engagement', 'read_insights'],
+});
+
+/** { instagram: bool, facebook: bool } — whether a granted scope list covers each Meta platform. */
+export function platformReadiness(scopes = []) {
+  return Object.fromEntries(Object.entries(PLATFORM_SCOPES).map(([p, need]) => [p, need.every((s) => scopes.includes(s))]));
+}
+
+/** Scopes missing for a platform. */
+export function missingScopesFor(platform, scopes = []) {
+  return (PLATFORM_SCOPES[platform] ?? []).filter((s) => !scopes.includes(s));
+}
 
 export async function exchangeLongLivedToken({ appId, appSecret, shortToken }) {
   const body = await graphGet('/oauth/access_token', {
@@ -33,5 +50,6 @@ export async function debugToken(token) {
     scopes,
     missingScopes: REQUIRED_SCOPES.filter((s) => !scopes.includes(s)),
     optionalScopes: OPTIONAL_SCOPES.map((s) => ({ scope: s, granted: scopes.includes(s) })),
+    platformReadiness: platformReadiness(scopes),
   };
 }

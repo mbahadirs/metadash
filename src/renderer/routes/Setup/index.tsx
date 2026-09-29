@@ -10,8 +10,11 @@ import type { TokenHealth, AdAccount } from '@/lib/types';
 import { CopyButton, Avatar, Spinner } from '@/components/ui';
 import { Icon } from '@/components/Icons';
 import { useRunSync } from '@/hooks/useSyncEvents';
+import { FacebookPagesList, saveFacebookPages, useFacebookPages } from './FacebookPages';
+import { ThreadsConnect } from './ThreadsConnect';
 
-const STEPS = 6;
+/** Welcome, Meta app, token, accounts (+ optional Facebook Pages), ad accounts, Threads (optional), first sync. */
+const STEPS = 7;
 const GRAPH_EXPLORER = 'https://developers.facebook.com/tools/explorer/';
 const DEV_PORTAL = 'https://developers.facebook.com/apps/';
 
@@ -30,9 +33,10 @@ export function SetupPage() {
     if (p) setStep(clampStep(Number(p)));
     else if (state.data && !state.data.complete) setStep(clampStep(state.data.step + 1));
   }, [state.data, params]);
-  // Persisted `setupStep` is 0-based from Welcome (0 = Welcome … 5 = First sync), so wizard step n ↔ n - 1.
+  // Persisted `setupStep` is 0-based from Welcome (0 = Welcome … 5 = Threads, 6 = First sync), so wizard step n ↔ n - 1.
+  // Main bumps it to 5 after the accounts step is saved, which now resumes at the optional Threads step (wizard 6).
   const go = (n: number) => { setStep(n); api.setup.setStep(Math.max(0, n - 1)); };
-  const titles = [t('step_welcome'), t('step_app'), t('step_token'), t('step_accounts'), t('step_ad_accounts'), t('step_first_sync')];
+  const titles = [t('step_welcome'), t('step_app'), t('step_token'), t('step_accounts'), t('step_ad_accounts'), t('step_threads'), t('step_first_sync')];
 
   return (
     <div className="h-full flex bg-surface-0">
@@ -55,7 +59,8 @@ export function SetupPage() {
           {step === 3 && <TokenStep required={state.data?.requiredScopes ?? []} optional={state.data?.optionalScopes ?? []} onNext={() => go(4)} onBack={() => go(2)} />}
           {step === 4 && <AccountsStep onNext={() => go(5)} onBack={() => go(3)} />}
           {step === 5 && <AdAccountsStep onNext={() => go(6)} onBack={() => go(4)} />}
-          {step === 6 && <FirstSyncStep onDone={() => { qc.invalidateQueries(); nav('/'); }} onBack={() => go(5)} />}
+          {step === 6 && <ThreadsStep onNext={() => go(7)} onBack={() => go(5)} />}
+          {step === 7 && <FirstSyncStep onDone={() => { qc.invalidateQueries(); nav('/'); }} onBack={() => go(6)} />}
         </div>
       </main>
     </div>
@@ -164,6 +169,7 @@ function TokenStep({ required, optional, onNext, onBack }: { required: string[];
         <li>{t('token_step_4')}</li>
       </ol>
       <GuideBox />
+      <p className="text-xs text-ink-2 m-0">{t('read_insights_note')}</p>
       <div className="flex items-center gap-2"><button className="btn" onClick={() => api.system.openExternal(GRAPH_EXPLORER)}>Graph API Explorer <Icon.external /></button><code className="text-xs bg-surface-2 px-2 py-1 rounded flex-1 truncate">{scopes}</code><CopyButton text={scopes} /></div>
       <label className="block"><div className="text-xs text-ink-2 mb-1">{t('short_token')}</div><textarea className="input font-mono text-xs" rows={3} value={token} onChange={(e) => setToken(e.target.value)} placeholder="EAAB..." /></label>
       <button className="btn btn-primary" onClick={exchange} disabled={busy || token.length < 20}>{busy ? <><Spinner size={12} /> {t('loading')}</> : t('exchange_verify')}</button>
@@ -171,7 +177,7 @@ function TokenStep({ required, optional, onNext, onBack }: { required: string[];
       {health && (
         <div className="panel p-4 space-y-2">
           <div className={health.valid ? 'text-pos' : 'text-neg'}>{health.valid ? t('token_valid') : t('token_invalid')} {health.daysLeft != null && <span className="text-ink-2">· {health.daysLeft} {t('days_left')}</span>}</div>
-          <div className="grid grid-cols-2 gap-1 text-sm">{required.map((s) => <div key={s} className={health.scopes.includes(s) ? 'text-pos' : 'text-neg'}>{health.scopes.includes(s) ? '✓' : '✕'} {s}</div>)}{optional.map((s) => <div key={s} className={health.scopes.includes(s) ? 'text-pos' : 'text-ink-2'}>{health.scopes.includes(s) ? '✓' : '○'} {s} <span className="text-xs">({t('optional')})</span></div>)}</div>
+          <div className="grid grid-cols-2 gap-1 text-sm">{required.map((s) => <div key={s} className={health.scopes.includes(s) ? 'text-pos' : 'text-neg'}>{health.scopes.includes(s) ? '✓' : '✕'} {s}</div>)}{optional.map((s) => <div key={s} className={health.scopes.includes(s) ? 'text-pos' : 'text-ink-2'}>{health.scopes.includes(s) ? '✓' : '○'} {s} <span className="text-xs">({s === 'read_insights' ? `${t('optional')} · ${t('needed_for_fb')}` : t('optional')})</span></div>)}</div>
           {health.missingScopes.length > 0 && <div className="text-warn text-sm">{t('missing_scopes', { s: health.missingScopes.join(', ') })}</div>}
         </div>
       )}
@@ -190,10 +196,12 @@ function AccountsStep({ onNext, onBack }: { onNext: () => void; onBack: () => vo
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [meta, setMeta] = useState<Record<string, { clientName: string; tags: string[] }>>({});
   const [search, setSearch] = useState('');
+  const fb = useFacebookPages(false);
   const discover = async () => {
     setBusy(true); setErr(null);
     try {
       const res = await call<Discovery | Discovered[]>(api.setup.discoverAccounts());
+      fb.discover(); // Facebook Pages come from the same token; errors stay inside the optional section.
       const found = Array.isArray(res) ? res : res.items;
       setScan(Array.isArray(res) ? { warnings: [], businesses: [] } : { warnings: res.warnings ?? [], businesses: res.businesses ?? [] });
       setList(found);
@@ -208,7 +216,12 @@ function AccountsStep({ onNext, onBack }: { onNext: () => void; onBack: () => vo
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const save = async () => {
     setBusy(true);
-    try { await call(api.setup.saveTrackedAccounts([...selected], Object.fromEntries([...selected].map((id) => [id, meta[id] ?? { clientName: '', tags: [] }])))); onNext(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+    try {
+      await call(api.setup.saveTrackedAccounts([...selected], Object.fromEntries([...selected].map((id) => [id, meta[id] ?? { clientName: '', tags: [] }]))));
+      // After IG, so client names/tags of linked Instagram accounts can be copied onto ticked Pages.
+      if (fb.data) await saveFacebookPages(fb);
+      onNext();
+    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   };
   return (
     <div className="space-y-4">
@@ -246,6 +259,13 @@ function AccountsStep({ onNext, onBack }: { onNext: () => void; onBack: () => vo
           <div key={p.pageId} className="panel p-3 opacity-50"><div className="font-medium">{p.pageName}</div><div className="text-xs text-warn">{t('page_without_ig')}</div></div>
         ))}
       </div>
+      {list && (
+        <section className="pt-4 mt-2 border-t border-line space-y-2">
+          <h2 className="text-base font-semibold m-0">{t('fb_pages_title')}</h2>
+          <p className="text-xs text-ink-2 m-0">{t('fb_pages_intro')}</p>
+          <FacebookPagesList state={fb} />
+        </section>
+      )}
       <Nav onBack={onBack} onNext={save} disabled={busy || selected.size === 0} nextLabel={`${t('save')} (${selected.size})`} />
     </div>
   );
@@ -273,6 +293,20 @@ function AdAccountsStep({ onNext, onBack }: { onNext: () => void; onBack: () => 
           {list.length === 0 && <tr><td colSpan={4} className="text-center text-ink-2">{t('none')}</td></tr>}</tbody></table></div>
       )}
       <Nav onBack={onBack} onNext={onNext} nextLabel={t('continue')} />
+    </div>
+  );
+}
+
+function ThreadsStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
+  const t = useT();
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-ink-2">{t('threads_intro')}</p>
+      <ThreadsConnect />
+      <div className="flex items-center justify-between pt-6 mt-6 border-t border-line">
+        <button className="btn" onClick={onBack}>{t('back')}</button>
+        <div className="flex gap-2"><button className="btn btn-ghost" onClick={onNext}>{t('skip')}</button><button className="btn btn-primary" onClick={onNext}>{t('next')}</button></div>
+      </div>
     </div>
   );
 }

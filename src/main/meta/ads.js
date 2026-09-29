@@ -59,10 +59,17 @@ export async function fetchAdAccountMeta(actId, token) {
   return graphGet(`/${actId}`, { fields: 'id,name,currency,account_status' }, { token });
 }
 
-/** Ads → promoted Instagram post links (one paginated call per ad account). */
+/**
+ * Ads → promoted post links (one paginated call per ad account). The Instagram media id wins; otherwise the
+ * Facebook post behind the ad (effective_object_story_id = 'pageid_postid', the same key Facebook Page media use).
+ */
 export async function fetchAdMediaLinks(actId, token) {
-  const rows = await graphGetAll(`/${actId}/ads`, { fields: 'id,name,creative{effective_instagram_media_id,instagram_permalink_url}', limit: 200 }, { token });
+  const rows = await graphGetAll(`/${actId}/ads`, { fields: 'id,name,creative{effective_instagram_media_id,instagram_permalink_url,effective_object_story_id}', limit: 200 }, { token });
   return rows
-    .filter((r) => r.creative?.effective_instagram_media_id)
-    .map((r) => ({ actId, adId: r.id, adName: r.name, mediaId: r.creative.effective_instagram_media_id, permalink: r.creative.instagram_permalink_url ?? null }));
+    .map((r) => ({ r, mediaId: r.creative?.effective_instagram_media_id ?? r.creative?.effective_object_story_id ?? null }))
+    .filter(({ mediaId }) => mediaId)
+    .map(({ r, mediaId }) => ({
+      actId, adId: r.id, adName: r.name, mediaId,
+      permalink: r.creative.effective_instagram_media_id ? (r.creative.instagram_permalink_url ?? null) : null,
+    }));
 }

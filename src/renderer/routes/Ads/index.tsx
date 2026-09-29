@@ -79,7 +79,7 @@ export function AdsPage() {
       <Section title={t('blended')} right={<select className="input w-56" value={blendIg} onChange={(e) => setBlendIg(e.target.value)}><option value="">{t('account')}…</option>{(accounts.data ?? []).filter((a) => tracked.some((ad) => ad.linkedIgId === a.igId)).map((a) => <option key={a.igId} value={a.igId}>@{a.username}</option>)}</select>}>
         {!blendIg ? <div className="text-ink-2 text-sm">{t('linked_account')}</div> : blended.isLoading ? <Loading /> : blended.data?.adAccount ? (
           <div data-chart-id={`blended-${blendIg}`} style={{ height: 280 }}>
-            <TimeSeries data={blended.data.series} rightFormat={(v) => fmtMoney(v, blended.data!.adAccount!.currency)} series={[{ key: 'organicReach', name: `${t('reach')} (organik)`, color: '#4F7CFF', type: 'area' }, { key: 'paidReach', name: `${t('reach')} (reklam)`, color: '#C06CE8', type: 'area' }, { key: 'spend', name: t('spend'), color: '#E8B44A', type: 'bar', axis: 'right', format: (v) => fmtMoney(v, blended.data!.adAccount!.currency) }]} />
+            <TimeSeries data={blended.data.series} rightFormat={(v) => fmtMoney(v, blended.data!.adAccount!.currency)} series={[{ key: 'organicReach', name: t('organic_reach'), color: '#4F7CFF', type: 'area' }, { key: 'paidReach', name: t('paid_reach'), color: '#C06CE8', type: 'area' }, { key: 'spend', name: t('spend'), color: '#E8B44A', type: 'bar', axis: 'right', format: (v) => fmtMoney(v, blended.data!.adAccount!.currency) }]} />
           </div>
         ) : <div className="text-ink-2 text-sm">{t('no_ad_account')}</div>}
       </Section>

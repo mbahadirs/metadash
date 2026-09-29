@@ -73,3 +73,57 @@ export const COMMENT_TEXTS = ['Harika olmuş 👏', 'Fiyat bilgisi alabilir miyi
 export const CAMPAIGN_NAMES = ['Yaz Kampanyası', 'Marka Bilinirliği', 'Dönüşüm - Web', 'Mesaj Kampanyası', 'Yeni Ürün Lansmanı'];
 export const ADSET_NAMES = ['Kadın 25-34', 'Erkek 25-44', 'Retargeting', 'Lookalike 1%', 'Geniş Kitle', 'İlgi Alanı'];
 export const AD_NAMES = ['Video A', 'Video B', 'Carousel', 'Tek Görsel', 'Story Reklamı', 'Reels Reklamı'];
+
+/**
+ * Demo Facebook Pages: [linked Instagram brand index (BRANDS) or null, page username, page name, client, sector].
+ * Linked pages share the Instagram account's client; two stand-alone pages have no Instagram account.
+ */
+export const FB_PAGES = [
+  [0, 'kahveduragi.tr', 'Kahve Durağı', null, null],
+  [2, 'modaevi.official', 'Moda Evi', null, null],
+  [5, 'evdekormobilya', 'Ev Dekor Mobilya', null, null],
+  [10, 'denizotelbodrum', 'Deniz Otel Bodrum', null, null],
+  [11, 'teknomarketTR', 'Tekno Market', null, null],
+  [19, 'dilokuluistanbul', 'Dil Okulu İstanbul', null, null],
+  [null, 'belediyekultur', 'Şehir Kültür Merkezi', 'Şehir Kültür Vakfı', 'Kültür'],
+  [null, 'mahalleeczanesi', 'Mahalle Eczanesi', 'Mahalle Eczanesi', 'Sağlık'],
+];
+
+/** Demo Threads profiles: [linked Instagram brand index or null, username, name, client, sector]. */
+export const THREADS_PROFILES = [
+  [0, 'kahveduragi', 'Kahve Durağı', null, null],
+  [2, 'modaevi', 'Moda Evi', null, null],
+  [8, 'fitzone', 'FitZone', null, null],
+  [7, 'kitapkurdu', 'Kitap Kurdu', null, null],
+  [33, 'yazilimev', 'Yazılım Evi', null, null],
+  [null, 'ajans.notlari', 'Ajans Notları', 'Ajans (kendi hesabı)', 'Hizmet'],
+];
+
+export const FB_CAPTIONS = [
+  'Bu hafta sonu mağazamızda tadım etkinliği var, herkesi bekliyoruz! Detaylar için linke tıklayın.',
+  'Yeni ürünlerimiz web sitemizde. Siparişlerinizi bugün verin, yarın kapınızda olsun.',
+  'Müşterilerimizin sorularını yanıtladığımız canlı yayın tekrarı sayfamızda.',
+  'Çalışma saatlerimiz bayram boyunca değişiyor, lütfen güncel saatleri kontrol edin.',
+  'Ekibimiz büyüyor! Açık pozisyonlar için başvuru linki aşağıda.',
+  'Blogumuzda yeni yazı: sık sorulan 5 soru ve cevapları.',
+  'Fotoğraf albümü: geçen haftaki etkinlikten kareler 📸',
+  'Kampanya son gün! Kaçırmayın.',
+  'Topluluğumuza teşekkürler: sayfamız yeni bir kilometre taşına ulaştı 🎉',
+  'Sizce bir sonraki etkinliğimiz hangi şehirde olmalı? Yorumlarda buluşalım.',
+];
+
+export const THREADS_TEXTS = [
+  'Bugün ekipte en çok tartışılan konu: kahve mi çay mı? ☕️🫖',
+  'Küçük işletmeler için sosyal medyada en çok işe yarayan şey tutarlılık. Katılıyor musunuz?',
+  'Yeni sezon hazırlıkları başladı, perde arkasından kısa notlar 🧵',
+  'Bir müşterimiz bugün harika bir soru sordu, cevabı bu zincirde 👇',
+  'Haftanın önerisi: bu kitabı okumadan geçmeyin.',
+  'Sabah antrenmanı mı akşam antrenmanı mı?',
+  'Pazartesi motivasyonu: küçük adımlar, büyük sonuçlar.',
+  'Sizce yapay zekâ küçük işletmeler için fırsat mı tehdit mi?',
+  'Yeni ürünümüzü ilk kim denemek ister? 🙋',
+  'Bugün öğrendiğimiz bir şey: sabır her zaman kazanır.',
+];
+
+export const THREADS_AGE_BUCKETS = ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
+export const THREADS_GENDERS = ['F', 'M', 'U'];

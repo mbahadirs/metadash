@@ -52,8 +52,29 @@ const D = {
   bench_er: ['Kıyas ort. ER %', 'Benchmark avg. ER %'], char_count: ['Karakter', 'Characters'], ad_count: ['Reklam sayısı', 'Ad count'], lifecycle: ['Yaşam eğrisi', 'Lifecycle'], age_hours: ['Yaş (saat)', 'Age (hours)'],
   captured: ['Ölçüm', 'Captured'], ad_name: ['Reklam', 'Ad'], ad_account: ['Reklam hesabı', 'Ad account'], first_day: ['İlk gün', 'First day'], last_day: ['Son gün', 'Last day'],
   heat_tip: ['{n} gönderi, ER {v}', '{n} posts, ER {v}'], weekdays: ['Paz,Pzt,Sal,Çar,Per,Cum,Cmt', 'Sun,Mon,Tue,Wed,Thu,Fri,Sat'],
+  viewers: ['Görüntüleyen', 'Viewers'], reposts: ['Yeniden paylaşım', 'Reposts'], quotes: ['Alıntı', 'Quotes'], link_clicks: ['Bağlantı tıklaması', 'Link clicks'],
+  post_engagements: ['Gönderi etkileşimi', 'Post engagements'], page_views: ['Sayfa görüntüleme', 'Page views'], unfollows: ['Takibi bırakan', 'Unfollows'], shares: ['Paylaşım', 'Shares'],
+  instagram: ['Instagram', 'Instagram'], facebook: ['Facebook', 'Facebook'], threads: ['Threads', 'Threads'], text: ['Metin', 'Text'],
+  views_engagement: ['Görüntülenme ve etkileşim', 'Views and engagement'], reach_or_views: ['Erişim / görüntülenme', 'Reach / views'],
+  gender_unknown: ['Belirtilmemiş', 'Unspecified'], mixed_platforms_note: ['Farklı platformlar birlikte gösteriliyor: Threads\'te erişim yok, yerine görüntülenme kullanılır; kaydetme yalnızca Instagram\'da.', 'Platforms are mixed: Threads has no reach (views are used instead); saves exist on Instagram only.'],
+  health_note_no_response: ['Büyüme %37,5 + etkileşim %37,5 + düzenlilik %25 (bu platformda yorum verisi yok); aynı platformdaki hesaplar içinde yüzdelik dilime göre.', 'Growth 37.5% + engagement 37.5% + consistency 25% (no comment data on this platform); percentile among accounts on the same platform.'],
   bench_note: ['Farklar hesabın aynı türdeki ({t}, {n} gönderi) son {d} gün ortalamasına göre.', 'Deltas vs. the account\'s {d}-day average for the same type ({t}, {n} posts).'], compare_prev: ['Önceki dönem: {a} – {b}', 'Previous period: {a} – {b}'],
 };
+
+/** KPI key (accountAnalytics kpis) → label key; Facebook calls reach "Viewers" and profile views "Page views". */
+const KPI_LABEL = {
+  reach: (p) => (p === 'facebook' ? 'viewers' : 'reach'), views: 'views', profileViews: (p) => (p === 'facebook' ? 'page_views' : 'profile_views'),
+  er: 'er', saveRate: 'save_rate', newFollowers: 'new_followers', posts: 'posts', postEngagements: 'post_engagements',
+  likes: 'likes', replies: 'replies', reposts: 'reposts', quotes: 'quotes', linkClicks: 'link_clicks', engaged: 'engaged',
+};
+/** Daily metric (account_insights_daily name) → label key. */
+const METRIC_LABEL = {
+  reach: KPI_LABEL.reach, views: 'views', profile_views: KPI_LABEL.profileViews, accounts_engaged: 'engaged', post_engagements: 'post_engagements',
+  likes: 'likes', replies: 'replies', reposts: 'reposts', quotes: 'quotes', link_clicks: 'link_clicks', unfollows: 'unfollows', follower_count: 'new_followers',
+};
+const resolve = (map, key, platform) => { const v = map[key]; return typeof v === 'function' ? v(platform) : v ?? key; };
+export const kpiLabelKey = (key, platform = 'instagram') => resolve(KPI_LABEL, key, platform);
+export const metricLabelKey = (metric, platform = 'instagram') => resolve(METRIC_LABEL, metric, platform);
 
 export function makeL(lang = 'en') {
   const idx = lang === 'tr' ? 0 : 1;

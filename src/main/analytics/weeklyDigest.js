@@ -7,17 +7,17 @@ const fmtPct = (v, lang) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${round(v,
 const fmtNum = (v, lang) => new Intl.NumberFormat(lang === 'en' ? 'en-US' : 'tr-TR').format(Math.round(v ?? 0));
 
 /** Template-based weekly summary. weekOf = any date inside the week; week = 7 days ending on that date. */
-export function weeklyDigest({ weekOf, lang = 'en', tagIds } = {}) {
+export function weeklyDigest({ weekOf, lang = 'en', tagIds, platforms } = {}) {
   const to = weekOf ? fmtDate(toDate(weekOf)) : fmtDate(subDays(new Date(), 1));
   const from = fmtDate(subDays(toDate(to), 6));
-  const p = portfolio({ from, to, tagIds });
+  const p = portfolio({ from, to, tagIds, platforms });
   const rows = p.rows.filter((r) => r.reach > 0 || r.followers);
   const up = rows.filter((r) => (r.reachChangePct ?? 0) > 0);
   const sortedByReach = [...rows].filter((r) => r.reachChangePct != null).sort((a, b) => b.reachChangePct - a.reachChangePct);
   const best = sortedByReach[0];
   const worst = sortedByReach[sortedByReach.length - 1];
   const { fromMs, toMs } = rangeMs(from, to);
-  const topPosts = listMedia({ from: fromMs, to: toMs, sort: 'reach', limit: 3 });
+  const topPosts = p.rows.length ? listMedia({ from: fromMs, to: toMs, igIds: p.rows.map((r) => r.igId), sort: 'reach', limit: 3 }) : [];
   const growth = [...rows].sort((a, b) => (b.followersChange ?? 0) - (a.followersChange ?? 0));
   const sentences = [];
   const tr = lang === 'tr';
