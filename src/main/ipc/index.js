@@ -12,6 +12,9 @@ import { registerSystemHandlers } from './system.handlers.js';
 import { registerCompetitorHandlers } from './competitors.handlers.js';
 import { registerUpdateHandlers } from './update.handlers.js';
 import { registerAiHandlers } from './ai.handlers.js';
+import { registerPlatformHandlers } from './platforms.handlers.js';
+import { registerFacebookSetupHandlers } from './setup.facebook.handlers.js';
+import { registerThreadsSetupHandlers } from './setup.threads.handlers.js';
 
 /** Wraps a handler so the renderer always receives { ok, data } | { ok: false, error }.*/
 export function handle(channel, fn) {
@@ -51,6 +54,9 @@ export function registerIpc() {
   registerCompetitorHandlers(handle);
   registerUpdateHandlers(handle);
   registerAiHandlers(handle);
+  registerPlatformHandlers(handle);
+  registerFacebookSetupHandlers(handle);
+  registerThreadsSetupHandlers(handle);
 
   for (const evt of RENDERER_EVENTS) {
     progressBus.on(evt, (payload) => {

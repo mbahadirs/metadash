@@ -6,10 +6,17 @@ export function pickColor(index) {
   return SERIES_COLORS[index % SERIES_COLORS.length];
 }
 
-export function listAccounts({ tagIds, search, onlyTracked = true } = {}) {
+export const PLATFORMS = ['instagram', 'facebook', 'threads'];
+
+/** Lists accounts. `platforms` (array) narrows to those platforms; omitted/empty = every platform. */
+export function listAccounts({ tagIds, search, onlyTracked = true, platforms } = {}) {
   const where = [];
   const params = [];
   if (onlyTracked) where.push('a.is_tracked = 1');
+  if (platforms?.length) {
+    where.push(`a.platform IN (${platforms.map(() => '?').join(',')})`);
+    params.push(...platforms);
+  }
   if (search) {
     where.push('(a.username LIKE ? OR a.name LIKE ? OR a.client_name LIKE ?)');
     const s = `%${search}%`;
@@ -43,9 +50,16 @@ export function getAccount(igId) {
   return row ? mapAccount(row) : null;
 }
 
+/**
+ * Row → Account. NOTE: `igId` (column ig_id) is the *account key*, not necessarily an Instagram id:
+ * raw IG id for Instagram, 'fb-<pageId>' for Facebook Pages, 'th-<userId>' for Threads. `externalId` is the raw API id.
+ */
 function mapAccount(row) {
   return {
     igId: row.ig_id,
+    platform: row.platform ?? 'instagram',
+    externalId: row.external_id ?? row.ig_id,
+    linkedAccountId: row.linked_account_id ?? null,
     profileId: row.profile_id,
     pageId: row.page_id,
     username: row.username,
@@ -65,24 +79,31 @@ function mapAccount(row) {
   };
 }
 
+/**
+ * Inserts or updates an account row keyed by `igId` (the account key). `platform` defaults to 'instagram' and is only
+ * written on insert; `externalId` defaults to the key; `linkedAccountId` is kept when not given.
+ */
 export function upsertAccount(acc) {
   const existing = q.get('SELECT ig_id, color FROM accounts WHERE ig_id = ?', acc.igId);
   if (existing) {
     q.run(
-      `UPDATE accounts SET profile_id = ?, page_id = ?, username = ?, name = ?, profile_pic_url = ?, biography = ?, website = ?
+      `UPDATE accounts SET profile_id = ?, page_id = ?, username = ?, name = ?, profile_pic_url = ?, biography = ?, website = ?,
+         external_id = COALESCE(?, external_id, ig_id), linked_account_id = COALESCE(?, linked_account_id)
        WHERE ig_id = ?`,
       acc.profileId, acc.pageId ?? null, acc.username, acc.name ?? null, acc.profilePicUrl ?? null,
-      acc.biography ?? null, acc.website ?? null, acc.igId,
+      acc.biography ?? null, acc.website ?? null, acc.externalId ?? null, acc.linkedAccountId ?? null, acc.igId,
     );
     return;
   }
   const count = q.get('SELECT COUNT(*) AS c FROM accounts').c;
   q.run(
-    `INSERT INTO accounts (ig_id, profile_id, page_id, username, name, profile_pic_url, biography, website, is_tracked, client_name, color, first_seen_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO accounts (ig_id, profile_id, page_id, username, name, profile_pic_url, biography, website, is_tracked, client_name, color, first_seen_at,
+       platform, external_id, linked_account_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     acc.igId, acc.profileId, acc.pageId ?? null, acc.username, acc.name ?? null, acc.profilePicUrl ?? null,
     acc.biography ?? null, acc.website ?? null, acc.isTracked === false ? 0 : 1, acc.clientName ?? null,
     acc.color ?? pickColor(count), acc.firstSeenAt ?? Date.now(),
+    acc.platform ?? 'instagram', acc.externalId ?? acc.igId, acc.linkedAccountId ?? null,
   );
 }
 
@@ -97,13 +118,13 @@ export function updateAccount(igId, patch) {
   q.run(`UPDATE accounts SET ${sets.join(', ')} WHERE ig_id = ?`, ...params);
 }
 
-export function setTrackedAccounts(igIds) {
+/** Sets the tracked set for one platform only: accounts of `platform` not in `igIds` are untracked; other platforms untouched. */
+export function setTrackedAccounts(igIds, { platform = 'instagram' } = {}) {
   const tx = q.tx((ids) => {
-    q.run('UPDATE accounts SET is_tracked = 0');
-    const stmt = q.run;
-    for (const id of ids) stmt('UPDATE accounts SET is_tracked = 1 WHERE ig_id = ?', id);
+    q.run('UPDATE accounts SET is_tracked = 0 WHERE platform = ?', platform);
+    for (const id of ids) q.run('UPDATE accounts SET is_tracked = 1 WHERE ig_id = ? AND platform = ?', id, platform);
   });
-  tx(igIds);
+  tx(igIds ?? []);
 }
 
 export function markSynced(igId, at = Date.now()) {

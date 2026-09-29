@@ -1,24 +1,35 @@
 export interface ApiError { code: string | number; message: string; hint: string | null }
 export type Envelope<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
+export type Platform = 'instagram' | 'facebook' | 'threads';
+export type AuthPlatform = 'meta' | 'threads';
+export interface PlatformCapabilities { reach: boolean; saveRate: boolean; stories: boolean; demographics: boolean; competitors: boolean; comments: boolean; ads: boolean }
+/** platforms:list row. `enabled` = provider implemented in this build; `connected` = auth profile exists. */
+export interface PlatformInfo { platform: Platform; label: string; enabled: boolean; auth: AuthPlatform; connected: boolean; trackedCount: number; capabilities: PlatformCapabilities; primaryMetric: 'reach' | 'views' }
+
+/**
+ * `igId` is the *account key* (column ig_id), not necessarily an Instagram id: raw IG id, 'fb-<pageId>' or 'th-<userId>'.
+ * `externalId` is the raw API id; `linkedAccountId` links a Facebook Page to its Instagram account key.
+ */
 export interface Account {
-  igId: string; profileId: number; pageId: string | null; username: string; name: string | null; profilePicUrl: string | null;
+  igId: string; platform: Platform; externalId: string; linkedAccountId: string | null; profileId: number; pageId: string | null; username: string; name: string | null; profilePicUrl: string | null;
   biography: string | null; website: string | null; isTracked: boolean; clientName: string | null; color: string | null;
   firstSeenAt: number | null; lastSyncedAt: number | null; followers: number | null; follows: number | null; mediaCount: number | null; tagIds: number[];
 }
 export interface Tag { id: number; name: string; color: string; count?: number }
 export interface Kpi { value: number | null; prev?: number | null; changePct: number | null; currency?: string; byCurrency?: Record<string, { value: number; prev: number }> }
 export interface Media {
-  mediaId: string; igId: string; username: string; clientName: string | null; accountColor: string | null; profilePicUrl: string | null;
+  mediaId: string; igId: string; platform: Platform; externalId: string; username: string; clientName: string | null; accountColor: string | null; profilePicUrl: string | null;
   mediaType: string; mediaProductType: string; caption: string | null; permalink: string | null; thumbnailPath: string | null;
   postedAt: number; postedHour: number; postedWeekday: number; captionLength: number; hashtagCount: number; mentionCount: number; emojiCount: number;
   reach: number | null; views: number | null; likes: number | null; comments: number | null; saved: number | null; shares: number | null;
+  reposts: number | null; quotes: number | null; clicks: number | null;
   totalInteractions: number | null; engagementRate: number | null; saveRate: number | null;
   spend: number | null; paidReach: number | null; paidImpressions: number | null; paidClicks: number | null; paidResults: number | null; adCount: number; paidCurrency: string | null;
   paidPostEngagement: number | null; paidPageEngagement: number | null; paidResultType: string | null; totalReach: number; totalImpressions: number; paidReachShare: number | null; paidImpressionShare: number | null; costPerResult: number | null;
   paidFrequency: number | null; paidCpc: number | null; paidCtr: number | null; paidCpm: number | null; costPerPostEngagement: number | null; costPerPageEngagement: number | null;
 }
-export type TypeKey = 'image' | 'carousel' | 'video' | 'reels' | 'story';
+export type TypeKey = 'image' | 'carousel' | 'video' | 'reels' | 'story'; // D adds 'text' (main already returns it for TEXT_POST/TEXT/LINK/STATUS)
 export interface PaidAd { adId: string; adName: string | null; actId: string; accountName: string; currency: string; spend: number; impressions: number; reach: number; clicks: number; results: number; resultType: string | null; firstDate: string | null; lastDate: string | null; ctr: number | null; cpc: number | null; cpm: number | null; costPerResult: number | null }
 export interface MediaDetail {
   media: Media & { typeKey: TypeKey; ageHours: number };
@@ -65,7 +76,13 @@ export interface AccountAnalytics {
 export interface HeatCell { weekday: number; hour: number; count: number; value: number | null; avgReach: number | null; qualified: boolean }
 export interface BestTime { matrix: HeatCell[][]; best: HeatCell[]; totalPosts: number; minPosts: number }
 export interface Lifecycle { curve: { ageHours: number; ratio: number | null; samples: number }[]; hoursTo80: number | null; mediaCount: number }
-export interface SyncStatus { running: boolean; runId: number | null; scope: string | null; phase: string | null; currentAccount: string | null; done: number; total: number; apiCalls: number; startedAt: number | null; errors: number; lastSuccessAt: number | null; rateLimit: { usagePct: number; multiplier: number }; tokenInvalid: boolean }
+export interface SyncStatus { running: boolean; runId: number | null; scope: string | null; phase: string | null; currentAccount: string | null; done: number; total: number; apiCalls: number; startedAt: number | null; errors: number; lastSuccessAt: number | null; rateLimit: { usagePct: number; multiplier: number }; tokenInvalid: boolean; invalidAuth?: AuthPlatform[] }
+export interface SyncDone { runId: number; status: string; errors: number; apiCalls: number; tokenInvalid: boolean; invalidAuth: AuthPlatform[]; demo?: boolean }
+export interface TokenWarning { platform: AuthPlatform; code: number | string; message: string }
+export interface DisabledMetric { metric: string; scope: string; reason: string | null; disabledAt: number | null; platform: Platform }
+export interface FacebookPageCandidate { accountId: string; pageId: string; name: string; pictureUrl: string | null; followers: number | null; linkedIgId: string | null; canAnalyze: boolean; tracked: boolean; known: boolean }
+export interface FacebookDiscovery { items: FacebookPageCandidate[]; missingScopes: string[] }
+export interface ThreadsSetupState { hasApp: boolean; appId: string | null; hasToken: boolean; expiresAt: number | null; username: string | null; tracked: boolean }
 export interface SyncProgress { runId: number; phase: string; currentAccount: string | null; done: number; total: number; apiCalls: number }
 export interface AdAccount { actId: string; name: string; currency: string; status: string; linkedIgId: string | null; linkedUsername: string | null; isTracked: boolean; lastDate: string | null; monthlyBudget: number | null; budgetNote: string | null }
 export interface AdRow { objectId?: string; objectName?: string; resultType?: string | null; bucket?: string; date?: string; spend: number; impressions: number; reach: number; clicks: number; results: number; ctr: number | null; cpc: number | null; cpm: number | null; frequency: number | null; costPerResult: number | null; postEngagement: number; pageEngagement: number; costPerPostEngagement: number | null; costPerPageEngagement: number | null }

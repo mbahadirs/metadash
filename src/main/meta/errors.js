@@ -1,7 +1,7 @@
 export const RETRYABLE_CODES = new Set([4, 17, 32, 613]);
 
 export class MetaError extends Error {
-  constructor({ code, subcode, message, type, endpoint, status }) {
+  constructor({ code, subcode, message, type, endpoint, status, source }) {
     super(message);
     this.name = 'MetaError';
     this.code = code ?? null;
@@ -9,6 +9,7 @@ export class MetaError extends Error {
     this.type = type ?? null;
     this.endpoint = endpoint ?? null;
     this.status = status ?? null;
+    this.source = source ?? null; // client name that raised it: 'meta' | 'threads'
   }
 
   get isRetryable() {
@@ -52,6 +53,13 @@ export function toUserError(err, lang = 'en') {
     };
   }
   if (err instanceof MetaError) {
+    if (err.isTokenError && err.source === 'threads') {
+      return {
+        code: err.code,
+        message: tr ? 'Threads bağlantınızın süresi doldu veya geçersiz. Ayarlar > Bağlantılar\'dan yeniden bağlayın.' : 'Your Threads connection has expired or is invalid. Reconnect it in Settings > Connections.',
+        hint: tr ? 'Threads adımına dönüp yeni bir token veya kod yapıştırın.' : 'Go back to the Threads step and paste a new token or code.',
+      };
+    }
     if (err.isTokenError) {
       return {
         code: err.code,

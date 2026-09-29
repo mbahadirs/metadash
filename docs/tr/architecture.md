@@ -62,7 +62,7 @@ handle(channel, async (payload, event) => data)
 
 - Sarmalayıcı her istisnayı yakalar, kanal adıyla loglar ve `toUserError()` (`src/main/meta/errors.js`) ile yerelleştirilmiş, kullanıcıya yönelik bir mesaja ve isteğe bağlı bir ipucuna (örn. hangi iznin eksik olduğu) dönüştürür. Ham yığın izleri arayüze ulaşmaz.
 - Renderer tarafında `src/renderer/lib/api.ts` içindeki `call()` zarfı açar ve TanStack Query'nin gösterebilmesi için `ApiCallError` fırlatır.
-- İşleyiciler `src/main/ipc/*.handlers.js` altında alana göre gruplanmıştır: setup, accounts (etiketler ve notlar dahil), sync, analytics, ads, export, system (ayarlar, yedekleme/geri yükleme, veri taşıma, SQL konsolu), competitors.
+- İşleyiciler `src/main/ipc/*.handlers.js` altında alana göre gruplanmıştır: setup, accounts (etiketler ve notlar dahil), sync, analytics, ads, export, system (ayarlar, yedekleme/geri yükleme, veri taşıma, SQL konsolu), competitors, platforms (`platforms:list`) ve platform kurulumları (`setup.facebook.handlers.js`, `setup.threads.handlers.js`).
 - Anlık olaylar (`sync:progress`, `sync:done`, `token:warning`) dahili bir `progressBus` üzerinden yayılır ve tüm pencerelere iletilir.
 
 ## Veritabanı
@@ -71,13 +71,13 @@ handle(channel, async (payload, event) => data)
 - **Konum:** `<userData>/data.db`. `src/main/paths.js`, Electron'un `userData` çözümlemesini taklit eder; böylece komut satırı betikleri (örn. `ELECTRON_RUN_AS_NODE=1` ile çalışan `scripts/seed.js`) aynı dosyayı kullanır.
 - **Migration'lar:** `src/main/db/migrations/` altında numaralı SQL dosyaları (`001_init.sql`, `002_ad_breakdowns.sql`, …). Açılışta, sayısal öneki `schema_version` tablosunda olmayan her dosya kendi transaction'ı içinde çalıştırılır ve kaydedilir. Migration'lar yalnızca ileri yönlüdür; şemayı değiştirmek için bir sonraki numarayla yeni dosya ekleyin.
 - **Sorgular:** `src/main/db/queries/*.js`, alan bazında hazırlanmış sorguları sarmalar (accounts, media, stories, ads, competitors, profiles, settings, sync, tags). Küçük `q` yardımcısı `all/get/run/tx` sunar.
-- **Başlıca tablolar:** `settings` (şifreli sırlar dahil JSON kodlu anahtar/değerler), `profiles`, `accounts`, `tags`/`account_tags`, `account_snapshots` (günlük takipçi sayıları), `account_insights_daily`, `account_demographics`, `media`, `media_insight_snapshots` (gönderi başına zaman serisi, yaşam eğrileri için), `media_latest`, `stories`, `comments`, `competitors`/`competitor_snapshots`, `ad_accounts`, `ad_insights_daily`, `ad_insights_breakdown`, `ad_media_links` (reklam → Instagram gönderisi), `ad_budget_overrides`, `sync_runs`, `sync_errors`, `disabled_metrics`, `notes`.
+- **Başlıca tablolar:** `settings` (şifreli sırlar dahil JSON kodlu anahtar/değerler), `profiles`, `accounts`, `tags`/`account_tags`, `account_snapshots` (günlük takipçi sayıları), `account_insights_daily`, `account_demographics`, `media`, `media_insight_snapshots` (gönderi başına zaman serisi, yaşam eğrileri için), `media_latest`, `stories`, `comments`, `competitors`/`competitor_snapshots`, `ad_accounts`, `ad_insights_daily`, `ad_insights_breakdown`, `ad_media_links` (reklam → Instagram gönderisi), `ad_budget_overrides`, `sync_runs`, `sync_errors`, `disabled_metrics`, `metric_resolution` (Facebook/Threads için çalışan metrik adları, v1.3), `notes`.
 
 ## Meta entegrasyonu (`src/main/meta`)
 
 | Modül | Sorumluluk |
 | --- | --- |
-| `client.js` | `https://graph.facebook.com/v21.0`'a karşı `graphGet` / `graphGetAll`: token'ı ekler, 30 sn zaman aşımı, `paging.next`'i izler, yeniden denenebilir kodlarda (4, 17, 32, 613; en fazla 5 deneme, 60 sn ile sınırlı ve hız sınırlayıcıyla ölçeklenen) üstel geri çekilme. Senkronizasyon başına API çağrılarını sayar. |
+| `client.js` | `https://graph.facebook.com/v26.0`'a karşı `graphGet` / `graphGetAll`: token'ı ekler, 30 sn zaman aşımı, `paging.next`'i izler, yeniden denenebilir kodlarda (4, 17, 32, 613; en fazla 5 deneme, 60 sn ile sınırlı ve hız sınırlayıcıyla ölçeklenen) üstel geri çekilme. Senkronizasyon başına API çağrılarını sayar. |
 | `rateLimiter.js` | Her yanıttan sonra `X-App-Usage` ve `X-Business-Use-Case-Usage` başlıklarını okur. En yüksek kullanım yüzdesi bir gecikme çarpanı belirler: %80 üzerinde ×2, %95 üzerinde ×4. Temel gecikme 250 ms'dir (`METADASH_GRAPH_DELAY_MS`). |
 | `errors.js` | `MetaError` (`isRetryable`, 190/102 için `isTokenError`, `isPermissionError`, `isInvalidParam`), `NetworkError` ve IPC zarfı için `toUserError()`. |
 | `metricMap.js` | Medya ailesi (feed, reels, carousel, story) ve hesap düzeyi metrik adlarının tanımlandığı tek yer; adı değişen metrikler için eşlemeler (`impressions`/`plays` → `views`) dahil. |
@@ -88,36 +88,55 @@ Hesap keşfi, `/me/accounts` (kişisel Sayfa rolleri) ile Business Manager'daki 
 
 Meta bir metriği 100 hata koduyla reddettiğinde metrik sonraki isteklerden çıkarılır, `disabled_metrics` tablosuna yazılır ve Ayarlar'da listelenir; oradan yeniden etkinleştirilebilir.
 
+## Sağlayıcılar (`src/main/providers`)
+
+v1.3'ten itibaren her sosyal platform tek bir arayüzün arkasındaki bir *sağlayıcıdır*; böylece senkronizasyon işi, analitik ve arayüz platformdan bağımsız kalır. Ortak Meta altyapısı (client, hatalar, hız sınırlayıcı, auth, reklamlar, rakipler) `src/main/meta` içinde kalır; `meta/organic.js`, `meta/stories.js` ve `meta/metricMap.js` Instagram sağlayıcısını yeniden dışa aktaran ara dosyalardır.
+
+| Modül | Sorumluluk |
+| --- | --- |
+| `index.js` | Kayıt: `listProviders()` (etkin sağlayıcılar, Instagram → Facebook → Threads sırasıyla), `getProvider(platform)`. Taslak sağlayıcılar (`{ platform, enabled: false }`) atlanır. |
+| `types.js` | JSDoc sözleşmesi (`Provider`, `SyncContext`, `Post`, …): `discover`, `prepare?`, `fetchProfile`, `fetchPosts`, `fetchPostInsights`, `fetchDailyInsights`, `fetchDemographics?`, `fetchComments?`, `skipInsights?`, `maintenance?`, `dailyWindow`, `concurrency`, `auth` (`meta` / `threads`). |
+| `capabilities.js` | Platform yetenekleri (erişim, kaydetme oranı, hikâyeler, demografi, rakipler, yorumlar, reklamlar), birincil metrik (`reach`, Threads için `views`) ve hesap anahtarı yardımcıları. `platforms:list` ile renderer'a açılır. |
+| `shared/insights.js` | Genel günlük `/insights` döngüsü (önce zaman serisi, yalnızca `total_value` sunulan metrikler gün gün, desteklenmeyenler düşürülür). |
+| `shared/metricFallback.js` | Kanonik metrik → aday API adları; çalışan ad `metric_resolution` tablosuna yazılır, tüm adayları biten metrik desteklenmiyor olarak işaretlenir. |
+| `shared/metaPages.js` | Instagram ve Facebook keşfinin paylaştığı Facebook Sayfası taraması (`/me/accounts` + Business Manager sayfaları). |
+| `shared/tiers.js` | Gönderi istatistiği yenileme kademeleri (`needsRefresh`). |
+| `instagram/` | Instagram sağlayıcısı (`api.js`, `stories.js`, `metrics.js`). `facebook/` ve `threads/` diğer sağlayıcıları barındırır. |
+
+Tüm platformların hesapları `accounts` tablosundadır; `ig_id` sütunu *hesap anahtarıdır* (ham Instagram kimliği, `fb-<pageId>`, `th-<userId>`), `external_id` ise ham API kimliğidir. `profiles.platform` Meta ve Threads bağlantılarını ayırır.
+
 ## Senkronizasyon
 
 ### Orkestratör (`src/main/sync/orchestrator.js`)
 
-`runSync({ scope, igIds })`, `scope` = `full | organic | stories | ads | competitors`:
+`runSync({ scope, igIds, platforms })`, `scope` = `full | organic | stories | ads | competitors`:
 
 1. Takip edilen hesaplardan, takip edilen reklam hesaplarından ve rakiplerden iş listesini oluşturur (isteğe bağlı olarak `igIds` ile daraltılır).
 2. Bir `sync_runs` satırı açar ve her hesap için bir işi ayrı [p-queue](https://github.com/sindresorhus/p-queue) kuyruklarına ekler:
 
    | Kuyruk | Eşzamanlılık |
    | --- | --- |
-   | organic | 2 |
-   | stories | 2 |
+   | organic (platform başına bir kuyruk, ilk kullanımda oluşturulur) | sağlayıcının `concurrency` değeri (Instagram 2) |
+   | stories (yalnızca Instagram) | 2 |
    | ads | 2 |
    | competitors | 1 |
 
 3. `sync:progress` (aşama, geçerli hesap, tamamlanan/toplam, API çağrısı) ve sonunda `sync:done` olaylarını yayar. Çalışma `ok`, `partial` (bazı işlerde hata; `sync_errors`'a yazılır) veya `failed` olarak biter.
-4. Token hatası (190/102) tüm çalışmayı durdurur ve `token:warning` yayar; ağ hatası çalışmayı iptal eder, mevcut veriler olduğu gibi kalır. `cancelSync()` bir `AbortController` ile iptal eder ve kuyrukları boşaltır.
+4. Meta token hatası (190/102) tüm çalışmayı durdurur ve `platform: 'meta'` ile `token:warning` yayar; Threads token hatası yalnızca kalan Threads işlerini atlar (`platform: 'threads'` ile `token:warning`, `sync:done.invalidAuth`). Ağ hatası çalışmayı iptal eder, mevcut veriler olduğu gibi kalır. `cancelSync()` bir `AbortController` ile iptal eder ve kuyrukları boşaltır.
 
 Aynı anda yalnızca bir senkronizasyon çalışır. Etkin profil demo profiliyse `sync/demo.js` aşamaları ağ çağrısı yapmadan simüle eder ve demo veri kümesini bir gün ileri alır.
 
 ### İşler (`src/main/sync/jobs`)
 
-- **Organik hesap:** profil ve takipçi anlık görüntüsü → medya listesi (artımlı: son senkronizasyondan iki gün öncesinden, ilk senkronizasyonda `mediaLookbackDays`) → **yenileme kademesine** göre medya insights → günlük hesap insights → demografi (haftalık) → yorumlar (isteğe bağlı). Açıklamalar uzunluk, hashtag, bahsetme ve emoji açısından analiz edilir (`sync/caption.js`).
+- **Organik hesap** (`platformAccount.js`, sağlayıcılardan bağımsız; `organicAccount.js` Instagram sarmalayıcısıdır): profil ve takipçi anlık görüntüsü → medya listesi (artımlı: son senkronizasyondan iki gün öncesinden, ilk senkronizasyonda `mediaLookbackDays`) → **yenileme kademesine** göre medya insights → günlük hesap insights → demografi (haftalık) → yorumlar (isteğe bağlı). Açıklamalar uzunluk, hashtag, bahsetme ve emoji açısından analiz edilir (`sync/caption.js`).
 - **Yenileme kademeleri:** 48 saatten genç gönderiler her senkronizasyonda yenilenir; 7 güne kadar olanlar her `recent` saatte (varsayılan 24); 30 güne kadar olanlar her `month` saatte (168); daha eskiler her `old` saatte (720). Ayarlar'dan değiştirilebilir.
 - **Story'ler:** etkin story'ler ve insights'ları.
 - **Reklamlar:** hesap, kampanya, reklam seti ve reklam seviyelerinde insights ile yaş, cinsiyet ve platform kırılımları; son kayıtlı tarihten üç gün önceden başlar (ilk senkronizasyonda `adsLookbackDays`, varsayılan 90). Reklamlar tanıttıkları Instagram gönderileriyle eşleştirilir.
 - **Rakipler:** Business Discovery ile herkese açık sayılar.
 
 ### Zamanlayıcı (`src/main/sync/scheduler.js`)
+
+Her döngü önce tüm sağlayıcıların `maintenance()` kancasını çalıştırır (ör. Threads token yenileme).
 
 Uygulama açıkken 15 dakikalık bir döngü; son story senkronizasyonu `storyIntervalHours`'tan (varsayılan 4, `0` kapatır) eskiyse story senkronizasyonu, `autoSyncDaily` açıksa günde bir tam senkronizasyon çalıştırır. Arayüz ayrıca son başarılı senkronizasyon 20 saatten eskiyse güncelleme önerir.
 

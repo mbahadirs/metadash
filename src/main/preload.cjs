@@ -49,6 +49,22 @@ const api = {
     complete: () => invoke('setup:complete'),
     loadDemo: (p) => invoke('setup:loadDemo', p),
     resetAll: () => invoke('setup:resetAll'),
+    facebook: {
+      discover: () => invoke('setup:facebook:discover'),
+      saveTracked: (accountIds, meta) => invoke('setup:facebook:saveTracked', { accountIds, meta }),
+    },
+    threads: {
+      getState: () => invoke('setup:threads:getState'),
+      saveApp: (p) => invoke('setup:threads:saveApp', p),
+      authUrl: (p) => invoke('setup:threads:authUrl', p),
+      exchangeToken: (p) => invoke('setup:threads:exchangeToken', p),
+      refresh: () => invoke('setup:threads:refresh'),
+      disconnect: () => invoke('setup:threads:disconnect'),
+      saveTracked: (tracked) => invoke('setup:threads:saveTracked', { tracked }),
+    },
+  },
+  platforms: {
+    list: () => invoke('platforms:list'),
   },
   accounts: {
     list: (p) => invoke('accounts:list', p),

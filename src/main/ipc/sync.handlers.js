@@ -18,5 +18,11 @@ export function registerSyncHandlers(handle) {
   handle('sync:errors', ({ limit = 50 } = {}) => recentErrors(limit));
   handle('sync:suggest', () => shouldSuggestSync());
   handle('sync:disabledMetrics', () => listDisabledMetrics());
-  handle('sync:enableMetric', (metric) => { enableMetric(metric); return listDisabledMetrics(); });
+  // Accepts a metric name (Instagram, legacy) or { metric, platform, scope } for Facebook/Threads metric_resolution rows.
+  handle('sync:enableMetric', (arg) => {
+    const { metric, platform, scope } = typeof arg === 'string' ? { metric: arg } : (arg ?? {});
+    if (typeof metric !== 'string' || !metric) throw new Error(msg('invalid_metric'));
+    enableMetric(metric, { platform, scope });
+    return listDisabledMetrics();
+  });
 }

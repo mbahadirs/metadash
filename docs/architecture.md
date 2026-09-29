@@ -62,7 +62,7 @@ handle(channel, async (payload, event) => data)
 
 - The wrapper catches every exception, logs it with the channel name, and converts it with `toUserError()` (`src/main/meta/errors.js`) into a localized, user-facing message plus an optional hint (e.g. which permission is missing). Raw stack traces never reach the UI.
 - On the renderer side, `call()` in `src/renderer/lib/api.ts` unwraps the envelope and throws an `ApiCallError` so TanStack Query can surface it.
-- Handlers are grouped by domain in `src/main/ipc/*.handlers.js`: setup, accounts (plus tags and notes), sync, analytics, ads, export, system (settings, backup/restore, transfer, SQL console), competitors.
+- Handlers are grouped by domain in `src/main/ipc/*.handlers.js`: setup, accounts (plus tags and notes), sync, analytics, ads, export, system (settings, backup/restore, transfer, SQL console), competitors, platforms (`platforms:list`), and per-platform setup (`setup.facebook.handlers.js`, `setup.threads.handlers.js`).
 - Push events (`sync:progress`, `sync:done`, `token:warning`) are emitted on an internal `progressBus` and broadcast to all windows.
 
 ## Database
@@ -71,13 +71,13 @@ handle(channel, async (payload, event) => data)
 - **Location:** `<userData>/data.db`. `src/main/paths.js` mirrors Electron's `userData` resolution so CLI scripts (e.g. `scripts/seed.js`, run with `ELECTRON_RUN_AS_NODE=1`) use the same file.
 - **Migrations:** numbered SQL files in `src/main/db/migrations/` (`001_init.sql`, `002_ad_breakdowns.sql`, …). On open, each file whose numeric prefix is not in `schema_version` is executed in its own transaction and recorded. Migrations are forward-only; to change the schema, add a new file with the next number.
 - **Queries:** `src/main/db/queries/*.js` wrap prepared statements per domain (accounts, media, stories, ads, competitors, profiles, settings, sync, tags). A small helper `q` offers `all/get/run/tx`.
-- **Main tables:** `settings` (JSON-encoded key/values, including encrypted secrets), `profiles`, `accounts`, `tags`/`account_tags`, `account_snapshots` (daily follower counts), `account_insights_daily`, `account_demographics`, `media`, `media_insight_snapshots` (time series per post, used for lifecycle curves), `media_latest`, `stories`, `comments`, `competitors`/`competitor_snapshots`, `ad_accounts`, `ad_insights_daily`, `ad_insights_breakdown`, `ad_media_links` (ad → Instagram post), `ad_budget_overrides`, `sync_runs`, `sync_errors`, `disabled_metrics`, `notes`.
+- **Main tables:** `settings` (JSON-encoded key/values, including encrypted secrets), `profiles`, `accounts`, `tags`/`account_tags`, `account_snapshots` (daily follower counts), `account_insights_daily`, `account_demographics`, `media`, `media_insight_snapshots` (time series per post, used for lifecycle curves), `media_latest`, `stories`, `comments`, `competitors`/`competitor_snapshots`, `ad_accounts`, `ad_insights_daily`, `ad_insights_breakdown`, `ad_media_links` (ad → Instagram post), `ad_budget_overrides`, `sync_runs`, `sync_errors`, `disabled_metrics`, `metric_resolution` (Facebook/Threads metric names that work, v1.3), `notes`.
 
 ## Meta integration (`src/main/meta`)
 
 | Module | Responsibility |
 | --- | --- |
-| `client.js` | `graphGet` / `graphGetAll` against `https://graph.facebook.com/v21.0`: adds the token, 30 s timeout, follows `paging.next`, exponential back-off for retryable codes (4, 17, 32, 613; up to 5 retries, capped at 60 s and scaled by the rate limiter). Counts API calls per sync. |
+| `client.js` | `graphGet` / `graphGetAll` against `https://graph.facebook.com/v26.0`: adds the token, 30 s timeout, follows `paging.next`, exponential back-off for retryable codes (4, 17, 32, 613; up to 5 retries, capped at 60 s and scaled by the rate limiter). Counts API calls per sync. |
 | `rateLimiter.js` | Reads `X-App-Usage` and `X-Business-Use-Case-Usage` headers after every response. The highest usage percentage sets a delay multiplier: ×2 above 80 %, ×4 above 95 %. Base delay is 250 ms (`METADASH_GRAPH_DELAY_MS`). |
 | `errors.js` | `MetaError` (with `isRetryable`, `isTokenError` for 190/102, `isPermissionError`, `isInvalidParam`), `NetworkError`, and `toUserError()` for the IPC envelope. |
 | `metricMap.js` | The single place where metric names per media family (feed, reels, carousel, story) and account level are defined, including aliases for renamed metrics (`impressions`/`plays` → `views`). |
@@ -88,36 +88,55 @@ Account discovery combines `/me/accounts` (personal Page roles) with Business Ma
 
 When Meta rejects a metric with error code 100, the metric is removed from subsequent requests, recorded in `disabled_metrics` and listed in Settings, where it can be re-enabled.
 
+## Providers (`src/main/providers`)
+
+Since v1.3 every social platform is a *provider* behind one interface, so the sync job, analytics and UI stay platform-agnostic. Shared Meta plumbing (client, errors, rate limiter, auth, ads, competitors) stays in `src/main/meta`; `meta/organic.js`, `meta/stories.js` and `meta/metricMap.js` are re-export shims for the Instagram provider.
+
+| Module | Responsibility |
+| --- | --- |
+| `index.js` | Registry: `listProviders()` (enabled providers, in order Instagram → Facebook → Threads), `getProvider(platform)`. Stub providers (`{ platform, enabled: false }`) are skipped. |
+| `types.js` | JSDoc contract (`Provider`, `SyncContext`, `Post`, …): `discover`, `prepare?`, `fetchProfile`, `fetchPosts`, `fetchPostInsights`, `fetchDailyInsights`, `fetchDemographics?`, `fetchComments?`, `skipInsights?`, `maintenance?`, `dailyWindow`, `concurrency`, `auth` (`meta` / `threads`). |
+| `capabilities.js` | Per-platform capabilities (reach, save rate, stories, demographics, competitors, comments, ads), primary metric (`reach`, or `views` for Threads) and account-key helpers. Exposed to the renderer through `platforms:list`. |
+| `shared/insights.js` | Generic daily `/insights` loop (time series first, `total_value`-only metrics per day, unsupported metrics dropped). |
+| `shared/metricFallback.js` | Canonical metric → candidate API names; the name that works is stored in `metric_resolution`, exhausted metrics are marked unsupported. |
+| `shared/metaPages.js` | Facebook Page traversal (`/me/accounts` + Business Manager pages) shared by Instagram and Facebook discovery. |
+| `shared/tiers.js` | Post-insight refresh tiers (`needsRefresh`). |
+| `instagram/` | The Instagram provider (`api.js`, `stories.js`, `metrics.js`). `facebook/` and `threads/` hold the other providers. |
+
+Accounts of every platform live in `accounts`; the `ig_id` column is the *account key* (raw Instagram id, `fb-<pageId>`, `th-<userId>`) and `external_id` the raw API id. `profiles.platform` separates the Meta and Threads connections.
+
 ## Sync
 
 ### Orchestrator (`src/main/sync/orchestrator.js`)
 
-`runSync({ scope, igIds })` with `scope` = `full | organic | stories | ads | competitors`:
+`runSync({ scope, igIds, platforms })` with `scope` = `full | organic | stories | ads | competitors`:
 
 1. Builds the job list from tracked accounts, tracked ad accounts and competitors (optionally narrowed to `igIds`).
 2. Creates a `sync_runs` row and enqueues one job per account into dedicated [p-queue](https://github.com/sindresorhus/p-queue) queues:
 
    | Queue | Concurrency |
    | --- | --- |
-   | organic | 2 |
-   | stories | 2 |
+   | organic (one queue per platform, created on first use) | provider `concurrency` (Instagram 2) |
+   | stories (Instagram only) | 2 |
    | ads | 2 |
    | competitors | 1 |
 
 3. Emits `sync:progress` (phase, current account, done/total, API calls) and finally `sync:done`. The run is `ok`, `partial` (some job errors, logged to `sync_errors`) or `failed`.
-4. A token error (190/102) stops the whole run and emits `token:warning`; a network error cancels the run so existing data stays untouched. `cancelSync()` aborts via an `AbortController` and clears the queues.
+4. A Meta token error (190/102) stops the whole run and emits `token:warning` with `platform: 'meta'`; a Threads token error only skips the remaining Threads jobs (`token:warning` with `platform: 'threads'`, `sync:done.invalidAuth`). A network error cancels the run so existing data stays untouched. `cancelSync()` aborts via an `AbortController` and clears the queues.
 
 Only one sync runs at a time. If the active profile is a demo profile, `sync/demo.js` simulates the phases without network calls and advances the demo dataset by one day.
 
 ### Jobs (`src/main/sync/jobs`)
 
-- **Organic account:** profile and follower snapshot → media list (incremental: from the last sync minus two days, or `mediaLookbackDays` on first sync) → media insights by **refresh tier** → daily account insights → demographics (weekly) → comments (optional). Captions are analyzed for length, hashtags, mentions and emoji (`sync/caption.js`).
+- **Organic account** (`platformAccount.js`, generic over providers; `organicAccount.js` is the Instagram wrapper): profile and follower snapshot → media list (incremental: from the last sync minus two days, or `mediaLookbackDays` on first sync) → media insights by **refresh tier** → daily account insights → demographics (weekly) → comments (optional). Captions are analyzed for length, hashtags, mentions and emoji (`sync/caption.js`).
 - **Refresh tiers:** posts younger than 48 h are refreshed on every sync; up to 7 days old every `recent` hours (default 24); up to 30 days every `month` hours (168); older every `old` hours (720). Configurable in Settings.
 - **Stories:** active stories and their insights.
 - **Ads:** insights for account, campaign, ad set and ad levels plus age, gender and platform breakdowns, starting three days before the last stored date (or `adsLookbackDays`, default 90, on first sync); ads are linked to the Instagram posts they promote.
 - **Competitors:** public counts via Business Discovery.
 
 ### Scheduler (`src/main/sync/scheduler.js`)
+
+Each tick first runs every provider's `maintenance()` hook (e.g. Threads token refresh).
 
 While the app is open, a 15-minute tick runs a stories sync when the last one is older than `storyIntervalHours` (default 4, `0` disables it), and a full sync once a day if `autoSyncDaily` is enabled. The UI also suggests a refresh when the last successful sync is older than 20 hours.
 

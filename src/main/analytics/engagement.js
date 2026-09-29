@@ -1,8 +1,11 @@
 import { upsertLatest } from '../db/queries/media.js';
 
-/** Interactions = likes + comments + saved + shares. */
+/**
+ * Interactions = likes + comments + saved + shares + reposts + quotes (missing values count as 0, so Instagram
+ * values are unchanged; reposts/quotes are Threads-only). Link clicks are deliberately excluded.
+ */
 export function interactions(m) {
-  return (m.likes ?? 0) + (m.comments ?? 0) + (m.saved ?? 0) + (m.shares ?? 0);
+  return (m.likes ?? 0) + (m.comments ?? 0) + (m.saved ?? 0) + (m.shares ?? 0) + (m.reposts ?? 0) + (m.quotes ?? 0);
 }
 
 /** Engagement rate by followers (percentage). Default table column — comparable with competitors. */

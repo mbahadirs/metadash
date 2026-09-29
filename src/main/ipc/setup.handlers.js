@@ -32,7 +32,7 @@ export function registerSetupHandlers(handle) {
       hasApp: !!profile?.app_id && profile.app_id !== '',
       appId: profile?.app_id ?? getSetting('pendingAppId', null),
       hasToken: !!profile && (isDemoProfile(profile) || !!readToken(profile.token_ref)),
-      trackedCount: listAccounts().length,
+      trackedCount: listAccounts({ platforms: ['instagram'] }).length,
       adAccountCount: listAdAccounts().length,
       requiredScopes: REQUIRED_SCOPES,
       optionalScopes: OPTIONAL_SCOPES,
@@ -86,10 +86,10 @@ export function registerSetupHandlers(handle) {
   handle('setup:discoverAccounts', async () => {
     const { profile, token } = requireToken();
     if (token === 'demo') {
-      return { items: listAccounts({ onlyTracked: false }).map((a) => ({ pageId: a.pageId, pageName: a.name, ig: { ...a, followers: a.followers }, tracked: a.isTracked, known: true, sources: ['demo'] })), warnings: [], businesses: [] };
+      return { items: listAccounts({ onlyTracked: false, platforms: ['instagram'] }).map((a) => ({ pageId: a.pageId, pageName: a.name, ig: { ...a, followers: a.followers }, tracked: a.isTracked, known: true, sources: ['demo'] })), warnings: [], businesses: [] };
     }
     const pages = await discoverAccounts(token);
-    const known = new Map(listAccounts({ onlyTracked: false }).map((a) => [a.igId, a]));
+    const known = new Map(listAccounts({ onlyTracked: false, platforms: ['instagram'] }).map((a) => [a.igId, a]));
     for (const p of pages) {
       if (!p.ig) continue;
       upsertAccount({ ...p.ig, profileId: profile.id, pageId: p.pageId, isTracked: known.get(p.ig.igId)?.isTracked ?? true });
@@ -101,7 +101,7 @@ export function registerSetupHandlers(handle) {
   });
 
   handle('setup:saveTrackedAccounts', ({ igIds, meta = {} }) => {
-    setTrackedAccounts(igIds);
+    setTrackedAccounts(igIds, { platform: 'instagram' });
     for (const [igId, m] of Object.entries(meta)) {
       updateAccount(igId, { clientName: m.clientName });
       if (m.tags?.length) setAccountTags(igId, m.tags.map((name) => findOrCreateTag(name).id));

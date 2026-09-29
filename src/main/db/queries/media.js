@@ -1,17 +1,19 @@
 import { q } from '../index.js';
 
+/** Upserts a media row. `mediaId` is the stored key; `externalId` (raw API id) defaults to it. */
 export function upsertMedia(m) {
   q.run(
     `INSERT INTO media (media_id, ig_id, media_type, media_product_type, caption, permalink, thumbnail_path, posted_at,
-       posted_hour, posted_weekday, caption_length, hashtag_count, mention_count, emoji_count, is_deleted, first_seen_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+       posted_hour, posted_weekday, caption_length, hashtag_count, mention_count, emoji_count, is_deleted, first_seen_at, external_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
      ON CONFLICT(media_id) DO UPDATE SET caption = excluded.caption, permalink = excluded.permalink,
        thumbnail_path = COALESCE(excluded.thumbnail_path, media.thumbnail_path), is_deleted = 0,
        caption_length = excluded.caption_length, hashtag_count = excluded.hashtag_count,
-       mention_count = excluded.mention_count, emoji_count = excluded.emoji_count`,
+       mention_count = excluded.mention_count, emoji_count = excluded.emoji_count,
+       external_id = COALESCE(excluded.external_id, media.external_id)`,
     m.mediaId, m.igId, m.mediaType, m.mediaProductType, m.caption ?? null, m.permalink ?? null, m.thumbnailPath ?? null,
     m.postedAt, m.postedHour, m.postedWeekday, m.captionLength ?? 0, m.hashtagCount ?? 0, m.mentionCount ?? 0,
-    m.emojiCount ?? 0, m.firstSeenAt ?? Date.now(),
+    m.emojiCount ?? 0, m.firstSeenAt ?? Date.now(), m.externalId ?? m.mediaId,
   );
 }
 
@@ -25,13 +27,16 @@ export function insertSnapshotMetric(mediaId, capturedAt, ageHours, metric, valu
 
 export function upsertLatest(mediaId, metrics, engagementRate, updatedAt = Date.now()) {
   q.run(
-    `INSERT INTO media_latest (media_id, reach, views, likes, comments, saved, shares, total_interactions, engagement_rate, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO media_latest (media_id, reach, views, likes, comments, saved, shares, total_interactions, engagement_rate, updated_at,
+       reposts, quotes, clicks)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(media_id) DO UPDATE SET reach = excluded.reach, views = excluded.views, likes = excluded.likes,
        comments = excluded.comments, saved = excluded.saved, shares = excluded.shares,
-       total_interactions = excluded.total_interactions, engagement_rate = excluded.engagement_rate, updated_at = excluded.updated_at`,
+       total_interactions = excluded.total_interactions, engagement_rate = excluded.engagement_rate, updated_at = excluded.updated_at,
+       reposts = excluded.reposts, quotes = excluded.quotes, clicks = excluded.clicks`,
     mediaId, metrics.reach ?? null, metrics.views ?? null, metrics.likes ?? null, metrics.comments ?? null,
     metrics.saved ?? null, metrics.shares ?? null, metrics.total_interactions ?? null, engagementRate ?? null, updatedAt,
+    metrics.reposts ?? null, metrics.quotes ?? null, metrics.clicks ?? null,
   );
 }
 
@@ -44,6 +49,7 @@ const PAID_SUB = `(SELECT l.media_id, SUM(i.spend) AS spend, SUM(i.reach) AS pai
 
 const MEDIA_SELECT = `
   SELECT m.*, l.reach, l.views, l.likes, l.comments, l.saved, l.shares, l.total_interactions, l.engagement_rate,
+    l.reposts, l.quotes, l.clicks, a.platform,
     a.username, a.client_name, a.color AS account_color, a.profile_pic_url,
     p.spend, p.paid_reach, p.paid_impressions, p.paid_clicks, p.paid_results, p.paid_post_engagement, p.paid_page_engagement, p.paid_result_type, p.ad_count, p.currency AS paid_currency
   FROM media m
@@ -55,6 +61,8 @@ export function mapMedia(row) {
   return {
     mediaId: row.media_id,
     igId: row.ig_id,
+    platform: row.platform ?? 'instagram',
+    externalId: row.external_id ?? row.media_id,
     username: row.username,
     clientName: row.client_name,
     accountColor: row.account_color,
@@ -78,6 +86,9 @@ export function mapMedia(row) {
     comments: row.comments,
     saved: row.saved,
     shares: row.shares,
+    reposts: row.reposts ?? null,
+    quotes: row.quotes ?? null,
+    clicks: row.clicks ?? null,
     totalInteractions: row.total_interactions,
     engagementRate: row.engagement_rate,
     saveRate: row.reach ? ((row.saved ?? 0) / row.reach) * 100 : null,
@@ -106,18 +117,23 @@ export function mapMedia(row) {
   };
 }
 
+/** Media types without an image/video (Threads TEXT_POST, Facebook status/link posts). */
+export const TEXT_TYPES = ['TEXT_POST', 'TEXT', 'LINK', 'STATUS'];
+
 /** Classifies a media row into a UI-facing type key. */
 export function mediaTypeKey(m) {
   const product = m.mediaProductType ?? m.media_product_type;
   const type = m.mediaType ?? m.media_type;
   if (product === 'REELS') return 'reels';
   if (product === 'STORY') return 'story';
+  if (TEXT_TYPES.includes(type)) return 'text';
   if (type === 'CAROUSEL_ALBUM') return 'carousel';
   if (type === 'VIDEO') return 'video';
   return 'image';
 }
 
 const TYPE_SQL = {
+  text: "m.media_type IN ('TEXT_POST','TEXT','LINK','STATUS')",
   reels: "m.media_product_type = 'REELS'",
   carousel: "m.media_product_type <> 'REELS' AND m.media_type = 'CAROUSEL_ALBUM'",
   video: "m.media_product_type <> 'REELS' AND m.media_type = 'VIDEO'",
@@ -126,10 +142,11 @@ const TYPE_SQL = {
 };
 
 /** Lists media with optional filters (ms timestamps for from/to). */
-export function listMedia({ igIds, from, to, types, typeKeys, hashtag, minReach, search, limit, sort, onlyPaid } = {}) {
+export function listMedia({ igIds, from, to, types, typeKeys, hashtag, minReach, search, limit, sort, onlyPaid, platforms } = {}) {
   const where = ['m.is_deleted = 0', 'a.is_tracked = 1'];
   const params = [];
   if (igIds?.length) { where.push(`m.ig_id IN (${igIds.map(() => '?').join(',')})`); params.push(...igIds); }
+  if (platforms?.length) { where.push(`a.platform IN (${platforms.map(() => '?').join(',')})`); params.push(...platforms); }
   if (from) { where.push('m.posted_at >= ?'); params.push(from); }
   if (to) { where.push('m.posted_at <= ?'); params.push(to); }
   if (types?.length) { where.push(`m.media_product_type IN (${types.map(() => '?').join(',')})`); params.push(...types); }
@@ -156,7 +173,7 @@ export function getMedia(mediaId) {
 }
 
 export function mediaForAccount(igId, sinceMs = 0) {
-  return q.all('SELECT media_id, posted_at, media_product_type, media_type FROM media WHERE ig_id = ? AND posted_at >= ? AND is_deleted = 0', igId, sinceMs);
+  return q.all('SELECT media_id, external_id, posted_at, media_product_type, media_type FROM media WHERE ig_id = ? AND posted_at >= ? AND is_deleted = 0', igId, sinceMs);
 }
 
 export function lastSnapshotAt(mediaId) {
