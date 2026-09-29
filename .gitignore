@@ -6,3 +6,6 @@ coverage
 .DS_Store
 *.metadash
 .env
+
+# Personal notes (not published)
+PROMOTION.md
