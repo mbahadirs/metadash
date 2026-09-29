@@ -163,6 +163,8 @@ const api = {
     test: () => invoke('ai:test'),
     reportCommentary: (p) => invoke('ai:reportCommentary', p),
     explainAnomaly: (p) => invoke('ai:explainAnomaly', p),
+    ask: (p) => invoke('ai:ask', p),
+    askCancel: (requestId) => invoke('ai:askCancel', { requestId }),
   },
   transfer: {
     export: (p) => invoke('transfer:export', p ?? {}),

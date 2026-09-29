@@ -68,6 +68,7 @@ export function createAnthropicProvider({ apiKey, model, client }) {
     id: 'anthropic',
     model: id,
     userMessage: (text) => ({ role: 'user', content: text }),
+    assistantMessage: (text) => ({ role: 'assistant', content: text }),
     appendAssistant: (messages, res) => [...messages, { role: 'assistant', content: res.raw }],
     appendToolResults: (messages, res, results) => [
       ...messages,

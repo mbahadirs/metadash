@@ -121,3 +121,10 @@ describe('mapAnthropicError', () => {
     expect(mapAnthropicError(e)).toBe(e);
   });
 });
+
+describe('anthropic assistantMessage', () => {
+  it('builds a plain-text assistant turn for history', () => {
+    const p = createAnthropicProvider({ apiKey: 'k', model: 'claude-haiku-4-5', client: {} });
+    expect(p.assistantMessage('prev answer')).toEqual({ role: 'assistant', content: 'prev answer' });
+  });
+});

@@ -19,6 +19,7 @@ const NAV = [
   { to: '/competitors', key: 'nav_competitors', icon: Icon.competitors },
   { to: '/reports', key: 'nav_reports', icon: Icon.reports },
   { to: '/presentation', key: 'nav_presentation', icon: Icon.presentation },
+  { to: '/ask', key: 'nav_ask', icon: Icon.ask },
 ] as const;
 
 export function Layout() {

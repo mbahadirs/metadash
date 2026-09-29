@@ -6,12 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-29
+
+AI features are **beta**: they are off by default, need your own API key (or a local Ollama model) and have been tested against stubbed providers only. Please report problems.
+
 ### Added
 
 - **White-label reports:** new **Settings → Report branding** section (agency name, logo, accent color, footer text, "Hide 'Generated with MetaDash' footer" toggle, live preview). Branding is applied to HTML/PDF reports, table PDF exports, the Excel title row and the presentation cover slide. Accounts can carry an optional client logo (Settings → Account management), shown on single-client reports. Logos are PNG/JPG/WebP/SVG, validated by content, downscaled and limited to 1 MB; SVGs with scripts are rejected and logos are only ever rendered as `<img>`.
 - **AI assistant (optional, bring your own key):** new **Settings → AI assistant** section (off by default) with Anthropic (Claude, via the official `@anthropic-ai/sdk`: `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5`), OpenAI, Google Gemini and local Ollama providers, encrypted per-provider API keys (write-only, shown as "set · …abcd"), a **Test connection** button and a privacy note. Nothing is sent to a provider unless the assistant is enabled and you use an AI feature.
 - **Write with AI** on the Reports page drafts the report commentary (what happened, why, three next steps) from a compact summary of the same analytics the report uses (KPIs vs. previous period, top/bottom posts, ad spend and results), in the report language. The draft fills the commentary box for editing before export.
 - **Needs attention** panel on the Overview lists ±2σ anomalies; with the assistant enabled each one has an **Explain** button that returns a short likely-cause explanation from the account's daily series ±7 days, posts in that window, ad spend/reach and posting frequency.
+- **Ask your data (AI):** new sidebar screen for natural-language questions (EN/TR) about your analytics. The assistant queries the local SQLite database through two tools, `run_sql` (single read-only SELECT on a separate read-only connection, 200-row cap, 5 s time guard, rejects `settings`/`profiles`, token/secret identifiers, sqlite internals, table-valued pragmas and recursive CTEs) and `get_period` (today + the selected period), with a compact, deterministic schema description. Answers are rendered as safe Markdown (no HTML injection) with a copy button and a collapsible **How I found this** list of every query with a result preview. Requests can be cancelled; follow-up questions keep the last 6 question/answer turns as plain text. Available only when the AI assistant is enabled.
 
 ## [1.1.0] - 2026-09-29
 
@@ -66,6 +71,7 @@ First open-source release under the MIT License.
 - **Data:** local SQLite database, AES-256-GCM encrypted secrets, backup/restore, passphrase-protected data transfer between computers.
 - **Security:** sandboxed renderer with context isolation, strict CSP, Electron fuses on packaged builds, hardened runtime on macOS.
 
-[Unreleased]: https://github.com/mbahadirs/metadash/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/mbahadirs/metadash/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/mbahadirs/metadash/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/mbahadirs/metadash/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mbahadirs/metadash/releases/tag/v1.0.0

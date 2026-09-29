@@ -11,12 +11,18 @@ function geminiSchema(schema) {
   return Object.fromEntries(Object.entries(schema).filter(([k]) => k !== 'additionalProperties').map(([k, v]) => [k, geminiSchema(v)]));
 }
 
+/** Gemini rejects OBJECT schemas with no properties, so parameterless tools omit `parameters`. */
+function geminiTool(t) {
+  const hasProps = Object.keys(t.parameters?.properties ?? {}).length > 0;
+  return { name: t.name, description: t.description, ...(hasProps ? { parameters: geminiSchema(t.parameters) } : {}) };
+}
+
 /** Pure generateContent body. */
 export function buildGeminiRequest({ system, messages, tools = [], maxTokens = GEMINI_MAX_TOKENS }) {
   return {
     systemInstruction: { parts: [{ text: system }] },
     contents: messages,
-    ...(tools.length ? { tools: [{ functionDeclarations: tools.map((t) => ({ name: t.name, description: t.description, parameters: geminiSchema(t.parameters) })) }] } : {}),
+    ...(tools.length ? { tools: [{ functionDeclarations: tools.map(geminiTool) }] } : {}),
     generationConfig: { maxOutputTokens: maxTokens },
   };
 }
@@ -39,6 +45,7 @@ export function createGeminiProvider({ apiKey, model, fetchImpl, baseUrl = BASE 
     id: 'gemini',
     model,
     userMessage: (text) => ({ role: 'user', parts: [{ text }] }),
+    assistantMessage: (text) => ({ role: 'model', parts: [{ text }] }),
     appendAssistant: (messages, res) => [...messages, res.raw],
     appendToolResults: (messages, res, results) => [
       ...messages,

@@ -34,6 +34,7 @@ export function createOpenAIProvider({ apiKey, model, fetchImpl, baseUrl = ENDPO
     id: 'openai',
     model,
     userMessage: (text) => ({ role: 'user', content: text }),
+    assistantMessage: (text) => ({ role: 'assistant', content: text }),
     appendAssistant: (messages, res) => [...messages, res.raw],
     appendToolResults: (messages, res, results) => [...messages, res.raw, ...results.map((r) => ({ role: 'tool', tool_call_id: r.id, content: r.content }))],
     async complete({ system, messages, tools, maxTokens, signal }) {

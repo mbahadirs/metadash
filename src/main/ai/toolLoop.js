@@ -2,12 +2,13 @@ import { AiError } from './errors.js';
 
 /**
  * Provider-agnostic agent loop. The provider supplies native message shapes:
- *   userMessage(text), complete({ system, messages, tools, maxTokens, signal, continuation }),
+ *   userMessage(text), assistantMessage(text), complete({ system, messages, tools, maxTokens, signal, continuation }),
  *   appendAssistant(messages, res), appendToolResults(messages, res, results) — both return new arrays.
  * Tools use the neutral shape { name, description, parameters: JSONSchema }.
+ * `history` = prior plain-text turns [{ question, answer }] replayed before userText (provider-agnostic, no tool traces).
  */
-export async function runToolLoop({ provider, system, userText, tools = [], execute, maxSteps = 8, maxTokens, signal }) {
-  let messages = [provider.userMessage(userText)];
+export async function runToolLoop({ provider, system, userText, history = [], tools = [], execute, maxSteps = 8, maxTokens, signal }) {
+  let messages = [...historyMessages(provider, history), provider.userMessage(userText)];
   let continuation = false;
   let usage = { inputTokens: 0, outputTokens: 0 };
   for (let step = 1; step <= maxSteps; step += 1) {
@@ -30,6 +31,12 @@ export async function runToolLoop({ provider, system, userText, tools = [], exec
     return { text, stopReason: res.stopReason, truncated: res.stopReason === 'max_tokens', steps: step, usage };
   }
   throw new AiError('ai_max_steps', { vars: { n: maxSteps } });
+}
+
+function historyMessages(provider, history) {
+  if (!history.length) return [];
+  if (typeof provider.assistantMessage !== 'function') throw new Error(`Provider "${provider.id}" does not support conversation history`);
+  return history.flatMap((turn) => [provider.userMessage(turn.question), provider.assistantMessage(turn.answer)]);
 }
 
 function addUsage(a, b) {

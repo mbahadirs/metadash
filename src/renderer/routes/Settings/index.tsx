@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSettings, useTokenHealth, useAccounts, useTags, useAdAccounts, useSyncHistory, useApiMutation, useSetupState } from '@/hooks/queries';
 import { useAppStore } from '@/store/app';
@@ -28,6 +28,8 @@ export function SettingsPage() {
   const set = async (key: string, value: unknown) => { await call(api.settings.set(key, value)); qc.invalidateQueries({ queryKey: ['settings'] }); };
   const s = (settings.data ?? {}) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   const [msg, setMsg] = useState<string | null>(null);
+  const focus = (useLocation().state as { focus?: string } | null)?.focus;
+  useEffect(() => { if (focus === 'ai' && !settings.isLoading) document.getElementById('ai-assistant')?.scrollIntoView({ block: 'start' }); }, [focus, settings.isLoading]);
 
   if (settings.isLoading) return <Loading />;
   return (
@@ -58,7 +60,7 @@ export function SettingsPage() {
 
       <NotificationsSection />
 
-      <AiSection />
+      <div id="ai-assistant" className="scroll-mt-4"><AiSection /></div>
 
       <BrandingSection />
 

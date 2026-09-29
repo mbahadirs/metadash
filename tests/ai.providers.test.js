@@ -144,3 +144,18 @@ describe('models/config helpers', () => {
     expect(maskKey(null)).toEqual({ set: false, last4: null });
   });
 });
+
+describe('assistantMessage (plain-text history turns)', () => {
+  it('uses each provider\'s native assistant role', () => {
+    expect(createOpenAIProvider({ apiKey: 'k', model: 'm' }).assistantMessage('a')).toEqual({ role: 'assistant', content: 'a' });
+    expect(createOllamaProvider({ model: 'm' }).assistantMessage('a')).toEqual({ role: 'assistant', content: 'a' });
+    expect(createGeminiProvider({ apiKey: 'k', model: 'm' }).assistantMessage('a')).toEqual({ role: 'model', parts: [{ text: 'a' }] });
+  });
+});
+
+describe('gemini parameterless tools', () => {
+  it('omits parameters when the tool takes no arguments', () => {
+    const body = buildGeminiRequest({ system: 's', messages: [], tools: [{ name: 'get_period', description: 'd', parameters: { type: 'object', properties: {}, required: [], additionalProperties: false } }] });
+    expect(body.tools[0].functionDeclarations[0]).toEqual({ name: 'get_period', description: 'd' });
+  });
+});

@@ -34,6 +34,7 @@ export function createOllamaProvider({ baseUrl = DEFAULT_OLLAMA_URL, model, fetc
     id: 'ollama',
     model,
     userMessage: (text) => ({ role: 'user', content: text }),
+    assistantMessage: (text) => ({ role: 'assistant', content: text }),
     appendAssistant: (messages, res) => [...messages, res.raw],
     appendToolResults: (messages, res, results) => [...messages, res.raw, ...results.map((r) => ({ role: 'tool', content: r.content, tool_name: r.name }))],
     async complete({ system, messages, tools, maxTokens, signal }) {

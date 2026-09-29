@@ -96,3 +96,16 @@ describe('runToolLoop', () => {
     await expect(runToolLoop({ provider: fakeProvider([{ text: ' ', stopReason: 'end' }]), system: 's', userText: 'q' })).rejects.toMatchObject({ key: 'ai_empty' });
   });
 });
+
+describe('runToolLoop history', () => {
+  it('replays prior plain-text turns before the new user message', async () => {
+    const p = { ...fakeProvider([{ text: 'ok', stopReason: 'end' }]), assistantMessage: (text) => ({ role: 'assistant', content: text }) };
+    await runToolLoop({ provider: p, system: 's', userText: 'q2', history: [{ question: 'q1', answer: 'a1' }] });
+    expect(p.calls[0].messages).toEqual([{ role: 'user', content: 'q1' }, { role: 'assistant', content: 'a1' }, { role: 'user', content: 'q2' }]);
+  });
+
+  it('refuses history when the provider cannot express assistant turns', async () => {
+    const p = fakeProvider([{ text: 'ok', stopReason: 'end' }]);
+    await expect(runToolLoop({ provider: p, system: 's', userText: 'q', history: [{ question: 'a', answer: 'b' }] })).rejects.toThrow(/history/);
+  });
+});
