@@ -1,6 +1,6 @@
-import { ComingSoon } from '../parts';
+import { IdeasBoard } from './IdeasBoard';
 
-/** Studio → Ideas tab. Placeholder owned by v1.5 chunk C, which replaces this file (keep the export name). */
+/** Studio → Ideas tab (v1.5 chunk C): monthly content ideas per account → Planner drafts. */
 export function IdeasTab() {
-  return <ComingSoon />;
+  return <IdeasBoard />;
 }

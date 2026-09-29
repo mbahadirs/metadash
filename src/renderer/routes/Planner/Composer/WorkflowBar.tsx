@@ -6,6 +6,7 @@ import type { PlannerPost, PostStatus } from '@/lib/types';
 import { useToast } from '../Toast';
 import { ConfirmDialog, PromptDialog } from '../parts';
 import { errorText, isNotImplemented, tx } from '../lib';
+import { RepurposeButton } from '@/components/RepurposeDialog';
 
 function B({ label, onClick, primary, disabled, title, busy }: { label: string; onClick: () => void; primary?: boolean; disabled?: boolean; title?: string; busy: boolean }) {
   return <button type="button" className={`btn btn-sm ${primary ? 'btn-primary' : ''}`} onClick={onClick} disabled={busy || disabled} title={title}>{label}</button>;
@@ -77,6 +78,7 @@ export function WorkflowBar({ post, requireApproval, blocked, hasTime, busy, onF
       {status === 'archived' && <B busy={dis} label={t('pl_restore')} onClick={() => setStatus('draft')} primary />}
       <span className="flex-1" />
       {post && <B busy={dis} label={t('pl_duplicate')} onClick={() => run(async (p) => { const d = await plannerApi.duplicate(p.id, null); toast(t('pl_duplicated', { ref: d.ref }), 'ok'); onDuplicated(d.id); })} />}
+      {post && <RepurposeButton source={{ postId: post.id }} sourceAccountIds={post.targets.map((x) => x.accountId)} isVideo={post.assets.some((a) => a.asset?.kind === 'video')} onCreated={onDuplicated} />}
       {post && !['publishing', 'archived', 'scheduled'].includes(status) && <B busy={dis} label={t('pl_archive')} onClick={() => setStatus('archived')} />}
       {post && status !== 'publishing' && <button type="button" className="btn btn-sm btn-danger" disabled={dis} onClick={() => setDialog('delete')}>{t('delete')}</button>}
 

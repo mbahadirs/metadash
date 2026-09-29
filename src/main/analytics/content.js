@@ -3,6 +3,7 @@ import { listMedia, getMedia, commentsForMedia, typeBenchmarks, reachRank, media
 import { paidForMedia } from '../db/queries/ads.js';
 import { bestTime } from './besttime.js';
 import { mediaLifecycle } from './lifecycle.js';
+import { hashtagStats } from './hashtags.js';
 import { rangeMs, mean, pctChange, round, fmtDate, toDate } from './util.js';
 
 const BENCH_DAYS = 90;
@@ -74,16 +75,7 @@ export function contentAnalysis({ from, to, igIds, typeKeys, platforms, recentDa
     };
   });
 
-  const tagStats = new Map();
-  for (const p of posts) {
-    const tags = new Set((p.caption ?? '').toLowerCase().match(/#[\p{L}\p{N}_]+/gu) ?? []);
-    for (const t of tags) {
-      const cur = tagStats.get(t) ?? { tag: t, posts: 0, reach: [], er: [], saved: [] };
-      tagStats.set(t, { ...cur, posts: cur.posts + 1, reach: [...cur.reach, p.reach], er: [...cur.er, p.engagementRate], saved: [...cur.saved, p.saved] });
-    }
-  }
-  const hashtags = [...tagStats.values()].filter((h) => h.posts >= 2).map((h) => ({ tag: h.tag, posts: h.posts, avgReach: round(mean(h.reach), 0), avgEr: round(mean(h.er), 2), avgSaved: round(mean(h.saved), 0) }))
-    .sort((a, b) => (b.avgReach ?? 0) - (a.avgReach ?? 0)).slice(0, 20);
+  const hashtags = hashtagStats(posts);
 
   const totalReach = posts.reduce((s, p) => s + (p.reach ?? 0), 0);
   const paidPosts = posts.filter((p) => (p.spend ?? 0) > 0);

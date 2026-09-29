@@ -1,2 +1,20 @@
 /** AI studio ideas messages (owned by v1.5 chunk C). Format: { key: [en, tr] }. Keys must be unique across all i18n files. */
-export const STUDIO_IDEAS_MESSAGES = {};
+export const STUDIO_IDEAS_MESSAGES = {
+  ideas_bad_month: ['Pick a month from this month up to 12 months ahead.', 'Bu aydan başlayarak en fazla 12 ay sonrasına kadar bir ay seçin.'],
+  ideas_no_ideas: ['Select at least one idea.', 'En az bir fikir seçin.'],
+  ideas_special_days_invalid: ['Special days: check the entry "{field}" (date MM-DD or YYYY-MM-DD and a name).', 'Özel günler: "{field}" girdisini kontrol edin (tarih AA-GG veya YYYY-AA-GG ve bir ad).'],
+  ideas_note_hook: ['Hook', 'Kanca'],
+  ideas_note_why: ['Why', 'Neden'],
+  ideas_note_pillar: ['Pillar', 'İçerik ekseni'],
+  ideas_note_based_on: ['Based on {n} top posts.', '{n} en iyi gönderiye dayanıyor.'],
+  rp_source_missing: ['The post to repurpose was not found (it may have been deleted or not synced yet).', 'Dönüştürülecek gönderi bulunamadı (silinmiş veya henüz senkronize edilmemiş olabilir).'],
+  rp_source_empty: ['This post has no caption to repurpose. Paste a transcript or add a caption first.', 'Bu gönderide dönüştürülecek açıklama yok. Önce bir döküm yapıştırın veya açıklama ekleyin.'],
+  rp_bad_account: ['@{account} ({platform}) cannot publish a "{to}" draft.', '@{account} ({platform}) "{to}" taslağı yayınlayamaz.'],
+  rp_default_title: ['Repurposed: {title}', 'Dönüştürüldü: {title}'],
+  rp_note_slides: ['Carousel slides (design the images from these texts):', 'Karusel slaytları (görselleri bu metinlerle tasarlayın):'],
+  rp_note_slide: ['Slide {n}', 'Slayt {n}'],
+  rp_note_chain: ['Thread chain: only the first post is published; add the rest as replies after publishing.', 'Zincir: yalnızca ilk gönderi yayınlanır; kalanları yayından sonra yanıt olarak ekleyin.'],
+  rp_note_frames: ['Story frames:', 'Hikâye kareleri:'],
+  rp_note_frame: ['Frame {n}', 'Kare {n}'],
+  rp_note_source: ['Repurposed from {source}.', '{source} kaynağından dönüştürüldü.'],
+};

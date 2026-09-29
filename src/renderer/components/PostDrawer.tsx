@@ -15,6 +15,7 @@ import { Icon } from './Icons';
 import { AdMetricGrid } from './AdMetricCells';
 import { usePlatformCaps } from '@/hooks/usePlatforms';
 import { PLATFORM_LABELS, platformOf } from '@/lib/platforms';
+import { RepurposeButton } from './RepurposeDialog';
 
 /** Right-hand slide-over with the full post analysis. Esc closes. */
 export function PostDrawer({ mediaId, onClose }: { mediaId: string | null; onClose: () => void }) {
@@ -82,6 +83,7 @@ function PostDrawerBody({ mediaId, onClose }: { mediaId: string; onClose: () => 
         <button className={`btn btn-sm ${inBasket ? 'btn-primary' : ''}`} onClick={() => toggleBasket(m.mediaId)}>{inBasket ? '✓ ' : '+ '}{t('report_basket')}</button>
         {m.permalink && <button className="btn btn-sm" onClick={() => api.system.openExternal(m.permalink!)}>{openLabel} <Icon.external /></button>}
         <button className="btn btn-sm" title={t('pl_duplicate_as_draft')} aria-label={t('pl_duplicate_as_draft')} onClick={() => { onClose(); navigate('/planner?post=new', { state: { draft: { caption: m.caption ?? '', accountIds: [m.igId] } } }); }}><Icon.calendar /></button>
+        <RepurposeButton source={{ mediaId: m.mediaId }} sourceAccountIds={[m.igId]} isVideo={m.typeKey === 'reels' || m.typeKey === 'video'} onCreated={(id) => { onClose(); navigate(`/planner?post=${id}`); }} />
         <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label={t('close')}>✕</button>
       </header>
 

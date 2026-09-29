@@ -254,7 +254,7 @@ export function ComposerDrawer({ postId, seed, onClose, onOpenPost }: {
                 <Field label={t('pl_caption')}>
                   <CaptionEditor state={form} accounts={accounts} disabled={disabled} onChange={patch} />
                 </Field>
-                <AiAssistSlot state={form} disabled={disabled} onChange={patch} />
+                <AiAssistSlot state={form} disabled={disabled} onChange={patch} postId={id} />
                 <Field label={t('pl_schedule_section')}>
                   <SchedulePicker scheduledAt={form.scheduledAt} accountIds={form.targets.map((tg) => tg.accountId)} disabled={disabled || status === 'publishing'} onChange={(at) => void setTime(at)} />
                 </Field>

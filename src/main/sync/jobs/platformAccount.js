@@ -1,6 +1,7 @@
 import { MetaError } from '../../meta/errors.js';
 import { upsertAccount, insertSnapshot, markSynced, upsertInsightDaily, upsertDemographic, lastDemographicCapture, latestFollowers } from '../../db/queries/accounts.js';
-import { upsertMedia, mediaForAccount, lastSnapshotAt, insertSnapshotMetric, upsertComment } from '../../db/queries/media.js';
+import { upsertMedia, mediaForAccount, lastSnapshotAt, insertSnapshotMetric } from '../../db/queries/media.js';
+import { storeComments } from '../../db/queries/comments.js';
 import { disableMetric, markUnsupported } from '../../db/queries/sync.js';
 import { materializeLatest } from '../../analytics/engagement.js';
 import { fmtDate } from '../../analytics/util.js';
@@ -140,16 +141,4 @@ export async function syncPlatformAccount(ctx, provider, account) {
   }
 
   markSynced(key, now);
-}
-
-function storeComments(mediaId, comments, ownerUsername) {
-  for (const c of comments) {
-    const createdAt = new Date(c.timestamp).getTime();
-    upsertComment({ commentId: c.id, mediaId, username: c.username, text: c.text, likeCount: c.like_count, createdAt, isFromOwner: c.username === ownerUsername, parentId: null });
-    for (const r of c.replies?.data ?? []) {
-      const rAt = new Date(r.timestamp).getTime();
-      const fromOwner = r.username === ownerUsername;
-      upsertComment({ commentId: r.id, mediaId, username: r.username, text: r.text ?? '', likeCount: 0, createdAt: rAt, isFromOwner: fromOwner, parentId: c.id, replyLatencyMinutes: fromOwner ? Math.round((rAt - createdAt) / 60_000) : null });
-    }
-  }
 }
