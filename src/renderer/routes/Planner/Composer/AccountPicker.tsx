@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import { useT } from '@/lib/i18n';
 import { useAppStore } from '@/store/app';
 import { PlatformIcon } from '@/components/PlatformBadge';
-import { PLATFORMS, PLATFORM_LABELS } from '@/lib/platforms';
-import type { Account, PlannerFormat, PublishingReadiness } from '@/lib/types';
+import { PUBLISH_PLATFORMS, PLATFORM_LABELS } from '@/lib/platforms';
+import type { Account, PlannerFormat, PublishPlatform, PublishingReadiness } from '@/lib/types';
 import { FORMATS, inferFormat, tx } from '../lib';
 import type { ComposerMedia, ComposerTarget } from './state';
 
@@ -35,7 +35,7 @@ export function AccountPicker({ accounts, targets, media, readiness, disabled, o
         <input className="input" placeholder={t('pl_search_accounts')} value={search} onChange={(e) => setSearch(e.target.value)} aria-label={t('pl_search_accounts')} />
       )}
       <div className="max-h-40 overflow-auto flex flex-wrap gap-1" role="group" aria-label={t('pl_accounts')}>
-        {PLATFORMS.flatMap((p) => filtered.filter((a) => a.platform === p)).map((a) => (
+        {PUBLISH_PLATFORMS.flatMap((p) => filtered.filter((a) => a.platform === p)).map((a) => (
           <button type="button" key={a.igId} className={`chip ${selected.has(a.igId) ? 'active' : ''}`} aria-pressed={selected.has(a.igId)} disabled={disabled} onClick={() => toggle(a)}>
             <PlatformIcon platform={a.platform} size={12} />@{a.username}
           </button>
@@ -47,7 +47,7 @@ export function AccountPicker({ accounts, targets, media, readiness, disabled, o
           {targets.map((tg) => {
             const acc = byId.get(tg.accountId);
             const auto = inferFormat(tg.platform, mediaMeta);
-            const ready = readiness?.[tg.platform];
+            const ready = readiness?.[tg.platform as PublishPlatform];
             const pageReady = tg.platform === 'facebook' ? readiness?.facebook.pages.find((p) => p.accountId === tg.accountId) : null;
             const blocked = ready ? !ready.canPublish || pageReady?.canPublish === false : false;
             const format = tg.format ?? auto;
@@ -80,7 +80,7 @@ export function AccountPicker({ accounts, targets, media, readiness, disabled, o
           })}
         </ul>
       )}
-      {!targets.length && <div className="text-xs text-ink-2">{t('pl_pick_accounts_hint', { platforms: PLATFORMS.map((p) => PLATFORM_LABELS[p]).join(' / ') })}</div>}
+      {!targets.length && <div className="text-xs text-ink-2">{t('pl_pick_accounts_hint', { platforms: PUBLISH_PLATFORMS.map((p) => PLATFORM_LABELS[p]).join(' / ') })}</div>}
     </div>
   );
 }

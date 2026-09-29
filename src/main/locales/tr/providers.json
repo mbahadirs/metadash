@@ -1,0 +1,6 @@
+{
+  "oauth_done_title": "Giriş yapıldı",
+  "oauth_done_body": "Bu sekmeyi kapatıp MetaDash'e dönebilirsiniz.",
+  "oauth_failed_title": "Giriş başarısız",
+  "oauth_failed_body": "MetaDash girişi tamamlayamadı. Bu sekmeyi kapatıp MetaDash'ten yeniden deneyin."
+}

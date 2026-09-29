@@ -1,11 +1,23 @@
 export interface ApiError { code: string | number; message: string; hint: string | null }
 export type Envelope<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
-export type Platform = 'instagram' | 'facebook' | 'threads';
-export type AuthPlatform = 'meta' | 'threads';
-export interface PlatformCapabilities { reach: boolean; saveRate: boolean; stories: boolean; demographics: boolean; competitors: boolean; comments: boolean; ads: boolean }
-/** platforms:list row. `enabled` = provider implemented in this build; `connected` = auth profile exists. */
-export interface PlatformInfo { platform: Platform; label: string; enabled: boolean; auth: AuthPlatform; connected: boolean; trackedCount: number; capabilities: PlatformCapabilities; primaryMetric: 'reach' | 'views' }
+export type Platform = 'instagram' | 'facebook' | 'threads' | 'youtube' | 'tiktok';
+export type AuthPlatform = 'meta' | 'threads' | 'google' | 'tiktok';
+/** Platforms the v1.4 planner publishes to (v2.0 YouTube/TikTok are analytics-only). */
+export type PublishPlatform = 'instagram' | 'facebook' | 'threads';
+/** Mirrors main/providers/capabilities.js CAPABILITY_SCHEMA; the v2.0 keys are optional for older payloads. */
+export interface PlatformCapabilities {
+  reach: boolean; saveRate: boolean; stories: boolean; demographics: boolean; competitors: boolean; comments: boolean; ads: boolean;
+  inbox?: boolean; inboxReply?: boolean | 'scope'; watchTime?: boolean; dailySeries?: 'native' | 'derived' | 'none'; experimental?: boolean;
+}
+/**
+ * platforms:list row. `enabled` = provider implemented in this build; `connected` = auth profile exists.
+ * v2.0 stub providers are omitted until enabled. `profiles` = active profiles of the auth (YouTube channels, …).
+ */
+export interface PlatformInfo {
+  platform: Platform; label: string; enabled: boolean; auth: AuthPlatform; connected: boolean; trackedCount: number; capabilities: PlatformCapabilities; primaryMetric: 'reach' | 'views';
+  keyPrefix?: string; experimental?: boolean; multiProfile?: boolean; profiles?: number;
+}
 
 /**
  * `igId` is the *account key* (column ig_id), not necessarily an Instagram id: raw IG id, 'fb-<pageId>' or 'th-<userId>'.
@@ -24,12 +36,14 @@ export interface Media {
   postedAt: number; postedHour: number; postedWeekday: number; captionLength: number; hashtagCount: number; mentionCount: number; emojiCount: number;
   reach: number | null; views: number | null; likes: number | null; comments: number | null; saved: number | null; shares: number | null;
   reposts: number | null; quotes: number | null; clicks: number | null;
+  /** v2.0 watch metrics (YouTube); null elsewhere. */
+  watchTimeMin?: number | null; avgViewDurationS?: number | null; avgViewPct?: number | null; durationS?: number | null;
   totalInteractions: number | null; engagementRate: number | null; saveRate: number | null;
   spend: number | null; paidReach: number | null; paidImpressions: number | null; paidClicks: number | null; paidResults: number | null; adCount: number; paidCurrency: string | null;
   paidPostEngagement: number | null; paidPageEngagement: number | null; paidResultType: string | null; totalReach: number; totalImpressions: number; paidReachShare: number | null; paidImpressionShare: number | null; costPerResult: number | null;
   paidFrequency: number | null; paidCpc: number | null; paidCtr: number | null; paidCpm: number | null; costPerPostEngagement: number | null; costPerPageEngagement: number | null;
 }
-export type TypeKey = 'image' | 'carousel' | 'video' | 'reels' | 'story' | 'text'; // 'text' = TEXT_POST/TEXT/LINK/STATUS (Facebook, Threads)
+export type TypeKey = 'image' | 'carousel' | 'video' | 'reels' | 'story' | 'text' | 'short' | 'live'; // 'text' = TEXT_POST/TEXT/LINK/STATUS (Facebook, Threads); short/live = YouTube
 export interface PaidAd { adId: string; adName: string | null; actId: string; accountName: string; currency: string; spend: number; impressions: number; reach: number; clicks: number; results: number; resultType: string | null; firstDate: string | null; lastDate: string | null; ctr: number | null; cpc: number | null; cpm: number | null; costPerResult: number | null }
 export interface MediaDetail {
   media: Media & { typeKey: TypeKey; ageHours: number };
@@ -76,9 +90,10 @@ export interface AccountAnalytics {
 export interface HeatCell { weekday: number; hour: number; count: number; value: number | null; avgReach: number | null; qualified: boolean }
 export interface BestTime { matrix: HeatCell[][]; best: HeatCell[]; totalPosts: number; minPosts: number }
 export interface Lifecycle { curve: { ageHours: number; ratio: number | null; samples: number }[]; hoursTo80: number | null; mediaCount: number }
-export interface SyncStatus { running: boolean; runId: number | null; scope: string | null; phase: string | null; currentAccount: string | null; done: number; total: number; apiCalls: number; startedAt: number | null; errors: number; lastSuccessAt: number | null; rateLimit: { usagePct: number; multiplier: number }; tokenInvalid: boolean; invalidAuth?: AuthPlatform[] }
-export interface SyncDone { runId: number; status: string; errors: number; apiCalls: number; tokenInvalid: boolean; invalidAuth: AuthPlatform[]; demo?: boolean }
-export interface TokenWarning { platform: AuthPlatform; code: number | string; message: string }
+export interface SyncStatus { running: boolean; runId: number | null; scope: string | null; phase: string | null; currentAccount: string | null; done: number; total: number; apiCalls: number; startedAt: number | null; errors: number; lastSuccessAt: number | null; rateLimit: { usagePct: number; multiplier: number }; tokenInvalid: boolean; invalidAuth?: string[]; lockedBy?: { kind: string; since: number } | null }
+/** invalidAuth: auth platforms ('meta', 'threads') or '<auth>:<profileId>' for multi-profile auths (v2.0). */
+export interface SyncDone { runId: number; status: string; errors: number; apiCalls: number; tokenInvalid: boolean; invalidAuth: string[]; demo?: boolean }
+export interface TokenWarning { platform: AuthPlatform; code: number | string; message: string; accountId?: string | null; profileId?: number | null }
 export interface DisabledMetric { metric: string; scope: string; reason: string | null; disabledAt: number | null; platform: Platform }
 export interface FacebookPageCandidate { accountId: string; pageId: string; name: string; pictureUrl: string | null; followers: number | null; linkedIgId: string | null; canAnalyze: boolean; tracked: boolean; known: boolean }
 export interface FacebookDiscovery { items: FacebookPageCandidate[]; missingScopes: string[] }
@@ -247,3 +262,61 @@ export type AbMetric = 'reach_lift' | 'er' | 'save_rate' | 'views_lift';
 export interface AbCreateInput { name: string; hypothesis?: string; variable: AbVariable; metric: AbMetric; arms: { arm: string; targetIds?: number[]; mediaKeys?: string[]; captionVariantIds?: number[] }[] }
 export interface StudioProgressEvent { requestId: string; feature: string; phase: 'preparing' | 'sending' | 'validating' | 'done' }
 export interface StudioChangedEvent { kind: 'voice' | 'inbox' | 'ab' | 'usage' | 'ideas' | string; accountIds?: string[]; postIds?: number[]; ids?: (string | number)[] }
+
+// ───────────────────────────────────────────── v2.0 contracts (chunk B) ─────────────────────────────────────────────
+// Owners fill the behaviour; changing a shape is a chunk-B follow-up (see v20 contract).
+
+/** setup:youtube:getState (C1). */
+export interface YouTubeChannel { accountId: string; profileId: number; title: string; handle: string | null; thumbnail: string | null; subscribers: number | null; tracked: boolean; tokenOk: boolean; canReply: boolean; expiresAt: number | null }
+export interface YouTubeSetupState { hasClient: boolean; clientId: string | null; channels: YouTubeChannel[]; quota: { used: number; limit: number; resetsAt: number } | null }
+/** setup:tiktok:getState (C2). */
+export interface TikTokAccountState { accountId: string; profileId: number; username: string; displayName: string | null; avatar: string | null; followers: number | null; tracked: boolean; tokenOk: boolean; expiresAt: number | null; refreshExpiresAt: number | null }
+export interface TikTokSetupState { hasClient: boolean; clientKey: string | null; sandbox: boolean; accounts: TikTokAccountState[]; redirectUri: string | null }
+
+/** Unified inbox (D). commentId keys: IG raw id | 'fbc-<id>' | 'th-<id>' | 'ytc-<id>'. */
+export type InboxStatus = 'open' | 'replied' | 'done' | 'ignored';
+export type InboxSentiment = 'positive' | 'neutral' | 'negative' | 'question' | 'complaint' | 'spam';
+export interface InboxListParams {
+  status?: InboxStatus | 'unanswered' | 'overdue' | 'all'; platforms?: Platform[]; accountIds?: string[]; sentiment?: InboxSentiment[]; assignee?: string | null;
+  question?: boolean; q?: string; from?: string; to?: string; sort?: 'newest' | 'oldest' | 'overdue'; cursor?: string | null; limit?: number;
+}
+export interface InboxRow {
+  commentId: string; externalId: string; mediaId: string; accountId: string; platform: Platform; accountUsername: string;
+  username: string; authorId: string | null; text: string; createdAt: number; likeCount: number; permalink: string | null; isHidden: boolean;
+  post: { caption: string | null; permalink: string | null; thumb: string | null; mediaType: string | null; mediaProductType: string | null };
+  status: InboxStatus; assignee: string | null; firstResponseAt: number | null; overdue: boolean; isQuestion: boolean;
+  sentiment: InboxSentiment | null; replies: number; aiDisabled: boolean;
+}
+export interface InboxCounts { open: number; replied: number; done: number; overdue: number }
+export interface InboxListResult { items: InboxRow[]; nextCursor: string | null; counts: InboxCounts }
+export interface InboxOutboxRow { id: number; commentId: string; body: string; status: 'sending' | 'sent' | 'failed'; remoteId: string | null; errorCode: string | null; error: string | null; attempts: number; author: string | null; createdAt: number; sentAt: number | null }
+export interface InboxThread { root: InboxRow; replies: (InboxRow & { isFromOwner: boolean })[]; outbox: InboxOutboxRow[]; notes?: NoteV2[] }
+export interface InboxCapability { accountId: string; platform: Platform; read: boolean; reply: boolean; hide: boolean; maxReplyLength: number | null; missingScopes: string[] }
+export interface InboxSlaRow { accountId: string; platform: Platform; incoming: number; answered: number; answeredPct: number | null; withinSlaPct: number | null; medianFrtMin: number | null; p90FrtMin: number | null; backlog: number }
+export interface InboxSla { slaHours: number; totals: Omit<InboxSlaRow, 'accountId' | 'platform'>; rows: InboxSlaRow[] }
+export interface InboxUpdatedEvent { commentIds?: string[]; accountIds?: string[]; reason: 'poll' | 'reply' | 'status' | 'assign' | 'hide' | 'classify' | string }
+
+/** Self-hosted publish worker (E). Executor applies per planner target. */
+export type WorkerExecutor = 'local' | 'worker';
+export interface WorkerToken { tokenKey: string; platform: Platform; accountId: string; scopes: string[]; expiresAt: number | null; pushedAt: number | null; status: 'ok' | 'expiring' | 'invalid' | 'missing' | string }
+export interface WorkerState {
+  configured: boolean; enabled: boolean; url: string | null; defaultExecutor: WorkerExecutor; lastSyncAt: number | null; lastError: string | null;
+  info: { version: string; time: number; tz: string; queue: { queued: number; publishing: number; failed: number }; publicMediaUrl: boolean } | null;
+  tokens: WorkerToken[];
+}
+export interface WorkerPairing { secret: string; envSnippet: string; pairing: string }
+export interface WorkerStatusEvent { configured: boolean; state: 'idle' | 'syncing' | 'error' | 'offline'; lastSyncAt: number | null; lastError: string | null; queue: { queued: number; publishing: number; failed: number } | null }
+
+/** Team workspace, roles and session (F1). */
+export type Role = 'admin' | 'analyst' | 'client';
+export interface Session { role: Role; clientScope: string[] | null; readOnly: boolean; workspace: 'local' | string }
+export interface TeamMember { id: string; name: string; handle: string; role: Role; isSelf: boolean; updatedAt: number | null }
+export interface TeamState {
+  mode: 'none' | 'publisher' | 'subscriber'; teamId: string | null; name: string | null; folder: string | null; encrypted: boolean;
+  me: TeamMember | null; members: TeamMember[]; lastPublishAt: number | null; lastPullAt: number | null; snapshotAt: number | null; publisher: string | null; error: string | null;
+}
+export interface TeamStatusEvent { state: 'idle' | 'publishing' | 'pulling' | 'error'; lastPublishAt: number | null; lastPullAt: number | null; error: string | null }
+export interface NoteV2 extends Note { uid: string; author_id: string | null; author_name: string | null; mentions: string[]; visibility: 'internal' | 'client'; updated_at: number | null; deleted_at: number | null }
+
+/** Command-line tool (F2). */
+export interface CliStatus { installed: boolean; shimPath: string | null; onPath: boolean; command: string; platform: string }

@@ -1,7 +1,7 @@
 import { metaClient } from '../../meta/client.js';
 import { MetaError } from '../../meta/errors.js';
 import * as api from './api.js';
-import { CAPABILITIES, PRIMARY_METRIC } from '../capabilities.js';
+import meta from './meta.js';
 
 const DEMOGRAPHIC_DIMENSIONS = [['city', 'city'], ['gender_age', 'genderAge'], ['country', 'country']];
 
@@ -13,8 +13,9 @@ const instagram = {
   enabled: true,
   auth: 'meta',
   concurrency: 2,
-  capabilities: CAPABILITIES.instagram,
-  primaryMetric: PRIMARY_METRIC.instagram,
+  meta,
+  capabilities: meta.capabilities,
+  primaryMetric: meta.primaryMetric,
   labelSuffix: '',
   client: metaClient,
   dailyWindow: { windowDays: 30, maxLookbackDays: 90, initialDays: 30 },

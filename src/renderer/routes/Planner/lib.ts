@@ -140,6 +140,8 @@ export const FORMATS: Record<Platform, PlannerFormat[]> = {
   instagram: ['image', 'carousel', 'reel', 'story'],
   facebook: ['text', 'link', 'photo', 'album', 'video', 'reel'],
   threads: ['text', 'image', 'video', 'carousel'],
+  youtube: [], // v2.0: analytics-only platforms, never planner targets
+  tiktok: [],
 };
 
 /** Renderer mirror of main publishing/limits.js (the server-side validation is authoritative). */
@@ -147,6 +149,8 @@ export const TEXT_LIMITS: Record<Platform, { captionMax: number; hashtagsMax?: n
   instagram: { captionMax: 2200, hashtagsMax: 30, mentionsMax: 20 },
   facebook: { captionMax: 63206 },
   threads: { captionMax: 500, topicTagsMax: 1, linksMax: 5 },
+  youtube: { captionMax: 5000 }, // v2.0: not publishable; present for type completeness
+  tiktok: { captionMax: 2200 },
 };
 
 /** Mirror of main capabilities.inferFormat (for the "Auto (…)" label). */

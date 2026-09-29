@@ -6,18 +6,24 @@ import { Section, Loading } from '@/components/ui';
 import { PlatformIcon } from '@/components/PlatformBadge';
 import { FacebookPagesPanel } from '@/routes/Setup/FacebookPages';
 import { ThreadsConnect } from '@/routes/Setup/ThreadsConnect';
+import { CONNECTION_CARDS } from './connections';
+
+const BUILT_IN: Platform[] = ['instagram', 'facebook', 'threads'];
 
 /** Settings → Connections: per-platform status, Facebook Page tracking and the Threads connection. */
 export function ConnectionsSection() {
   const t = useT();
   const q = usePlatforms();
   const info = (p: Platform) => q.data?.find((x) => x.platform === p);
+  // v2.0 platforms appear once platforms:list reports them (enabled in this build).
+  const shown = PLATFORMS.filter((p) => BUILT_IN.includes(p) || info(p)?.enabled);
+  const extraCards = shown.filter((p) => !BUILT_IN.includes(p) && CONNECTION_CARDS[p]);
   return (
     <Section title={t('connections')}>
       <div className="space-y-5 text-sm">
         <p className="text-xs text-ink-2 m-0">{t('connections_hint')}</p>
         {q.isLoading ? <Loading /> : (
-          <div className="grid grid-cols-3 gap-3">{PLATFORMS.map((p) => <StatusCard key={p} platform={p} info={info(p)} />)}</div>
+          <div className="grid grid-cols-3 gap-3">{shown.map((p) => <StatusCard key={p} platform={p} info={info(p)} />)}</div>
         )}
         <details className="panel p-3" open={(info('facebook')?.trackedCount ?? 0) > 0}>
           <summary className="cursor-pointer font-medium flex items-center gap-2"><PlatformIcon platform="facebook" size={16} />{t('fb_pages_title')}</summary>
@@ -27,10 +33,22 @@ export function ConnectionsSection() {
           <summary className="cursor-pointer font-medium flex items-center gap-2"><PlatformIcon platform="threads" size={16} />Threads</summary>
           <div className="mt-3">{info('threads')?.enabled === false ? <div className="text-ink-2">{t('not_in_build')}</div> : <ThreadsConnect onChange={() => q.refetch()} />}</div>
         </details>
+        {extraCards.map((p) => {
+          const Card = CONNECTION_CARDS[p]!;
+          const i = info(p)!;
+          return (
+            <details key={p} className="panel p-3" open>
+              <summary className="cursor-pointer font-medium flex items-center gap-2"><PlatformIcon platform={p} size={16} />{PLATFORM_LABELS[p]}{i.experimental && <span className="badge badge-warn">{t('experimental')}</span>}</summary>
+              <div className="mt-3"><Card info={i} onChange={() => q.refetch()} /></div>
+            </details>
+          );
+        })}
       </div>
     </Section>
   );
 }
+
+const AUTH_LABELS: Record<string, string> = { meta: 'Meta', threads: 'Threads', google: 'Google', tiktok: 'TikTok' };
 
 function StatusCard({ platform, info }: { platform: Platform; info: PlatformInfo | undefined }) {
   const t = useT();
@@ -40,7 +58,7 @@ function StatusCard({ platform, info }: { platform: Platform; info: PlatformInfo
     <div className="panel p-3 flex items-center gap-3">
       <PlatformIcon platform={platform} size={24} />
       <div className="min-w-0">
-        <div className="font-medium">{PLATFORM_LABELS[platform]} <span className="text-ink-2 text-xs font-normal">· {info?.auth === 'threads' ? 'Threads' : 'Meta'}</span></div>
+        <div className="font-medium">{PLATFORM_LABELS[platform]} <span className="text-ink-2 text-xs font-normal">· {AUTH_LABELS[info?.auth ?? 'meta'] ?? 'Meta'}</span></div>
         <div className="text-xs"><span className={state.cls}>{state.text}</span>{info && info.enabled !== false && <span className="text-ink-2 num"> · {t('tracked_n', { n: info.trackedCount })}</span>}</div>
       </div>
     </div>

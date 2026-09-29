@@ -4,7 +4,7 @@ import { useT } from '@/lib/i18n';
 import { api, call, ApiCallError } from '@/lib/api';
 import { fmtDateTime } from '@/lib/format';
 import { useSettings } from '@/hooks/queries';
-import type { MediaHostSettings, MediaHostInput, MediaHostTest, MediaHostType, PublishingReadiness, PublishingStatus, PlatformReadiness, Platform, S3Settings } from '@/lib/types';
+import type { MediaHostSettings, MediaHostInput, MediaHostTest, MediaHostType, PublishingReadiness, PublishingStatus, PlatformReadiness, Platform, PublishPlatform, S3Settings } from '@/lib/types';
 import { Section, Toggle, Loading } from '@/components/ui';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import { NumberSetting } from './BackgroundSection';
@@ -13,7 +13,7 @@ const READINESS_KEY = ['publishingReadiness'];
 const STATUS_KEY = ['publishingStatus'];
 const HOST_KEY = ['mediaHost'];
 const HOST_TYPES = [['none', 'pub_host_none'], ['s3', 'pub_host_s3'], ['fbpage', 'pub_host_fbpage'], ['url', 'pub_host_url']] as const;
-const PLATFORMS: Platform[] = ['instagram', 'facebook', 'threads'];
+const PLATFORMS: PublishPlatform[] = ['instagram', 'facebook', 'threads'];
 const notImplemented = (e: unknown) => e instanceof ApiCallError && e.code === 'NOT_IMPLEMENTED';
 
 /**

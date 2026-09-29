@@ -3,7 +3,11 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const invoke = (channel, ...args) => ipcRenderer.invoke(channel, ...args);
 
 /** Main → renderer events (keep in sync with RENDERER_EVENTS in ipc/index.js). */
-const EVENTS = ['sync:progress', 'sync:done', 'token:warning', 'update:status', 'app:navigate', 'planner:changed', 'publish:progress', 'publish:missed', 'studio:progress', 'studio:changed'];
+const EVENTS = [
+  'sync:progress', 'sync:done', 'token:warning', 'update:status', 'app:navigate', 'planner:changed', 'publish:progress', 'publish:missed',
+  'studio:progress', 'studio:changed',
+  'inbox:updated', 'worker:status', 'team:status', 'session:changed', // v2.0
+];
 
 /** Generic studio escape hatch: only `studio:<a-z:>` channels (chunks may add channels without touching this file). */
 const STUDIO_SUB = /^[a-z][a-zA-Z]*(?::[a-z][a-zA-Z]*){0,3}$/;
@@ -78,6 +82,26 @@ const api = {
       disconnect: () => invoke('setup:threads:disconnect'),
       saveTracked: (tracked) => invoke('setup:threads:saveTracked', { tracked }),
     },
+    // v2.0 C1 — Google OAuth (loopback + PKCE), one profile per channel.
+    youtube: {
+      getState: () => invoke('setup:youtube:getState'),
+      saveClient: (p) => invoke('setup:youtube:saveClient', p),
+      connect: (p) => invoke('setup:youtube:connect', p ?? {}),
+      cancelConnect: () => invoke('setup:youtube:cancelConnect'),
+      saveTracked: (accountIds) => invoke('setup:youtube:saveTracked', { accountIds }),
+      disconnect: (p) => invoke('setup:youtube:disconnect', p),
+    },
+    // v2.0 C2 — TikTok Login Kit (loopback, or paste-code fallback), experimental.
+    tiktok: {
+      getState: () => invoke('setup:tiktok:getState'),
+      saveClient: (p) => invoke('setup:tiktok:saveClient', p),
+      connect: () => invoke('setup:tiktok:connect'),
+      cancelConnect: () => invoke('setup:tiktok:cancelConnect'),
+      authUrl: () => invoke('setup:tiktok:authUrl'),
+      exchangeCode: (p) => invoke('setup:tiktok:exchangeCode', p),
+      saveTracked: (accountIds) => invoke('setup:tiktok:saveTracked', { accountIds }),
+      disconnect: (p) => invoke('setup:tiktok:disconnect', p),
+    },
   },
   platforms: {
     list: () => invoke('platforms:list'),
@@ -100,6 +124,9 @@ const api = {
     list: (p) => invoke('notes:list', p),
     add: (p) => invoke('notes:add', p),
     delete: (id) => invoke('notes:delete', id),
+    update: (p) => invoke('notes:update', p), // v2.0 F1: { id|uid, body, mentions, visibility }
+    mentions: () => invoke('notes:mentions'),
+    markSeen: (uids) => invoke('notes:markSeen', { uids }),
   },
   sync: {
     run: (p) => invoke('sync:run', p),
@@ -289,6 +316,61 @@ const api = {
       conclude: (p) => invoke('studio:ab:conclude', p),
     },
     call: (sub, payload) => (STUDIO_SUB.test(String(sub)) ? invoke(`studio:${sub}`, payload) : Promise.resolve({ ok: false, error: { code: 'INVALID_PAYLOAD', message: 'Invalid studio channel', hint: null } })),
+  },
+  // v2.0 D — unified inbox (payloads: lib/types.ts Inbox*).
+  inbox: {
+    list: (p) => invoke('inbox:list', p ?? {}),
+    thread: (commentId) => invoke('inbox:thread', { commentId }),
+    reply: (p) => invoke('inbox:reply', p),
+    retry: (outboxId) => invoke('inbox:retry', { outboxId }),
+    setStatus: (p) => invoke('inbox:setStatus', p),
+    assign: (p) => invoke('inbox:assign', p),
+    hide: (p) => invoke('inbox:hide', p),
+    refresh: (p) => invoke('inbox:refresh', p ?? {}),
+    suggest: (p) => invoke('inbox:suggest', p),
+    classify: (p) => invoke('inbox:classify', p ?? {}),
+    classifyPreview: (p) => invoke('inbox:classifyPreview', p ?? {}),
+    sla: (p) => invoke('inbox:sla', p ?? {}),
+    capabilities: () => invoke('inbox:capabilities'),
+    counts: () => invoke('inbox:counts'),
+  },
+  // v2.0 E — self-hosted publish worker.
+  worker: {
+    getState: () => invoke('worker:getState'),
+    generatePairing: () => invoke('worker:generatePairing'),
+    configure: (p) => invoke('worker:configure', p),
+    test: () => invoke('worker:test'),
+    tokens: () => invoke('worker:tokens'),
+    pushToken: (p) => invoke('worker:pushToken', p),
+    revokeToken: (tokenKey) => invoke('worker:revokeToken', { tokenKey }),
+    syncNow: () => invoke('worker:syncNow'),
+    setExecutor: (p) => invoke('worker:setExecutor', p),
+    recall: (targetId) => invoke('worker:recall', { targetId }),
+    disconnect: () => invoke('worker:disconnect'),
+  },
+  // v2.0 F1 — shared-folder team workspace and roles.
+  team: {
+    getState: () => invoke('team:getState'),
+    setIdentity: (p) => invoke('team:setIdentity', p),
+    pickFolder: () => invoke('team:pickFolder'),
+    create: (p) => invoke('team:create', p),
+    join: (p) => invoke('team:join', p),
+    leave: (p) => invoke('team:leave', p ?? {}),
+    publishNow: () => invoke('team:publishNow'),
+    pullNow: () => invoke('team:pullNow'),
+    members: () => invoke('team:members'),
+  },
+  session: {
+    get: () => invoke('session:get'),
+    setRole: (role) => invoke('session:setRole', { role }),
+    enterClientView: (p) => invoke('session:enterClientView', p),
+    exitClientView: (p) => invoke('session:exitClientView', p),
+  },
+  // v2.0 F2 — command-line tool shim.
+  cli: {
+    status: () => invoke('cli:status'),
+    installShim: (p) => invoke('cli:installShim', p ?? {}),
+    uninstallShim: () => invoke('cli:uninstallShim'),
   },
   app: {
     background: {

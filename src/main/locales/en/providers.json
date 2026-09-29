@@ -1,0 +1,6 @@
+{
+  "oauth_done_title": "Signed in",
+  "oauth_done_body": "You can close this tab and return to MetaDash.",
+  "oauth_failed_title": "Sign-in failed",
+  "oauth_failed_body": "MetaDash could not complete the sign-in. Close this tab and try again from MetaDash."
+}

@@ -4,16 +4,17 @@ import { q } from '../index.js';
 export function upsertMedia(m) {
   q.run(
     `INSERT INTO media (media_id, ig_id, media_type, media_product_type, caption, permalink, thumbnail_path, posted_at,
-       posted_hour, posted_weekday, caption_length, hashtag_count, mention_count, emoji_count, is_deleted, first_seen_at, external_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+       posted_hour, posted_weekday, caption_length, hashtag_count, mention_count, emoji_count, is_deleted, first_seen_at, external_id, duration_s)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
      ON CONFLICT(media_id) DO UPDATE SET caption = excluded.caption, permalink = excluded.permalink,
        thumbnail_path = COALESCE(excluded.thumbnail_path, media.thumbnail_path), is_deleted = 0,
        caption_length = excluded.caption_length, hashtag_count = excluded.hashtag_count,
        mention_count = excluded.mention_count, emoji_count = excluded.emoji_count,
-       external_id = COALESCE(excluded.external_id, media.external_id)`,
+       external_id = COALESCE(excluded.external_id, media.external_id),
+       duration_s = COALESCE(excluded.duration_s, media.duration_s)`,
     m.mediaId, m.igId, m.mediaType, m.mediaProductType, m.caption ?? null, m.permalink ?? null, m.thumbnailPath ?? null,
     m.postedAt, m.postedHour, m.postedWeekday, m.captionLength ?? 0, m.hashtagCount ?? 0, m.mentionCount ?? 0,
-    m.emojiCount ?? 0, m.firstSeenAt ?? Date.now(), m.externalId ?? m.mediaId,
+    m.emojiCount ?? 0, m.firstSeenAt ?? Date.now(), m.externalId ?? m.mediaId, Number.isFinite(m.durationS) ? Math.round(m.durationS) : null,
   );
 }
 
@@ -28,15 +29,17 @@ export function insertSnapshotMetric(mediaId, capturedAt, ageHours, metric, valu
 export function upsertLatest(mediaId, metrics, engagementRate, updatedAt = Date.now()) {
   q.run(
     `INSERT INTO media_latest (media_id, reach, views, likes, comments, saved, shares, total_interactions, engagement_rate, updated_at,
-       reposts, quotes, clicks)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       reposts, quotes, clicks, watch_time_min, avg_view_duration_s, avg_view_pct)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(media_id) DO UPDATE SET reach = excluded.reach, views = excluded.views, likes = excluded.likes,
        comments = excluded.comments, saved = excluded.saved, shares = excluded.shares,
        total_interactions = excluded.total_interactions, engagement_rate = excluded.engagement_rate, updated_at = excluded.updated_at,
-       reposts = excluded.reposts, quotes = excluded.quotes, clicks = excluded.clicks`,
+       reposts = excluded.reposts, quotes = excluded.quotes, clicks = excluded.clicks,
+       watch_time_min = excluded.watch_time_min, avg_view_duration_s = excluded.avg_view_duration_s, avg_view_pct = excluded.avg_view_pct`,
     mediaId, metrics.reach ?? null, metrics.views ?? null, metrics.likes ?? null, metrics.comments ?? null,
     metrics.saved ?? null, metrics.shares ?? null, metrics.total_interactions ?? null, engagementRate ?? null, updatedAt,
     metrics.reposts ?? null, metrics.quotes ?? null, metrics.clicks ?? null,
+    metrics.watch_time_min ?? null, metrics.avg_view_duration_s ?? null, metrics.avg_view_pct ?? null,
   );
 }
 
@@ -49,7 +52,7 @@ const PAID_SUB = `(SELECT l.media_id, SUM(i.spend) AS spend, SUM(i.reach) AS pai
 
 const MEDIA_SELECT = `
   SELECT m.*, l.reach, l.views, l.likes, l.comments, l.saved, l.shares, l.total_interactions, l.engagement_rate,
-    l.reposts, l.quotes, l.clicks, a.platform,
+    l.reposts, l.quotes, l.clicks, l.watch_time_min, l.avg_view_duration_s, l.avg_view_pct, a.platform,
     a.username, a.client_name, a.color AS account_color, a.profile_pic_url,
     p.spend, p.paid_reach, p.paid_impressions, p.paid_clicks, p.paid_results, p.paid_post_engagement, p.paid_page_engagement, p.paid_result_type, p.ad_count, p.currency AS paid_currency
   FROM media m
@@ -89,6 +92,10 @@ export function mapMedia(row) {
     reposts: row.reposts ?? null,
     quotes: row.quotes ?? null,
     clicks: row.clicks ?? null,
+    watchTimeMin: row.watch_time_min ?? null,
+    avgViewDurationS: row.avg_view_duration_s ?? null,
+    avgViewPct: row.avg_view_pct ?? null,
+    durationS: row.duration_s ?? null,
     totalInteractions: row.total_interactions,
     engagementRate: row.engagement_rate,
     saveRate: row.reach ? ((row.saved ?? 0) / row.reach) * 100 : null,
@@ -120,10 +127,14 @@ export function mapMedia(row) {
 /** Media types without an image/video (Threads TEXT_POST, Facebook status/link posts). */
 export const TEXT_TYPES = ['TEXT_POST', 'TEXT', 'LINK', 'STATUS'];
 
+/** v2.0 product types: YouTube Shorts / regular videos / live streams, TikTok videos. */
+export const VIDEO_PRODUCTS = Object.freeze({ YT_SHORT: 'short', YT_VIDEO: 'video', YT_LIVE: 'live', TIKTOK: 'video' });
+
 /** Classifies a media row into a UI-facing type key. */
 export function mediaTypeKey(m) {
   const product = m.mediaProductType ?? m.media_product_type;
   const type = m.mediaType ?? m.media_type;
+  if (VIDEO_PRODUCTS[product]) return VIDEO_PRODUCTS[product];
   if (product === 'REELS') return 'reels';
   if (product === 'STORY') return 'story';
   if (TEXT_TYPES.includes(type)) return 'text';
@@ -136,9 +147,11 @@ const TYPE_SQL = {
   text: "m.media_type IN ('TEXT_POST','TEXT','LINK','STATUS')",
   reels: "m.media_product_type = 'REELS'",
   carousel: "m.media_product_type <> 'REELS' AND m.media_type = 'CAROUSEL_ALBUM'",
-  video: "m.media_product_type <> 'REELS' AND m.media_type = 'VIDEO'",
+  video: "m.media_product_type NOT IN ('REELS','YT_SHORT','YT_LIVE') AND m.media_type = 'VIDEO'",
   image: "m.media_product_type <> 'REELS' AND m.media_type = 'IMAGE'",
   story: "m.media_product_type = 'STORY'",
+  short: "m.media_product_type = 'YT_SHORT'",
+  live: "m.media_product_type = 'YT_LIVE'",
 };
 
 /** Lists media with optional filters (ms timestamps for from/to). */
@@ -261,12 +274,24 @@ export function commentStats(igId, fromMs, toMs) {
   );
 }
 
+/**
+ * Upserts a comment. v2.0 columns (migration 012) are optional: platform/account_id default to the post's account,
+ * external_id to commentId; authorId, permalink, isHidden, fetchedAt when the adapter knows them.
+ */
 export function upsertComment(c) {
+  const hidden = c.isHidden == null ? null : c.isHidden ? 1 : 0;
   q.run(
-    `INSERT INTO comments (comment_id, media_id, username, text, like_count, created_at, is_from_owner, parent_id, reply_latency_minutes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(comment_id) DO UPDATE SET like_count = excluded.like_count, text = excluded.text`,
+    `INSERT INTO comments (comment_id, media_id, username, text, like_count, created_at, is_from_owner, parent_id, reply_latency_minutes,
+       platform, account_id, external_id, author_id, permalink, is_hidden, fetched_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
+       COALESCE(?, (SELECT a.platform FROM media m JOIN accounts a ON a.ig_id = m.ig_id WHERE m.media_id = ?), 'instagram'),
+       COALESCE(?, (SELECT m.ig_id FROM media m WHERE m.media_id = ?)), ?, ?, ?, COALESCE(?, 0), ?)
+     ON CONFLICT(comment_id) DO UPDATE SET like_count = excluded.like_count, text = excluded.text,
+       is_hidden = COALESCE(?, comments.is_hidden), fetched_at = COALESCE(excluded.fetched_at, comments.fetched_at),
+       author_id = COALESCE(excluded.author_id, comments.author_id), permalink = COALESCE(excluded.permalink, comments.permalink)`,
     c.commentId, c.mediaId, c.username, c.text, c.likeCount ?? 0, c.createdAt, c.isFromOwner ? 1 : 0, c.parentId ?? null, c.replyLatencyMinutes ?? null,
+    c.platform ?? null, c.mediaId, c.accountId ?? null, c.mediaId, c.externalId ?? c.commentId, c.authorId ?? null, c.permalink ?? null,
+    hidden, c.fetchedAt ?? null, hidden,
   );
 }
 

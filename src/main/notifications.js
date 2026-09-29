@@ -12,7 +12,7 @@ import { isDemoProfile } from './sync/orchestrator.js';
 import { progressBus } from './sync/progress.js';
 import { navigateTo } from './appWindow.js';
 import { currentLang } from './i18n.js';
-import { pickNotifications, pruneSent, markSent, NOTIFY_TYPES, DAY_MS } from './notifyRules.js';
+import { pickNotifications, pruneSent, markSent, gatherExtraData, NOTIFY_TYPES, DAY_MS } from './notifyRules.js';
 
 /** Desktop notifications: gathers data, applies notifyRules.js, shows them and persists the sent log (`notify.sent`). */
 const SENT_KEY = 'notify.sent';
@@ -41,6 +41,7 @@ function gatherData(prefs, now) {
     budgets: prefs.budget ? budgetPacing() : [],
     silent: prefs.silent ? accounts.map((a) => { const p = lastPostAt(a.igId); return { igId: a.igId, username: a.username, daysSincePost: p ? Math.floor((now - p) / DAY_MS) : null }; }) : [],
     token: prefs.token ? { expiresAt: getActiveProfile()?.token_expires_at ?? null } : null,
+    ...gatherExtraData(prefs, now),
   };
 }
 

@@ -19,6 +19,9 @@ import { AiSection } from './AiSection';
 import { BrandingSection } from './BrandingSection';
 import { ClientLogoCell, useClientLogoFlags } from './ClientLogoCell';
 import { ConnectionsSection } from './ConnectionsSection';
+import { WorkerSection } from './WorkerSection';
+import { TeamSection } from './TeamSection';
+import { CliSection } from './CliSection';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import type { DisabledMetric } from '@/lib/types';
 
@@ -73,7 +76,7 @@ export function SettingsPage() {
 
       <NotificationsSection />
 
-      <div id="publishing" className="scroll-mt-4 space-y-6"><PublishingSection /><BackgroundSection /></div>
+      <div id="publishing" className="scroll-mt-4 space-y-6"><PublishingSection /><BackgroundSection /><WorkerSection /></div>
 
       <div id="ai-assistant" className="scroll-mt-4"><AiSection /></div>
 
@@ -100,9 +103,13 @@ export function SettingsPage() {
         </div>
       </Section>
 
+      <div id="team" className="scroll-mt-4"><TeamSection /></div>
+
       <TransferSection />
 
       <SqlConsole />
+
+      <div id="cli" className="scroll-mt-4"><CliSection /></div>
 
       <Section title={`${t('theme')} · ${t('language')}`}>
         <div className="flex items-center gap-6">

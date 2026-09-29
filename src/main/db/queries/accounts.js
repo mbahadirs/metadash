@@ -1,4 +1,5 @@
 import { q } from '../index.js';
+import { ALL_PLATFORM_KEYS } from '../../providers/metas.js';
 
 const SERIES_COLORS = ['#4F7CFF', '#3FBF8F', '#E8B44A', '#C06CE8', '#E5605F', '#48C3D6'];
 
@@ -6,10 +7,29 @@ export function pickColor(index) {
   return SERIES_COLORS[index % SERIES_COLORS.length];
 }
 
-export const PLATFORMS = ['instagram', 'facebook', 'threads'];
+/** Every known platform in display order (registry-driven: providers/metas.js), including stub providers. */
+export const PLATFORMS = [...ALL_PLATFORM_KEYS];
 
-/** Lists accounts. `platforms` (array) narrows to those platforms; omitted/empty = every platform. */
-export function listAccounts({ tagIds, search, onlyTracked = true, platforms } = {}) {
+/**
+ * Account scope hook (v2.0 team "client view"): team/scope.js registers a filter (accounts → accounts) that
+ * listAccounts applies after the SQL. null = no scoping (default; own install / admin).
+ */
+let scopeFilter = null;
+export function setAccountScopeFilter(fn) {
+  scopeFilter = typeof fn === 'function' ? fn : null;
+}
+export const hasAccountScope = () => scopeFilter != null;
+
+/**
+ * Lists accounts. `platforms` (array) narrows to those platforms; omitted/empty = every platform.
+ * `unscoped: true` bypasses the team scope filter (sync, setup and other admin paths).
+ */
+export function listAccounts({ tagIds, search, onlyTracked = true, platforms, unscoped = false } = {}) {
+  const rows = listAccountsRaw({ tagIds, search, onlyTracked, platforms });
+  return scopeFilter && !unscoped ? scopeFilter(rows) : rows;
+}
+
+function listAccountsRaw({ tagIds, search, onlyTracked, platforms }) {
   const where = [];
   const params = [];
   if (onlyTracked) where.push('a.is_tracked = 1');

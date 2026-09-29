@@ -10,14 +10,31 @@ import { startNotifications, stopNotifications } from './notifications.js';
 import { configureAppWindow, createMainWindow } from './appWindow.js';
 import { registerMediaScheme, handleMediaProtocol } from './protocol.js';
 import { acquireSingleInstance, shouldStartHidden, startBackground, stopBackground, confirmQuit } from './lifecycle.js';
+import { initTeam } from './team/index.js';
+import { userDataArg } from './cli/argv.js';
 
 const SMOKE = process.env.METADASH_SMOKE === '1';
+/**
+ * v2.0 headless CLI: `MetaDash --cli <command> …` runs src/main/cli without a window, tray, updater, notifications or
+ * scheduler, and without the single-instance lock (so it can run next to the GUI; data.db has busy_timeout and sync
+ * uses a cross-process lease).
+ */
+const CLI_IDX = process.argv.indexOf('--cli');
+const CLI = CLI_IDX !== -1;
 
 if (process.env.METADASH_USER_DATA) app.setPath('userData', process.env.METADASH_USER_DATA);
+if (CLI) {
+  const ud = userDataArg(process.argv.slice(CLI_IDX + 1));
+  if (ud) app.setPath('userData', path.resolve(ud));
+  app.disableHardwareAcceleration();
+  app.dock?.hide();
+  // Offscreen windows (PDF export) closing must not quit the app mid-command.
+  app.on('window-all-closed', () => {});
+}
 // One instance per userData: a second launch focuses the running window (two instances could double-publish).
-const PRIMARY = acquireSingleInstance({ smoke: SMOKE });
+const PRIMARY = CLI ? false : acquireSingleInstance({ smoke: SMOKE });
 registerMediaScheme(); // must run before app ready
-configureAppWindow({ onWindowCreated: SMOKE ? (win) => runSmoke(win) : null });
+if (!CLI) configureAppWindow({ onWindowCreated: SMOKE ? (win) => runSmoke(win) : null });
 
 /** Walks every route, records renderer errors and saves screenshots (METADASH_SMOKE=1). */
 async function runSmoke(win) {
@@ -69,9 +86,25 @@ async function runSmoke(win) {
 }
 
 app.whenReady().then(async () => {
+  if (CLI) {
+    let code = 1;
+    try {
+      openDb(path.join(app.getPath('userData'), 'data.db'));
+      await initTeam();
+      const { runCli } = await import('./cli/index.js');
+      code = await runCli(process.argv.slice(CLI_IDX + 1), { version: app.getVersion() });
+    } catch (e) {
+      console.error('[cli]', e);
+    } finally {
+      closeDb();
+    }
+    app.exit(code);
+    return;
+  }
   if (!PRIMARY) return;
   const userData = app.getPath('userData');
   openDb(path.join(userData, 'data.db'));
+  await initTeam();
   if (!app.isPackaged && process.argv.includes('--demo') && !isSeeded()) seedDemo({ reset: false });
   nativeTheme.themeSource = getConfig('theme') === 'light' ? 'light' : 'dark';
   handleMediaProtocol();

@@ -94,5 +94,7 @@
   "ai_max_steps": "Yapay zekâ asistanı {n} adımdan sonra nihai yanıt vermeden durdu.",
   "ai_bad_input": "Geçersiz yapay zekâ isteği: {field}",
   "ai_prefill": "İç hata: konuşma bir asistan mesajıyla bitemez.",
-  "unsupported_lang": "Desteklenmeyen dil: {lang}"
+  "unsupported_lang": "Desteklenmeyen dil: {lang}",
+  "sync_locked": "Başka bir MetaDash işlemi bu verileri zaten güncelliyor. Bittiğinde yeniden deneyin.",
+  "sync_locked_cli": "Komut satırından başlatılan bir güncelleme çalışıyor. Bittiğinde yeniden deneyin."
 }

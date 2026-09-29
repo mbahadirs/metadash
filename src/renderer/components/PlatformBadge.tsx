@@ -1,4 +1,5 @@
 import { PLATFORM_LABELS } from '@/lib/platforms';
+import { EXTRA_PLATFORMS } from '@/platforms';
 import type { Platform } from '@/lib/types';
 
 /** Brand colours; Threads uses the ink colour so it reads in both themes. */
@@ -6,6 +7,8 @@ const STYLE: Record<Platform, { bg: string; fg: string; glyph: string }> = {
   instagram: { bg: 'linear-gradient(135deg, #F58529, #DD2A7B 55%, #8134AF)', fg: '#fff', glyph: 'IG' },
   facebook: { bg: '#1877F2', fg: '#fff', glyph: 'f' },
   threads: { bg: 'var(--ink-1)', fg: 'var(--surface-1)', glyph: '@' },
+  youtube: EXTRA_PLATFORMS.youtube.icon,
+  tiktok: EXTRA_PLATFORMS.tiktok.icon,
 };
 
 /** Round platform mark (used as Avatar corner badge and in dense lists). */

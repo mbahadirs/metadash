@@ -18,6 +18,7 @@ import { msg, locale, reportLocale } from '../i18n.js';
 import { resolveBranding, safeLogo } from './branding.js';
 import { brandBar, footerHtml, recolorAccent, BRAND_CSS } from './brandingHtml.js';
 import { getClientLogo, sharedClientLogo } from '../db/queries/accountLogos.js';
+import { renderExtraSections } from './reportSections/index.js';
 
 const CSS = `
 :root{--surface-0:#10131A;--surface-1:#171B24;--surface-2:#1F2430;--ink-1:#E8EAF0;--ink-2:#9AA3B2;--line:#2A3040;--accent:#4F7CFF;--pos:#3FBF8F;--neg:#E5605F;--warn:#E8B44A}
@@ -298,6 +299,7 @@ export function clientReport(params) {
       if (incFor(a, 'demographics')) parts.push(h3(demographicsSection(L, igId)));
       if (incFor(a, 'health')) parts.push(h3(healthSection(L, igId, from, to)));
       if (incFor(a, 'ads')) parts.push(h3(adsSection(L, igId, from, to)));
+      parts.push(h3(renderExtraSections(template, { L, lang, analysis: a, igId, from, to }, { sections })));
     }
   } else {
     const a = analyses[0];
@@ -313,6 +315,7 @@ export function clientReport(params) {
     if (inc('stories')) parts.push(storiesSection(L, igId, from, to));
     if (inc('demographics')) parts.push(demographicsSection(L, igId));
     if (inc('health')) parts.push(healthSection(L, igId, from, to));
+    parts.push(renderExtraSections(template, { L, lang, analysis: a, igId, from, to }, { sections }));
     if (inc('competitors')) {
       const agg = a.posts;
       parts.push(competitorsSection(L, igId, from, to, { username: a.account.username, followers: a.account.followers, growthPct: a.kpis.newFollowers.value != null && a.account.followers ? (a.kpis.newFollowers.value / Math.max(1, a.account.followers - a.kpis.newFollowers.value)) * 100 : null, postsPerWeek: round((agg.length / prev.days) * 7, 1), avgLikes: round(mean(agg.map((p) => p.likes)), 0), avgComments: round(mean(agg.map((p) => p.comments)), 0) }));

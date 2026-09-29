@@ -1,4 +1,4 @@
-import { CAPABILITIES, PRIMARY_METRIC } from '../capabilities.js';
+import meta from './meta.js';
 import { latestFollowers } from '../../db/queries/accounts.js';
 import { threadsClient, THREADS_MIN_SINCE_UNIX } from './client.js';
 import * as api from './api.js';
@@ -15,8 +15,9 @@ const threads = {
   enabled: true,
   auth: 'threads',
   concurrency: 1,
-  capabilities: CAPABILITIES.threads,
-  primaryMetric: PRIMARY_METRIC.threads,
+  meta,
+  capabilities: meta.capabilities,
+  primaryMetric: meta.primaryMetric,
   labelSuffix: ' (Threads)',
   client: threadsClient,
   dailyWindow: { windowDays: 30, maxLookbackDays: 90, initialDays: 30, minSinceUnix: THREADS_MIN_SINCE_UNIX },

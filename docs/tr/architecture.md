@@ -223,3 +223,40 @@ Arayüz dili varsayılan olarak İngilizcedir ve `lang` ayarında saklanır. Rap
 - **Birim ve entegrasyon testleri** (`tests/`, Vitest, `environment: node`), native modül ABI'si eşleşsin diye Electron'un Node'u altında (`ELECTRON_RUN_AS_NODE=1`) çalışır. `sync.integration.test.js`, sahte bir Graph API'ye karşı tam bir senkronizasyon çalıştırır.
 - **Tip kontrolü:** renderer için `tsc --noEmit`.
 - **Smoke testi:** `npm run smoke` gerçek uygulamayı başlatır, tüm rotaları gezer ve renderer hatalarında başarısız olur.
+
+## v2.0 "Ölçek"
+
+Her özelliğin kendi belgesi vardır; aşağıdaki bölümler yalnızca onlara yönlendirir. Ortak sözleşmeler (011–014
+göçleri, sağlayıcı kancaları, IPC taslakları, preload yüzeyi) özellikler paralel geliştirilebilsin diye önce kuruldu.
+
+### Sağlayıcılar ve genişletilebilirlik
+
+Kayıt tabanlı platform meta verisi (`providers/<p>/meta.js` → `providers/capabilities.js`), sağlayıcı kancaları,
+OAuth yardımcıları (`src/main/oauth`) ve sözleşme testi. Bkz. [providers.md](providers.md).
+
+### YouTube
+
+Bkz. [youtube-setup.md](youtube-setup.md).
+
+### TikTok (deneysel)
+
+Bkz. [tiktok-setup.md](tiktok-setup.md).
+
+### Birleşik gelen kutusu
+
+v1.5 Stüdyo gelen kutusunu (yorumlar, `comment_replies`) tüm platformlara genişletir. Bkz. [inbox.md](inbox.md).
+
+### Kendi sunucunuzda yayın çalışanı
+
+Planlayıcı hedeflerini (`executor = 'worker'`) yayınlayan isteğe bağlı Docker hizmeti. Bkz. [worker.md](worker.md).
+
+### Ekip çalışma alanları ve roller
+
+Paylaşılan klasör anlık görüntüleri, üye başına olay günlükleri, roller ve müşteri görünümü (arayüz korkulukları,
+güvenlik sınırı değildir). Bkz. [team.md](team.md).
+
+### Komut satırı
+
+`MetaDash --cli <komut>` Electron ikilisi içinde pencere açmadan çalışır; data.db 5 sn `busy_timeout` kullanır ve
+senkronizasyon süreçler arası bir kilit (`locks` tablosu) alır, böylece CLI uygulamayla yan yana çalışabilir.
+Bkz. [cli.md](cli.md).

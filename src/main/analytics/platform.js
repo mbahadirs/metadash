@@ -1,4 +1,4 @@
-import { capabilitiesFor, primaryMetricFor, PLATFORM_LABELS } from '../providers/capabilities.js';
+import { capabilitiesFor, primaryMetricFor, PLATFORM_LABELS, metaFor } from '../providers/capabilities.js';
 import { PLATFORMS } from '../db/queries/accounts.js';
 import { msg } from '../i18n.js';
 
@@ -32,10 +32,15 @@ export const KPI_DAILY_METRIC = Object.freeze({
   likes: 'likes', replies: 'replies', reposts: 'reposts', quotes: 'quotes', linkClicks: 'link_clicks',
 });
 
+/** v2.0 platforms declare their vocabulary in their provider meta (`kpis`, providers/types.js ProviderKpis). */
+const providerKpis = (platform) => metaFor(platform)?.kpis ?? null;
+
 export const platformOf = (account) => account?.platform ?? 'instagram';
-export const kpiKeysFor = (platform) => [...(KPI_KEYS[platform] ?? KPI_KEYS.instagram)];
-export const chartMetricsFor = (platform) => [...(CHART_METRICS[platform] ?? CHART_METRICS.instagram)];
-export const dailyMetricsFor = (platform) => [...(DAILY_METRICS[platform] ?? DAILY_METRICS.instagram)];
+export const kpiKeysFor = (platform) => [...(KPI_KEYS[platform] ?? providerKpis(platform)?.keys ?? KPI_KEYS.instagram)];
+export const chartMetricsFor = (platform) => [...(CHART_METRICS[platform] ?? providerKpis(platform)?.chart ?? CHART_METRICS.instagram)];
+export const dailyMetricsFor = (platform) => [...(DAILY_METRICS[platform] ?? providerKpis(platform)?.daily ?? DAILY_METRICS.instagram)];
+/** Daily metric summed for a KPI key on a platform (provider meta overrides the shared table), or undefined. */
+export const kpiDailyMetric = (platform, key) => providerKpis(platform)?.dailyMetric?.[key] ?? KPI_DAILY_METRIC[key];
 export const platformLabel = (platform) => PLATFORM_LABELS[platform] ?? platform;
 export { capabilitiesFor, primaryMetricFor, PLATFORMS };
 

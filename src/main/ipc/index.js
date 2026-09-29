@@ -19,13 +19,27 @@ import { registerPlannerHandlers } from './planner.handlers.js';
 import { registerPublishingHandlers } from './publishing.handlers.js';
 import { registerAppHandlers } from './app.handlers.js';
 import { registerStudioHandlers } from './studio.handlers.js';
+import { registerYouTubeSetupHandlers } from './setup.youtube.handlers.js';
+import { registerTikTokSetupHandlers } from './setup.tiktok.handlers.js';
+import { registerInboxHandlers } from './inbox.handlers.js';
+import { registerWorkerHandlers } from './worker.handlers.js';
+import { registerTeamHandlers } from './team.handlers.js';
+import { registerSessionHandlers } from './session.handlers.js';
+import { registerCliHandlers } from './cli.handlers.js';
+import { check as policyCheck } from '../team/policy.js';
+import { getSession } from '../team/session.js';
 
-/** Wraps a handler so the renderer always receives { ok, data } | { ok: false, error }.*/
+/**
+ * Wraps a handler so the renderer always receives { ok, data } | { ok: false, error }.
+ * v2.0: every call first passes team/policy.js check(channel, args, session) (roles / read-only workspace / client
+ * view); a denial throws and is returned as an error envelope like any other failure.
+ */
 export function handle(channel, fn) {
   ipcMain.handle(channel, async (event, ...args) => {
     try {
       // Zero-arg calls (e.g. db:backup) still get a payload slot so `event` always lands in the same position.
       const padded = args.length ? args : [undefined];
+      await policyCheck(channel, padded, getSession());
       const data = await fn(...padded, event);
       return { ok: true, data: data ?? null };
     } catch (err) {
@@ -49,6 +63,8 @@ export const RENDERER_EVENTS = [
   'sync:progress', 'sync:done', 'token:warning', 'update:status', 'app:navigate',
   'planner:changed', 'publish:progress', 'publish:missed', // v1.4: { postIds, reason, … } | { targetId, postId, state, pct? } | { count }
   'studio:progress', 'studio:changed', // v1.5: { requestId, feature, phase } | { kind, accountIds?, postIds?, ids? }
+  // v2.0: { commentIds?, accountIds?, reason } | { configured, state, lastSyncAt, lastError, queue } | { state, lastPublishAt, lastPullAt, error } | Session
+  'inbox:updated', 'worker:status', 'team:status', 'session:changed',
 ];
 
 export function registerIpc() {
@@ -69,6 +85,14 @@ export function registerIpc() {
   registerPublishingHandlers(handle);
   registerAppHandlers(handle);
   registerStudioHandlers(handle);
+  // v2.0 (stubs until chunks C1, C2, D, E, F1, F2 land)
+  registerYouTubeSetupHandlers(handle);
+  registerTikTokSetupHandlers(handle);
+  registerInboxHandlers(handle);
+  registerWorkerHandlers(handle);
+  registerTeamHandlers(handle);
+  registerSessionHandlers(handle);
+  registerCliHandlers(handle);
 
   for (const evt of RENDERER_EVENTS) {
     progressBus.on(evt, (payload) => {

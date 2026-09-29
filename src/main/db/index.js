@@ -9,12 +9,20 @@ const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 let db = null;
 let dbPath = null;
 
+/**
+ * Wait this long for a write lock held by another connection before SQLITE_BUSY. The GUI and the CLI
+ * (`--cli`, v2.0) may open the same data.db at the same time; long work is additionally serialised by leases
+ * (db/queries/locks.js).
+ */
+export const BUSY_TIMEOUT_MS = 5000;
+
 /** Opens (or returns) the singleton SQLite connection. */
 export function openDb(filePath) {
   if (db) return db;
   dbPath = filePath;
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   db = new Database(filePath);
+  db.pragma(`busy_timeout = ${BUSY_TIMEOUT_MS}`);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.pragma('synchronous = NORMAL');
@@ -38,9 +46,12 @@ export function closeDb() {
   }
 }
 
-/** Closes and reopens the connection (after restore). */
-export function reopenDb() {
-  const p = dbPath;
+/**
+ * Closes and reopens the connection (after restore). With `filePath`, switches to another database file
+ * (v2.0 team subscriber workspaces: userData/workspaces/<teamId>/data.db); migrations run on the new file.
+ */
+export function reopenDb(filePath) {
+  const p = filePath ?? dbPath;
   closeDb();
   return openDb(p);
 }

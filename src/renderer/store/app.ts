@@ -4,7 +4,7 @@ import type { AuthPlatform, Platform, SyncProgress, SyncStatus } from '@/lib/typ
 import { isLang, isRtl, DEFAULT_LANG, type Lang } from '@/lib/i18nCore';
 
 export interface TokenWarningState { platform: AuthPlatform; message: string }
-const PLATFORM_KEYS: Platform[] = ['instagram', 'facebook', 'threads'];
+const PLATFORM_KEYS: Platform[] = ['instagram', 'facebook', 'threads', 'youtube', 'tiktok'];
 
 export type Preset = 'today' | 'yesterday' | 7 | 30 | 'this_month' | 'last_month' | 28 | 90 | 'custom';
 export interface Period { from: string; to: string; preset: Preset }

@@ -5,6 +5,8 @@ import { EXCLUDED_TABLES } from './sqlGuard.js';
 const HIDDEN_TABLES = new Set([
   ...EXCLUDED_TABLES, 'schema_version', 'account_logos', 'sync_runs', 'sync_errors', 'disabled_metrics', 'metric_resolution',
   'planner_quota', // API quota cache (planner_uploads / planner_approval_packs are in EXCLUDED_TABLES)
+  // v2.0 internals (chunk B): quota ledger, leases, inbox poll cursors, worker token registry, team event bookkeeping.
+  'api_quota', 'locks', 'inbox_cursor', 'worker_tokens', 'team_events_applied', 'mention_seen',
 ]);
 const HIDDEN_COLUMN = /token|secret/i;
 

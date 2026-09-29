@@ -15,6 +15,10 @@ import { analyzeCaption } from '../sync/caption.js';
 import { rng, pick, between, gauss } from './random.js';
 import { seedPlatformAccounts, extendPlatformDay, PLATFORM_DEMO_COUNTS } from './platforms.js';
 import { seedPlanner } from './planner.js';
+import { seedProviderDemos, extendProviderDay } from './providers.js';
+import { seedInbox } from './inbox.js';
+import { seedTeam } from './team.js';
+import { INBOX_TABLES } from '../db/queries/inbox.js';
 import { PLANNER_TABLES } from '../db/queries/planner.js';
 import { STUDIO_TABLES } from '../db/queries/studio.js';
 import { platformOfKey } from '../providers/capabilities.js';
@@ -36,7 +40,7 @@ export function canLoadDemo() {
 
 export function clearAll() {
   const db = getDb();
-  const tables = [...STUDIO_TABLES, ...PLANNER_TABLES, 'sync_errors', 'sync_runs', 'notes', 'ad_insights_breakdown', 'ad_insights_daily', 'ad_media_links', 'ad_budget_overrides', 'ad_accounts', 'competitor_snapshots', 'competitors', 'comments', 'stories', 'media_latest', 'media_insight_snapshots', 'media', 'account_demographics', 'account_insights_daily', 'account_snapshots', 'account_tags', 'account_logos', 'tags', 'accounts', 'profiles', 'disabled_metrics', 'metric_resolution'];
+  const tables = [...INBOX_TABLES, 'api_quota', ...STUDIO_TABLES, ...PLANNER_TABLES, 'sync_errors', 'sync_runs', 'notes', 'ad_insights_breakdown', 'ad_insights_daily', 'ad_media_links', 'ad_budget_overrides', 'ad_accounts', 'competitor_snapshots', 'competitors', 'comments', 'stories', 'media_latest', 'media_insight_snapshots', 'media', 'account_demographics', 'account_insights_daily', 'account_snapshots', 'account_tags', 'account_logos', 'tags', 'accounts', 'profiles', 'disabled_metrics', 'metric_resolution'];
   db.transaction(() => { for (const t of tables) db.exec(`DELETE FROM ${t}`); })();
 }
 
@@ -78,6 +82,8 @@ export function seedDemo({ reset = false, onProgress } = {}) {
   db.transaction(() => seedCompetitors(r, today))();
   const threadsProfileId = upsertProfile({ label: 'Demo Threads', appId: '987654321098765', tokenRef: 'demo:threads', tokenExpiresAt: Date.now() + 50 * DAY, platform: 'threads', refreshedAt: Date.now() - 2 * DAY });
   db.transaction(() => seedPlatformAccounts({ metaProfileId: profileId, threadsProfileId, now, onProgress: report }))();
+  // v2.0: enabled providers with a demo hook (YouTube, TikTok, …) seed their own accounts/profiles.
+  db.transaction(() => seedProviderDemos({ now, onProgress: report }))();
   const totalAccounts = BRANDS.length + PLATFORM_DEMO_COUNTS.facebook + PLATFORM_DEMO_COUNTS.threads;
   report('Sync history');
   db.transaction(() => {
@@ -89,6 +95,7 @@ export function seedDemo({ reset = false, onProgress } = {}) {
     }
   })();
   db.transaction(() => seedPlanner({ now: Date.now() }))();
+  db.transaction(() => { seedInbox({ now }); seedTeam({ now }); })();
   setSetting('setupStep', 6);
   setSetting('setupComplete', true);
   setSetting('demoMode', true);
@@ -323,7 +330,7 @@ export function extendDemoDay(igIds) {
       insertSnapshot({ igId, date, followers, follows: last.follows, mediaCount: last.media_count, capturedAt: now.getTime() });
       const platform = platformOfKey(igId);
       if (platform === 'instagram') extendInstagramDay(igId, r, date, followers);
-      else extendPlatformDay(igId, platform, r, date);
+      else if (!extendProviderDay(igId, platform, r, date)) extendPlatformDay(igId, platform, r, date);
       markSynced(igId, now.getTime());
     }
   });

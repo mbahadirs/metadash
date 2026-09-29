@@ -1,7 +1,7 @@
 import { metaClient } from '../../meta/client.js';
 import { MetaError } from '../../meta/errors.js';
 import { msg } from '../../i18n.js';
-import { CAPABILITIES, PRIMARY_METRIC } from '../capabilities.js';
+import meta from './meta.js';
 import * as api from './api.js';
 import { accountKey } from './mappers.js';
 
@@ -37,8 +37,9 @@ const facebook = {
   enabled: true,
   auth: 'meta',
   concurrency: 2,
-  capabilities: CAPABILITIES.facebook,
-  primaryMetric: PRIMARY_METRIC.facebook,
+  meta,
+  capabilities: meta.capabilities,
+  primaryMetric: meta.primaryMetric,
   labelSuffix: ' (FB)',
   client: metaClient,
   // Meta allows at most 90 days per since/until request; 30-day chunks keep responses small.

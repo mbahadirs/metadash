@@ -1,9 +1,14 @@
 import { msg } from './i18n.js';
+import { rule as inboxRule } from './notifyRules/inbox.js';
+import { rule as mentionsRule } from './notifyRules/mentions.js';
+import { rule as workerRule } from './notifyRules/worker.js';
 
 /** Pure notification rules (no Electron imports, unit-tested). notifications.js gathers data and shows them. */
 export const DAY_MS = 86_400_000;
 export const SENT_MAX_AGE_MS = 30 * DAY_MS;
-export const NOTIFY_TYPES = ['anomalies', 'budget', 'silent', 'token'];
+/** v2.0 feature rules (notifyRules/<type>.js, `rule` export; null until the feature lands). */
+export const EXTRA_RULES = Object.freeze([inboxRule, mentionsRule, workerRule].filter((r) => r && r.type && typeof r.pick === 'function'));
+export const NOTIFY_TYPES = ['anomalies', 'budget', 'silent', 'token', ...EXTRA_RULES.map((r) => r.type)];
 
 /** Per-key cooldowns. Keys embed the anomaly date / budget month / token expiry, so these mostly guard re-runs. */
 const COOLDOWN_MS = { anomalies: 3 * DAY_MS, budget: 28 * DAY_MS, silent: 7 * DAY_MS, token: DAY_MS };
@@ -71,7 +76,20 @@ function tokenNote({ token }, { now, sent, lang }) {
   return { type: 'token', key, keys: [key], title: msg('notify_token_title', null, lang), body, route: '/settings' };
 }
 
-const RULES = { anomalies: anomalyNote, budget: budgetNote, silent: silentNote, token: tokenNote };
+const RULES = {
+  anomalies: anomalyNote, budget: budgetNote, silent: silentNote, token: tokenNote,
+  ...Object.fromEntries(EXTRA_RULES.map((r) => [r.type, (data, ctx) => r.pick(data, { ...ctx, wasSent, nameList, cooldownMs: r.cooldownMs })])),
+};
+
+/** Data for the enabled v2.0 feature rules (called by notifications.js; impure). Failing gatherers are skipped. */
+export function gatherExtraData(prefs, now) {
+  const out = {};
+  for (const r of EXTRA_RULES) {
+    if (prefs[r.type] === false || typeof r.gather !== 'function') continue;
+    try { Object.assign(out, r.gather(now)); } catch (e) { console.error(`[notify:${r.type}]`, e); }
+  }
+  return out;
+}
 
 /**
  * Decides which desktop notifications to show.

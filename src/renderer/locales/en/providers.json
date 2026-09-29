@@ -1,0 +1,6 @@
+{
+  "type_short": "Short",
+  "type_live": "Live",
+  "experimental": "Experimental",
+  "sync_running_cli": "Updating from the command line…"
+}

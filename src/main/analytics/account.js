@@ -6,16 +6,25 @@ import { previousPeriod, rangeMs, pctChange, round, eachDay } from './util.js';
 import { healthScores } from './health.js';
 import { paidFields } from './paid.js';
 import { adAccountForIg, adTotals, listAdAccounts } from '../db/queries/ads.js';
-import { platformOf, capabilitiesFor, primaryMetricFor, kpiKeysFor, chartMetricsFor, dailyMetricsFor, KPI_DAILY_METRIC } from './platform.js';
+import { platformOf, capabilitiesFor, primaryMetricFor, kpiKeysFor, chartMetricsFor, dailyMetricsFor, kpiDailyMetric } from './platform.js';
+import { getProvider } from '../providers/index.js';
 
 const kpi = (value, prev) => ({ value, prev, changePct: pctChange(value, prev) });
 
-/** KPI tiles that apply to the account's platform (see platform.js kpiKeysFor); keys not listed are omitted. */
+/**
+ * KPI tiles that apply to the account's platform (see platform.js kpiKeysFor); keys not listed are omitted.
+ * v2.0 hook: a provider may compute keys that are neither daily sums nor generic (provider.computeKpi(key, c) →
+ * { value, prev, changePct } | undefined), e.g. YouTube avgViewDuration.
+ */
 function buildKpis(igId, platform, { from, to, prev, agg, prevAgg, newFollowers, prevNew }) {
   const out = {};
+  const computeKpi = getProvider(platform)?.computeKpi;
   for (const key of kpiKeysFor(platform)) {
-    if (KPI_DAILY_METRIC[key]) {
-      const metric = KPI_DAILY_METRIC[key];
+    const custom = typeof computeKpi === 'function' ? computeKpi(key, { igId, from, to, prev, agg, prevAgg }) : undefined;
+    if (custom !== undefined) {
+      if (custom) out[key] = custom;
+    } else if (kpiDailyMetric(platform, key)) {
+      const metric = kpiDailyMetric(platform, key);
       out[key] = kpi(insightSum(igId, from, to, metric), insightSum(igId, prev.from, prev.to, metric));
     } else if (key === 'er') {
       out.er = { value: round(agg.avgEr, 2), prev: round(prevAgg.avgEr, 2), changePct: pctChange(agg.avgEr, prevAgg.avgEr) };

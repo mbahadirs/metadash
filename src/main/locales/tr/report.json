@@ -193,5 +193,7 @@
   "wd_followers": "Net takipçi değişimi {net}; en çok kazanan @{top} (+{gain}).",
   "wd_top_post": "En iyi gönderi: @{user} — \"{caption}\" ({reach} erişim, ER %{er}).",
   "wd_silent": "{n} hesap 7+ gündür paylaşım yapmadı: {list}.",
-  "wd_spend": "Reklam harcaması {spend} {currency} ({pct})."
+  "wd_spend": "Reklam harcaması {spend} {currency} ({pct}).",
+  "short": "Shorts",
+  "live": "Canlı"
 }

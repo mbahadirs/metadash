@@ -21,6 +21,7 @@ import { SettingsPage } from './routes/Settings';
 import { AskPage } from './routes/Ask';
 import { PlannerPage } from './routes/Planner';
 import { StudioPage } from './routes/Studio';
+import { InboxPage } from './routes/Inbox';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 0, refetchOnWindowFocus: false } } });
 
@@ -54,6 +55,7 @@ function App() {
           <Route path="/planner" element={<PlannerPage />} />
           <Route path="/ask" element={<AskPage />} />
           <Route path="/studio" element={<StudioPage />} />
+          <Route path="/inbox" element={<InboxPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

@@ -193,5 +193,7 @@
   "wd_followers": "Net follower change {net}; top gainer @{top} (+{gain}).",
   "wd_top_post": "Top post: @{user} — \"{caption}\" ({reach} reach, ER {er}%).",
   "wd_silent": "{n} accounts have not posted for 7+ days: {list}.",
-  "wd_spend": "Ad spend {spend} {currency} ({pct})."
+  "wd_spend": "Ad spend {spend} {currency} ({pct}).",
+  "short": "Shorts",
+  "live": "Live"
 }

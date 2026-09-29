@@ -1,7 +1,8 @@
 import { MetaError } from '../../meta/errors.js';
 import { upsertAccount, insertSnapshot, markSynced, upsertInsightDaily, upsertDemographic, lastDemographicCapture, latestFollowers } from '../../db/queries/accounts.js';
 import { upsertMedia, mediaForAccount, lastSnapshotAt, insertSnapshotMetric } from '../../db/queries/media.js';
-import { storeComments } from '../../db/queries/comments.js';
+import { syncAccountComments } from '../../inbox/poller.js';
+import { materializeDerivedSeries } from '../../analytics/derived.js';
 import { disableMetric, markUnsupported } from '../../db/queries/sync.js';
 import { materializeLatest } from '../../analytics/engagement.js';
 import { fmtDate } from '../../analytics/util.js';
@@ -15,8 +16,10 @@ const isSoftError = (e) => e instanceof MetaError && (e.isPermissionError || e.i
 
 /**
  * Syncs one account of any platform through its provider:
- * prepare → profile + snapshot → posts → post insights by refresh tier → daily account insights (chunked by
- * provider.dailyWindow) → demographics (weekly, when capable) → comments (optional) → markSynced.
+ * prepare → profile + snapshot → posts → post insights by refresh tier (per post, or one provider.fetchPostInsightsBatch
+ * call) → daily account insights (chunked by provider.dailyWindow; refetchTrailingDays re-reads revised days) →
+ * derived daily series (capabilities.dailySeries 'derived') → demographics (weekly, when capable) →
+ * comments (optional; inbox/poller.js) → markSynced.
  * Instagram metric drops keep the legacy disabled_metrics table; other platforms record them in metric_resolution.
  */
 export async function syncPlatformAccount(ctx, provider, account) {
@@ -64,7 +67,36 @@ export async function syncPlatformAccount(ctx, provider, account) {
   report('insights');
   const tiers = settings.refreshTiers ?? DEFAULT_TIERS;
   const candidates = mediaForAccount(key, now - (settings.mediaLookbackDays ?? 365) * DAY);
-  for (const m of candidates) {
+  const writeInsights = (m, ageHours, fetched) => {
+    const values = inline.has(m.media_id) ? { ...inline.get(m.media_id), ...fetched } : fetched;
+    const capturedAt = Date.now();
+    for (const [metric, value] of Object.entries(values)) {
+      if (typeof value === 'number') insertSnapshotMetric(m.media_id, capturedAt, ageHours, metric, value);
+    }
+    materializeLatest(m.media_id, values, followers, capturedAt);
+  };
+  if (provider.fetchPostInsightsBatch) {
+    const due = [];
+    for (const m of candidates) {
+      const ageHours = Math.max(0, Math.floor((now - m.posted_at) / HOUR));
+      const post = { mediaId: m.media_id, externalId: m.external_id ?? m.media_id, mediaProductType: m.media_product_type, mediaType: m.media_type };
+      if (provider.skipInsights?.(post)) continue;
+      if (!needsRefresh(ageHours, lastSnapshotAt(m.media_id), now, tiers)) continue;
+      due.push({ m, ageHours, post });
+    }
+    if (due.length) {
+      try {
+        const { values: byMedia, dropped } = await provider.fetchPostInsightsBatch(ctx, account, due.map((d) => d.post), { disabled, overrides });
+        (dropped ?? []).forEach(dropMetric('media'));
+        for (const d of due) if (byMedia?.[d.m.media_id]) writeInsights(d.m, d.ageHours, byMedia[d.m.media_id]);
+      } catch (e) {
+        if (!isSoftError(e)) throw e;
+        log({ endpoint: 'insights:batch', code: e.code, message: e.message });
+      }
+      await delay();
+    }
+  }
+  for (const m of provider.fetchPostInsightsBatch ? [] : candidates) {
     if (signal?.aborted) return;
     const ageHours = Math.max(0, Math.floor((now - m.posted_at) / HOUR));
     const post = { mediaId: m.media_id, externalId: m.external_id ?? m.media_id, mediaProductType: m.media_product_type, mediaType: m.media_type };
@@ -73,12 +105,7 @@ export async function syncPlatformAccount(ctx, provider, account) {
     try {
       const { values: fetched, dropped } = await provider.fetchPostInsights(ctx, post, { account, disabled, overrides });
       dropped.forEach(dropMetric('media'));
-      const values = inline.has(m.media_id) ? { ...inline.get(m.media_id), ...fetched } : fetched;
-      const capturedAt = Date.now();
-      for (const [metric, value] of Object.entries(values)) {
-        if (typeof value === 'number') insertSnapshotMetric(m.media_id, capturedAt, ageHours, metric, value);
-      }
-      materializeLatest(m.media_id, values, followers, capturedAt);
+      writeInsights(m, ageHours, fetched);
     } catch (e) {
       if (isSoftError(e)) {
         log({ endpoint: `/${post.externalId}/insights`, code: e.code, message: e.message });
@@ -92,7 +119,9 @@ export async function syncPlatformAccount(ctx, provider, account) {
   // 4) account daily insights, chunked by the provider's window
   const win = provider.dailyWindow ?? { windowDays: 30, maxLookbackDays: 90, initialDays: 30 };
   const windowMs = win.windowDays * DAY;
-  const sinceMs = account.lastSyncedAt ? account.lastSyncedAt - 2 * DAY : now - (win.initialDays ?? 30) * DAY;
+  const incrementalMs = account.lastSyncedAt ? account.lastSyncedAt - 2 * DAY : now - (win.initialDays ?? 30) * DAY;
+  // Providers with revised data (YouTube Analytics lags 2–3 days) re-read the trailing N days on every sync.
+  const sinceMs = win.refetchTrailingDays ? Math.min(incrementalMs, now - win.refetchTrailingDays * DAY) : incrementalMs;
   const floorMs = Math.max(now - win.maxLookbackDays * DAY, (win.minSinceUnix ?? 0) * 1000);
   for (let s = Math.max(sinceMs, floorMs); s < now; s += windowMs) {
     const u = Math.min(s + windowMs, now);
@@ -105,6 +134,9 @@ export async function syncPlatformAccount(ctx, provider, account) {
     }
     await delay();
   }
+
+  // 4b) derived daily series (no native daily insights, e.g. TikTok): follower_count / views from snapshot deltas
+  if (provider.capabilities?.dailySeries === 'derived') materializeDerivedSeries(key);
 
   // 5) demographics weekly
   if (provider.capabilities?.demographics && provider.fetchDemographics) {
@@ -124,20 +156,10 @@ export async function syncPlatformAccount(ctx, provider, account) {
     }
   }
 
-  // 6) comments (optional module)
-  if (settings.syncComments && provider.fetchComments) {
-    const recent = candidates.filter((m) => now - m.posted_at < 14 * DAY);
-    for (const m of recent) {
-      if (signal?.aborted) return;
-      try {
-        const comments = await provider.fetchComments(ctx, { mediaId: m.media_id, externalId: m.external_id ?? m.media_id }, { account });
-        storeComments(m.media_id, comments, account.username);
-      } catch (e) {
-        if (isSoftError(e)) { log({ endpoint: 'comments', code: e.code, message: e.message }); break; }
-        throw e;
-      }
-      await delay();
-    }
+  // 6) comments (optional module; inbox/poller.js — chunk D generalises it to every inbox adapter)
+  if (settings.syncComments) {
+    await syncAccountComments(ctx, provider, account, { candidates, now, log, delay, signal });
+    if (signal?.aborted) return;
   }
 
   markSynced(key, now);

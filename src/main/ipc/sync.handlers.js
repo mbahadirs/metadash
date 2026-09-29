@@ -8,6 +8,7 @@ export function registerSyncHandlers(handle) {
       return await runSync(params);
     } catch (e) {
       if (e.message === 'SYNC_RUNNING') throw new Error(msg('sync_running'));
+      if (e.message === 'SYNC_LOCKED') throw Object.assign(new Error(msg(e.holder?.kind === 'cli' ? 'sync_locked_cli' : 'sync_locked')), { code: 'SYNC_LOCKED' });
       if (e.message === 'NO_PROFILE') throw new Error(msg('no_profile'));
       throw e;
     }

@@ -11,6 +11,7 @@ import { rangeMs } from '../analytics/util.js';
 import { makeL, weekdays, kpiLabelKey, metricLabelKey } from './reportI18n.js';
 import { capabilitiesFor, dailyMetricsFor, platformLabel } from '../analytics/platform.js';
 import { msg } from '../i18n.js';
+import { extraSheetsFor } from './reportSections/index.js';
 
 /** Ad metric columns (post/account rows), localized via L. */
 const adXlsx = (L) => [{ key: 'paidCurrency', label: L('currency'), type: 'text' }, { key: 'paidImpressions', label: L('ad_impressions'), type: 'int' }, { key: 'paidResults', label: L('results'), type: 'int' }, { key: 'paidResultType', label: L('result_type'), type: 'text' }, { key: 'costPerResult', label: L('cost_per_result'), type: 'money' }, { key: 'spend', label: L('amount_spent'), type: 'money' }, { key: 'paidReach', label: L('paid_reach'), type: 'int' }, { key: 'paidFrequency', label: L('frequency'), type: 'float' }, { key: 'paidCpc', label: 'CPC', type: 'money' }, { key: 'paidCtr', label: 'CTR %', type: 'percent' }, { key: 'paidCpm', label: 'CPM', type: 'money' }, { key: 'paidPostEngagement', label: L('post_engagement'), type: 'int' }, { key: 'costPerPostEngagement', label: L('cost_per_post_engagement'), type: 'money' }, { key: 'paidPageEngagement', label: L('page_engagement'), type: 'int' }, { key: 'costPerPageEngagement', label: L('cost_per_page_engagement'), type: 'money' }];
@@ -50,7 +51,7 @@ function kpiSheet(L, kpis, labels) {
   return { name: L('summary'), columns: [{ key: 'metric', label: L('type'), type: 'text' }, { key: 'value', label: L('value'), type: 'float' }, { key: 'prev', label: L('prev'), type: 'float' }, { key: 'changePct', label: 'Δ%', type: 'percent' }], rows: Object.entries(labels).map(([k, label]) => ({ metric: label, value: kpis[k]?.value ?? null, prev: kpis[k]?.prev ?? null, changePct: kpis[k]?.changePct ?? null })) };
 }
 
-function accountSheets(L, igId, from, to) {
+function accountSheets(L, igId, from, to, { template = null, lang = 'en', sections = {} } = {}) {
   const a = accountAnalytics({ igId, from, to });
   if (!a) return [];
   const u = a.account.username;
@@ -74,6 +75,7 @@ function accountSheets(L, igId, from, to) {
     sheets.push({ name: `${u} · ${L('ad')}`, columns: [{ key: 'date', label: L('date'), type: 'date' }, { key: 'organicReach', label: L('organic_reach'), type: 'int' }, { key: 'paidReach', label: L('paid_reach'), type: 'int' }, { key: 'impressions', label: L('impressions'), type: 'int' }, { key: 'spend', label: `${L('spend')} (${b.adAccount.currency})`, type: 'money' }], rows: b.series });
     if (b.campaigns.length) sheets.push({ name: `${u} · ${L('campaigns')}`, columns: adColumns(L, b.adAccount.currency), rows: b.campaigns });
   }
+  if (template) sheets.push(...extraSheetsFor(template, { L, lang, analysis: a, igId, from, to }, { sections }));
   return sheets;
 }
 
@@ -91,7 +93,7 @@ export function reportSheets(template, params) {
     case 'monthly':
     case 'weekly_client':
     case 'custom': {
-      const sheets = igIds.flatMap((id) => accountSheets(L, id, from, to));
+      const sheets = igIds.flatMap((id) => accountSheets(L, id, from, to, { template, lang, sections: params.sections ?? {} }));
       if (igIds.length > 1) {
         const rows = igIds.map((id) => accountAnalytics({ igId: id, from, to })).filter(Boolean).map((a) => ({ username: a.account.username, platform: platformLabel(a.platform), clientName: a.account.clientName, followers: a.account.followers, newFollowers: a.kpis.newFollowers?.value, reach: a.kpis.reach?.value ?? null, reachChange: a.kpis.reach?.changePct ?? null, views: a.kpis.views?.value, er: a.kpis.er?.value, erChange: a.kpis.er?.changePct, saveRate: a.kpis.saveRate?.value ?? null, posts: a.kpis.posts?.value, ...(a.paid ?? {}) }));
         sheets.unshift({ name: L('accounts_table'), columns: [{ key: 'username', label: L('account'), type: 'text' }, { key: 'platform', label: L('platform'), type: 'text' }, { key: 'clientName', label: L('client'), type: 'text' }, { key: 'followers', label: L('followers'), type: 'int' }, { key: 'newFollowers', label: L('new_followers'), type: 'int' }, { key: 'reach', label: L('reach'), type: 'int' }, { key: 'reachChange', label: `${L('reach')} Δ%`, type: 'percent' }, { key: 'views', label: L('views'), type: 'int' }, { key: 'er', label: 'ER %', type: 'percent' }, { key: 'erChange', label: 'ER Δ%', type: 'percent' }, { key: 'saveRate', label: L('save_rate'), type: 'percent' }, { key: 'posts', label: L('posts'), type: 'int' }, ...adXlsxAcc(L)], rows });

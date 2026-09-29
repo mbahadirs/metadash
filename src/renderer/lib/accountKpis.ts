@@ -2,14 +2,21 @@ import { fmtCompact, fmtNum, fmtPct } from './format';
 import type { Key } from './i18n';
 import type { Kpi, Platform, PlatformCapabilities } from './types';
 import type { AccountAnalyticsV13 } from './platforms';
+import { EXTRA_PLATFORMS } from '../platforms/index';
+import type { KpiSpec, SeriesDef as RegistrySeriesDef } from '../platforms/types';
 
 type T = (key: Key, vars?: Record<string, string | number>) => string;
 
 export interface KpiDef { key: string; label: string; kpi: Kpi; format: (v: number | null) => string; tip?: string }
-interface Spec { key: string; aliases?: string[]; label: Key; kind?: 'pct' | 'signed' | 'count'; tip?: Key; needs?: keyof PlatformCapabilities }
+type Spec = KpiSpec;
 
 const pct = (v: number | null) => fmtPct(v, 2);
 const signed = (v: number | null) => (v == null ? '—' : (v >= 0 ? '+' : '') + fmtNum(v));
+/** seconds → m:ss */
+const duration = (v: number | null) => (v == null ? '—' : `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, '0')}`);
+/** minutes → hours */
+const hours = (v: number | null) => (v == null ? '—' : fmtNum(Math.round(v / 6) / 10));
+const FORMATS: Record<NonNullable<Spec['kind']>, (v: number | null) => string> = { pct, signed, count: fmtCompact, duration, hours };
 
 /** KPI order per platform (plan §5). Keys are looked up with aliases so both camelCase and canonical names work. */
 const SPECS: Record<Platform, Spec[]> = {
@@ -32,6 +39,8 @@ const SPECS: Record<Platform, Spec[]> = {
     { key: 'newFollowers', aliases: ['follower_count'], label: 'new_followers', kind: 'signed' },
     { key: 'er', label: 'er', kind: 'pct', tip: 'er_formula' },
   ],
+  youtube: EXTRA_PLATFORMS.youtube.kpiSpecs,
+  tiktok: EXTRA_PLATFORMS.tiktok.kpiSpecs,
 };
 
 /** Labels for extra KPI keys the backend may add that are not in SPECS. */
@@ -50,7 +59,7 @@ export function accountKpiDefs(a: AccountAnalyticsV13, platform: Platform, caps:
     const hit = [spec.key, ...(spec.aliases ?? [])].find((k) => kpis[k] && !used.has(k));
     [spec.key, ...(spec.aliases ?? [])].forEach((k) => used.add(k));
     if (!hit) continue;
-    defs.push({ key: spec.key, label: t(spec.label), kpi: kpis[hit]!, format: spec.kind === 'pct' ? pct : spec.kind === 'signed' ? signed : fmtCompact, tip: spec.tip ? t(spec.tip) : undefined });
+    defs.push({ key: spec.key, label: t(spec.label), kpi: kpis[hit]!, format: spec.kind ? FORMATS[spec.kind] : fmtCompact, tip: spec.tip ? t(spec.tip) : undefined });
   }
   used.add('posts');
   const extras = Object.keys(kpis).filter((k) => !used.has(k) && kpis[k] && typeof kpis[k] === 'object' && EXTRA_LABELS[k] && !(k === 'saveRate' && !caps.saveRate) && !(k === 'saved' && !caps.saveRate));
@@ -59,11 +68,12 @@ export function accountKpiDefs(a: AccountAnalyticsV13, platform: Platform, caps:
   return defs;
 }
 
-export interface SeriesDef { key: string; name: string; color: string; type?: 'area'; axis?: 'right' }
+export type SeriesDef = RegistrySeriesDef;
 
 /** Daily chart series per platform: IG reach+accounts_engaged, FB viewers+post_engagements, Threads views+likes. */
 export function accountChart(platform: Platform, t: T): { title: string; series: SeriesDef[] } {
   if (platform === 'facebook') return { title: t('chart_reach_post_engagements'), series: [{ key: 'reach', name: t('viewers'), color: '#4F7CFF', type: 'area' }, { key: 'post_engagements', name: t('post_engagements'), color: '#3FBF8F', axis: 'right' }] };
   if (platform === 'threads') return { title: t('chart_views_likes'), series: [{ key: 'views', name: t('views'), color: '#4F7CFF', type: 'area' }, { key: 'likes', name: t('likes'), color: '#3FBF8F', axis: 'right' }] };
+  if (platform === 'youtube' || platform === 'tiktok') return EXTRA_PLATFORMS[platform].chart(t);
   return { title: t('chart_reach_engaged'), series: [{ key: 'reach', name: t('reach'), color: '#4F7CFF', type: 'area' }, { key: 'accounts_engaged', name: t('engaged'), color: '#3FBF8F', axis: 'right' }] };
 }

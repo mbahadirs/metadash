@@ -5,7 +5,7 @@ import { fmtNum } from '@/lib/format';
 import { PlatformIcon } from '@/components/PlatformBadge';
 import { useAccounts } from '@/hooks/queries';
 import { STUDIO_KEY, studio, useStudioCapabilities, useStudioRequest, useStudioSettings } from '@/hooks/useStudio';
-import type { CaptionGenerateResult, CaptionVariant, Platform } from '@/lib/types';
+import type { CaptionGenerateResult, CaptionVariant, Platform, PublishPlatform } from '@/lib/types';
 import { IssueList } from '../parts';
 import { errorText } from '../lib';
 import { platformsOf, type ComposerState } from './state';
@@ -66,7 +66,8 @@ export function CaptionAssistant({ state, disabled, onChange, postId }: {
   const [used, setUsed] = useState<string | null>(null);
 
   const accountIds = useMemo(() => state.targets.map((tg) => tg.accountId), [state.targets]);
-  const platforms = platformsOf(state);
+  // v2.0: only publishable platforms (planner targets are always IG/FB/Threads).
+  const platforms = platformsOf(state).filter((p): p is PublishPlatform => p === 'instagram' || p === 'facebook' || p === 'threads');
   const langs = langsPicked ?? (settings.data?.captionLangs?.length ? settings.data.captionLangs : ['tr']);
   const images = useMemo(() => state.media.filter((m) => m.asset.kind === 'image' || m.asset.thumbPath), [state.media]);
   const accounts = useAccounts({ onlyTracked: true });

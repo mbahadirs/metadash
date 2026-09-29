@@ -223,3 +223,39 @@ The UI language defaults to English and is stored in the `lang` setting. Reports
 - **Unit and integration tests** (`tests/`, Vitest, `environment: node`) run under Electron's Node (`ELECTRON_RUN_AS_NODE=1`) so the native module ABI matches. `sync.integration.test.js` runs a full sync against a fake Graph API.
 - **Type check:** `tsc --noEmit` for the renderer.
 - **Smoke test:** `npm run smoke` launches the real app, visits every route and fails on renderer errors.
+
+## v2.0 "Scale"
+
+Each feature owns its own document; the sections below only point to them. The shared contracts (migrations
+011–014, provider hooks, IPC stubs, preload surface) were laid down first so the features could be built in parallel.
+
+### Providers and extensibility
+
+Registry-driven platform metadata (`providers/<p>/meta.js` → `providers/capabilities.js`), provider hooks,
+OAuth helpers (`src/main/oauth`) and the contract test. See [providers.md](providers.md).
+
+### YouTube
+
+See [youtube-setup.md](youtube-setup.md).
+
+### TikTok (experimental)
+
+See [tiktok-setup.md](tiktok-setup.md).
+
+### Unified inbox
+
+Generalises the v1.5 Studio inbox (comments, `comment_replies`) to every platform. See [inbox.md](inbox.md).
+
+### Self-hosted publish worker
+
+Optional Docker service that publishes queued planner targets (`executor = 'worker'`). See [worker.md](worker.md).
+
+### Team workspaces and roles
+
+Shared-folder snapshots, per-member event logs, roles and client view (UI guardrails, not a security boundary).
+See [team.md](team.md).
+
+### Command-line interface
+
+`MetaDash --cli <command>` runs headless inside the Electron binary; data.db has a 5 s `busy_timeout` and sync
+takes a cross-process lease (`locks` table), so the CLI can run next to the app. See [cli.md](cli.md).

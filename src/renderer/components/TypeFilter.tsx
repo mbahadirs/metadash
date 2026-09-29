@@ -5,7 +5,7 @@ import { typeKeysFor } from '@/lib/platforms';
 
 /** Instagram chip set (kept for callers that want the pre-v1.3 list). */
 export const TYPE_KEYS: TypeKey[] = ['image', 'carousel', 'video', 'reels'];
-const ICON: Record<TypeKey, string> = { image: '▢', carousel: '❐', video: '▶', reels: '▶', story: '◐', text: '¶' };
+const ICON: Record<TypeKey, string> = { image: '▢', carousel: '❐', video: '▶', reels: '▶', story: '◐', text: '¶', short: '▮', live: '●' };
 
 export function typeLabel(key: TypeKey, t: ReturnType<typeof useT>) {
   return t(`type_${key}` as 'type_image');

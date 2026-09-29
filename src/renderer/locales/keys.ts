@@ -9,6 +9,14 @@ import type studio from './en/studio.json';
 import type studioVoice from './en/studio.voice.json';
 import type studioIdeas from './en/studio.ideas.json';
 import type studioInbox from './en/studio.inbox.json';
+// v2.0 feature namespaces (chunk B stubs; each chunk fills only its own file)
+import type youtube from './en/youtube.json';
+import type tiktok from './en/tiktok.json';
+import type inbox from './en/inbox.json';
+import type worker from './en/worker.json';
+import type team from './en/team.json';
+import type cli from './en/cli.json';
+import type providers from './en/providers.json';
 
 export type Key =
   | keyof typeof core
@@ -17,4 +25,11 @@ export type Key =
   | keyof typeof studio
   | keyof typeof studioVoice
   | keyof typeof studioIdeas
-  | keyof typeof studioInbox;
+  | keyof typeof studioInbox
+  | keyof typeof youtube
+  | keyof typeof tiktok
+  | keyof typeof inbox
+  | keyof typeof worker
+  | keyof typeof team
+  | keyof typeof cli
+  | keyof typeof providers;

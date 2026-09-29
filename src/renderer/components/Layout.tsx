@@ -10,9 +10,14 @@ import { Spinner } from './ui';
 import { UpdateBadge } from './UpdateBadge';
 import { useRunSync } from '@/hooks/useSyncEvents';
 import { useSyncHistory } from '@/hooks/queries';
+import { useSession, canSeeRoute } from '@/hooks/useSession';
+import { INBOX_READY } from '@/routes/Inbox/feature';
+import { useInboxBadge } from '@/routes/Inbox';
 
+/** `ready: false` items are hidden (v2.0 features whose chunk has not landed); `badge` = the inbox overdue count. */
 const NAV = [
   { to: '/', key: 'nav_overview', icon: Icon.overview, end: true },
+  { to: '/inbox', key: 'nav_inbox', icon: Icon.inbox, ready: INBOX_READY, badge: true },
   { to: '/content', key: 'nav_content', icon: Icon.content },
   { to: '/planner', key: 'nav_planner', icon: Icon.calendar },
   { to: '/compare', key: 'nav_compare', icon: Icon.compare },
@@ -32,6 +37,9 @@ export function Layout() {
   const [dismissed, setDismissed] = useState(false);
   const runSync = useRunSync();
   const loc = useLocation();
+  const session = useSession();
+  const inboxBadge = useInboxBadge();
+  const nav = NAV.filter((n) => (!('ready' in n) || n.ready) && canSeeRoute(session, n.to));
   useEffect(() => { call<{ suggest: boolean; lastSuccessAt: number | null }>(api.sync.suggest()).then(setStale).catch(() => {}); }, [sync?.lastSuccessAt]);
   const running = !!sync?.running || !!progress;
   const pct = progress && progress.total ? Math.min(100, (progress.done / progress.total) * 100) : running ? 5 : 0;
@@ -45,15 +53,16 @@ export function Layout() {
           {!sidebarCollapsed && <span className="font-semibold text-base tracking-tight">MetaDash</span>}
         </div>
         <nav className="flex-1 px-2 space-y-0.5 pt-2">
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <NavLink key={n.to} to={n.to} end={'end' in n && n.end} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title={t(n.key)}>
               <n.icon />{!sidebarCollapsed && <span>{t(n.key)}</span>}
+              {'badge' in n && n.badge && inboxBadge ? <span className="badge badge-neg ml-auto num">{inboxBadge}</span> : null}
             </NavLink>
           ))}
         </nav>
         <div className="px-2 pb-3 space-y-0.5 border-t border-line pt-2">
-          <NavLink to="/setup" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title={t('nav_setup')}><Icon.setup />{!sidebarCollapsed && <span>{t('nav_setup')}</span>}</NavLink>
-          <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title={t('nav_settings')}><Icon.settings />{!sidebarCollapsed && <span>{t('nav_settings')}</span>}</NavLink>
+          {canSeeRoute(session, '/setup') && <NavLink to="/setup" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title={t('nav_setup')}><Icon.setup />{!sidebarCollapsed && <span>{t('nav_setup')}</span>}</NavLink>}
+          {canSeeRoute(session, '/settings') && <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title={t('nav_settings')}><Icon.settings />{!sidebarCollapsed && <span>{t('nav_settings')}</span>}</NavLink>}
           <button className="nav-item w-full" onClick={toggleSidebar} aria-label="toggle sidebar"><Icon.menu />{!sidebarCollapsed && <span className="text-ink-2">{t('collapse')}</span>}</button>
           {!sidebarCollapsed && <div className="px-2 pt-2 text-[11px] text-ink-2">© 2026 Bahadır Şahin</div>}
         </div>

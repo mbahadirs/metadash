@@ -31,8 +31,9 @@ import { TYPE_KEYS_BY_PLATFORM, isPlatform, platformOf, profileUrl, typeKeyOf, t
 import { accountChart, accountKpiDefs } from '@/lib/accountKpis';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import type { Platform, PlatformCapabilities } from '@/lib/types';
+import { ACCOUNT_INBOX_TAB, AccountInboxTab } from './InboxTab';
 
-type Tab = 'overview' | 'posts' | 'stories' | 'demographics' | 'competitors' | 'ads';
+type Tab = 'overview' | 'posts' | 'stories' | 'demographics' | 'competitors' | 'ads' | 'inbox';
 
 export function AccountPage() {
   const { igId } = useParams();
@@ -56,6 +57,7 @@ export function AccountPage() {
     ...(caps.demographics ? [{ id: 'demographics' as Tab, label: t('demographics') }] : []),
     ...(caps.competitors ? [{ id: 'competitors' as Tab, label: t('competitors') }] : []),
     ...(caps.ads ? [{ id: 'ads' as Tab, label: t('ads') }] : []),
+    ...(ACCOUNT_INBOX_TAB && caps.inbox ? [{ id: 'inbox' as Tab, label: t('nav_inbox') }] : []),
   ];
   const tab: Tab = tabs.some((x) => x.id === tabState) ? tabState : 'overview';
   const kpiDefs = accountKpiDefs(a, platform, caps, t);
@@ -143,6 +145,7 @@ export function AccountPage() {
       {tab === 'demographics' && <DemographicsPanel igId={acc.igId} platform={platform} />}
       {tab === 'competitors' && <CompetitorPanel igId={acc.igId} />}
       {tab === 'ads' && <AdsPanel igId={acc.igId} />}
+      {tab === 'inbox' && <AccountInboxTab igId={acc.igId} />}
     </div>
   );
 }

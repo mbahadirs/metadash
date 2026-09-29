@@ -94,5 +94,7 @@
   "ai_max_steps": "The AI assistant stopped after {n} steps without a final answer.",
   "ai_bad_input": "Invalid AI request: {field}",
   "ai_prefill": "Internal error: the conversation cannot end with an assistant message.",
-  "unsupported_lang": "Unsupported language: {lang}"
+  "unsupported_lang": "Unsupported language: {lang}",
+  "sync_locked": "Another MetaDash process is already updating this data. Try again when it finishes.",
+  "sync_locked_cli": "An update started from the command line is running. Try again when it finishes."
 }
