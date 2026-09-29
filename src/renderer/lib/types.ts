@@ -104,3 +104,88 @@ export interface BudgetTree { account: { actId: string; name: string; currency: 
 export interface TransferInfo { filePath: string; meta: { exportedAt: number; appVersion: string; host: string; secrets: boolean } | null; needsPassphrase: boolean; secretCount: number; schemaVersion: number | null; accounts: number; media: number; snapshots: number; insights: number; adAccounts: number; adRows: number; stories: number; competitors: number; notes: number; tags: number; size: number }
 export type UpdateState = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
 export interface UpdateStatus { state: UpdateState; version?: string; url?: string; manual?: boolean; percent?: number; error?: string; dev?: boolean }
+
+// ---- v1.4 Planner / publishing (contract: main ipc/planner.handlers.js, publishing.handlers.js, app.handlers.js) ----
+export type PostStatus = 'draft' | 'in_review' | 'changes_requested' | 'approved' | 'scheduled' | 'publishing' | 'published' | 'partial' | 'failed' | 'archived';
+export type TargetState = 'idle' | 'queued' | 'hosting' | 'container' | 'ready' | 'handed_off' | 'publishing' | 'commenting' | 'published' | 'failed' | 'canceled' | 'missed' | 'paused';
+export type InstagramFormat = 'image' | 'carousel' | 'reel' | 'story';
+export type FacebookFormat = 'text' | 'link' | 'photo' | 'album' | 'video' | 'reel';
+export type ThreadsFormat = 'text' | 'image' | 'video' | 'carousel';
+export type PlannerFormat = InstagramFormat | FacebookFormat | ThreadsFormat;
+export type TargetMode = 'app' | 'native';
+export type PostSource = 'manual' | 'duplicate' | 'ai_idea' | 'repurpose';
+export type MediaHostType = 'none' | 's3' | 'fbpage' | 'url';
+
+/** planner_targets.options (JSON). */
+export interface TargetOptions { shareToFeed?: boolean; coverAssetId?: number; thumbOffsetMs?: number; link?: string; topicTag?: string; locationId?: string; collaborators?: string[]; altText?: Record<string, string>; children?: string[] }
+export interface PlannerTarget {
+  id: number; postId: number; accountId: string; platform: Platform; format: PlannerFormat; captionOverride: string | null; firstCommentOverride: string | null;
+  options: TargetOptions; mode: TargetMode; state: TargetState; attempts: number; nextAttemptAt: number | null; lockedAt: number | null; lockOwner: string | null;
+  containerId: string | null; remoteId: string | null; mediaKey: string | null; permalink: string | null; firstCommentId: string | null;
+  lastErrorCode: string | null; lastError: string | null; fbtraceId: string | null; publishedAt: number | null;
+}
+/** Library file. Preview URLs: mediaUrl(id) / mediaUrl(id, 'thumb') → mdmedia://asset/<id>[/thumb]. */
+export interface PlannerAsset {
+  id: number; sha256: string; fileName: string | null; storedPath: string; mime: string | null; format: 'jpeg' | 'png' | 'webp' | 'gif' | 'mp4' | 'mov' | null; kind: 'image' | 'video';
+  bytes: number | null; width: number | null; height: number | null; rotation: number; durationMs: number | null; videoCodec: string | null; audioCodec: string | null; fps: number | null;
+  thumbPath: string | null; createdAt: number;
+}
+export interface PlannerPostAsset { assetId: number; role: 'media' | 'cover'; position: number; altText: string | null; asset: PlannerAsset }
+export type IssueLevel = 'error' | 'warn' | 'info';
+/** Validation issue; `code` is an i18n key in lib/i18n/planner.ts, `params` fill its {placeholders}. */
+export interface Issue { level: IssueLevel; code: string; platform: Platform | null; targetId: number | null; accountId: string | null; assetId: number | null; field: string; params: Record<string, string | number | null> }
+export type AuditActor = 'user' | 'worker' | 'system' | 'client';
+export interface AuditEntry { id: number; at: number; postId: number | null; targetId: number | null; actor: AuditActor; action: string; detail: Record<string, unknown> | null; ref: string | null }
+export interface PlannerPost {
+  id: number; ref: string; title: string | null; caption: string; firstComment: string | null; status: PostStatus; scheduledAt: number | null; timezone: string | null;
+  clientName: string | null; labels: string[]; notes: string | null; version: number; approvedVersion: number | null; approvedBy: string | null; approvedAt: number | null;
+  source: PostSource; createdAt: number; updatedAt: number; deletedAt: number | null;
+  targets: PlannerTarget[]; assets: PlannerPostAsset[]; validation: Issue[]; audit: AuditEntry[];
+}
+export interface PlannerTargetSummary { id: number; accountId: string; platform: Platform; format: PlannerFormat; state: TargetState; mode: TargetMode; permalink: string | null }
+export interface PlannerPostSummary {
+  id: number; ref: string; title: string | null; captionPreview: string; status: PostStatus; scheduledAt: number | null; version: number;
+  targets: PlannerTargetSummary[]; thumb: { assetId: number; kind: 'image' | 'video' } | null; issuesCount: number; source: PostSource; labels: string[]; clientName: string | null; updatedAt: number;
+}
+export interface PlannerListParams { from?: number; to?: number; accountIds?: string[]; platforms?: Platform[]; statuses?: PostStatus[]; includeUnscheduled?: boolean; search?: string }
+export interface PlannerTargetInput { accountId: string; format?: PlannerFormat; captionOverride?: string | null; firstCommentOverride?: string | null; options?: TargetOptions | null; mode?: TargetMode }
+export interface PlannerAssetInput { assetId: number; role?: 'media' | 'cover'; altText?: string | null }
+export interface PlannerCreateInput {
+  title?: string | null; caption?: string; firstComment?: string | null; scheduledAt?: number | null; timezone?: string | null; targets: PlannerTargetInput[];
+  assetIds?: number[]; assets?: PlannerAssetInput[]; labels?: string[]; clientName?: string | null; notes?: string | null; source?: PostSource;
+}
+/** planner:posts:update patch. Time changes go through reschedule; targets/assets replace the whole list. */
+export type PlannerPatch = Partial<Omit<PlannerCreateInput, 'scheduledAt' | 'assetIds' | 'source' | 'targets'>> & { targets?: PlannerTargetInput[] };
+export interface PlannerUpdateInput { id: number; patch: PlannerPatch; expectedVersion?: number }
+export type PlannerDraft = PlannerCreateInput & { id?: number };
+export interface PlannerSetStatusInput { ids: number[]; status: PostStatus; note?: string; approver?: string }
+export interface PlannerSetStatusResult { updated: number[]; rejected: { id: number; reason: 'not_found' | 'use_publishing' | 'transition_not_allowed' | 'approval_required' | 'worker_only' | 'same_status' | 'unknown_status' }[] }
+export type PlannerRescheduled = PlannerPost & { warnings: Issue[] };
+export interface Slot { at: number; weekday: number; hour: number; score: number; avgEr: number | null; posts: number; qualified: boolean; source: 'account' | 'portfolio' | 'default'; conflicts: { postId: number; ref: string; accountId: string; scheduledAt: number }[] }
+export interface ApprovalExportInput { postIds?: number[]; from?: number; to?: number; accountIds?: string[]; format: 'html' | 'pdf'; title?: string; clientName?: string; lang?: 'tr' | 'en'; includeNotes?: boolean }
+export interface ApprovalExportResult { filePath: string; packId: string; count: number }
+export interface ApprovalImportResult { applied: { ref: string; decision: 'approved' | 'changes_requested'; note: string | null }[]; stale: { ref: string; packVersion: number; currentVersion: number }[]; unknown: string[] }
+
+export interface QueueItem extends PlannerTarget { postRef: string; postTitle: string | null; scheduledAt: number | null; thumb: { assetId: number; kind: 'image' | 'video' } | null }
+export interface ScheduleResult { queued: number; handedOff: number; warnings: Issue[] }
+export interface QuotaInfo { used: number | null; total: number | null; windowSec: number | null; checkedAt: number | null }
+export interface PlatformReadiness { canPublish: boolean; missingScopes: string[]; firstComment: boolean }
+export interface PublishingReadiness {
+  instagram: PlatformReadiness; facebook: PlatformReadiness & { pages: { accountId: string; canPublish: boolean }[] }; threads: PlatformReadiness;
+  mediaHost: { type: MediaHostType; configured: boolean; lastTestOk: boolean | null };
+}
+export interface PublishingStatus { paused: boolean; running: boolean; nextAt: number | null; inFlight: number }
+export interface S3Settings { endpoint: string; region: string; bucket: string; prefix: string; pathStyle: boolean; publicBaseUrl: string; urlTtlSec: number; deleteAfterPublish: boolean }
+export interface MediaHostSettings { type: MediaHostType; s3: S3Settings; keySet: { last4: string } | null }
+export interface MediaHostInput { type: MediaHostType; s3?: Partial<S3Settings>; accessKeyId?: string; secretAccessKey?: string }
+export interface MediaHostTest { ok: boolean; url: string | null; status: number | null; ms: number; error?: string }
+export interface BackgroundSettings { trayMode: boolean; launchAtLogin: boolean; startHidden: boolean; keepAwakeForPosts: boolean; supported: { loginItem: boolean; tray: boolean } }
+export type MissedAction = 'publish' | 'reschedule' | 'skip';
+
+/** Renderer events (api.on). */
+export interface PlannerChangedEvent { postIds: number[]; reason: 'created' | 'edited' | 'approval_invalidated' | 'rescheduled' | 'deleted' | 'status' | string; [extra: string]: unknown }
+export interface PublishProgressEvent { targetId: number; postId: number; state: TargetState; pct?: number }
+export interface PublishMissedEvent { count: number }
+
+/** mdmedia:// URL for a planner asset (main: planner/mediaRequest.js). */
+export const mediaUrl = (assetId: number, variant: 'file' | 'thumb' = 'file') => `mdmedia://asset/${assetId}${variant === 'thumb' ? '/thumb' : ''}`;

@@ -35,6 +35,22 @@ export const DEFAULTS = {
   'ai.provider': 'anthropic',
   'ai.model': null,
   'ai.ollamaUrl': 'http://127.0.0.1:11434',
+  // v1.4 background mode (chunk C applies them) and planner/publishing. S3 keys live encrypted under 'token:planner:s3'.
+  'app.trayMode': false,
+  'app.launchAtLogin': false,
+  'app.startHidden': true,
+  'app.keepAwakeForPosts': false,
+  'planner.paused': false,
+  'planner.missedPolicy': 'ask', // ask | publish | skip
+  'planner.missedGraceMin': 15,
+  'planner.maxLateMin': 180,
+  'planner.requireApproval': false,
+  'planner.minGapHours': 3,
+  'planner.weekStartsOn': 1,
+  'planner.mediaHost': { type: 'none' }, // none | s3 | fbpage | url
+  'planner.s3': { endpoint: '', region: 'auto', bucket: '', prefix: 'metadash/', pathStyle: false, publicBaseUrl: '', urlTtlSec: 86400, deleteAfterPublish: true },
+  'notify.publishSuccess': true,
+  'notify.publishFailure': true,
 };
 
 export function getConfig(key) {

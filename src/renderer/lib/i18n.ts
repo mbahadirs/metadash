@@ -1,6 +1,11 @@
 import { useAppStore } from '@/store/app';
+import { plannerDict } from './i18n/planner';
+import { backgroundDict } from './i18n/background';
 
+/** Core strings: { key: [tr, en] }. Feature dictionaries (same format) live in ./i18n/*.ts and are spread in first. */
 const dict = {
+  ...plannerDict,
+  ...backgroundDict,
   nav_overview: ['Genel Bakış', 'Overview'],
   nav_content: ['İçerik', 'Content'],
   nav_compare: ['Karşılaştır', 'Compare'],

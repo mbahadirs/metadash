@@ -1,7 +1,7 @@
 export const RETRYABLE_CODES = new Set([4, 17, 32, 613]);
 
 export class MetaError extends Error {
-  constructor({ code, subcode, message, type, endpoint, status, source }) {
+  constructor({ code, subcode, message, type, endpoint, status, source, fbtraceId, userTitle, userMessage }) {
     super(message);
     this.name = 'MetaError';
     this.code = code ?? null;
@@ -10,6 +10,9 @@ export class MetaError extends Error {
     this.endpoint = endpoint ?? null;
     this.status = status ?? null;
     this.source = source ?? null; // client name that raised it: 'meta' | 'threads'
+    this.fbtraceId = fbtraceId ?? null; // Graph `fbtrace_id` (quote it to Meta support; stored on failed publish targets)
+    this.userTitle = userTitle ?? null; // Graph `error_user_title` / `error_user_msg` (publishing errors often carry them)
+    this.userMessage = userMessage ?? null;
   }
 
   get isRetryable() {

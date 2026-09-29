@@ -2,7 +2,10 @@ import { getDb } from '../../db/index.js';
 import { EXCLUDED_TABLES } from './sqlGuard.js';
 
 /** Tables the model never sees: secrets (also blocked by the SQL guard), internals and binary blobs. */
-const HIDDEN_TABLES = new Set([...EXCLUDED_TABLES, 'schema_version', 'account_logos', 'sync_runs', 'sync_errors', 'disabled_metrics', 'metric_resolution']);
+const HIDDEN_TABLES = new Set([
+  ...EXCLUDED_TABLES, 'schema_version', 'account_logos', 'sync_runs', 'sync_errors', 'disabled_metrics', 'metric_resolution',
+  'planner_quota', // API quota cache (planner_uploads / planner_approval_packs are in EXCLUDED_TABLES)
+]);
 const HIDDEN_COLUMN = /token|secret/i;
 
 /** Hand-written notes on the important tables (units, date formats, join keys, pitfalls). */
@@ -26,6 +29,11 @@ const NOTES = {
   competitors: 'Public competitor accounts, each linked to one tracked account (linked_ig_id). No reach data for competitors.',
   competitor_snapshots: "Daily public stats per competitor. date = 'YYYY-MM-DD'. avg_likes/avg_comments are per recent post.",
   notes: 'User notes attached to an entity (entity_type/entity_id). created_at epoch ms.',
+  planner_posts: "Posts planned/scheduled in the MetaDash Planner (not yet necessarily published). ref = human code like 'P-0042'. status = draft | in_review | changes_requested | approved | scheduled | publishing | published | partial | failed | archived. scheduled_at/created_at/updated_at/approved_at are epoch ms UTC (NULL scheduled_at = unscheduled draft). labels = JSON array. version increases on every content change. Exclude deleted_at IS NOT NULL.",
+  planner_targets: "One row per planned post × account (join planner_posts on post_id; account_id = accounts.ig_id). platform = instagram | facebook | threads. format: Instagram image/carousel/reel/story, Facebook text/link/photo/album/video/reel, Threads text/image/video/carousel. state = idle | queued | hosting | container | ready | handed_off (scheduled on Facebook itself) | publishing | commenting | published | failed | canceled | missed | paused. media_key = media.media_id of the published post once synced (join media on media_id to get its performance). published_at epoch ms.",
+  planner_assets: 'Media files in the planner library. kind = image | video; bytes, width/height px, duration_ms, fps. created_at epoch ms.',
+  planner_post_assets: "Which media files a planned post uses (post_id → planner_posts.id, asset_id → planner_assets.id); role = media | cover; position = order in a carousel.",
+  planner_audit: "Planner history: one row per action (created, edited, approved, scheduled, published, failed, …). at epoch ms; actor = user | worker | system | client; detail = JSON.",
 };
 
 /** Distinct values listed for a few enum-like columns, so the model uses real names. */

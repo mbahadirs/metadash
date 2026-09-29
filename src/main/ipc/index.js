@@ -15,6 +15,9 @@ import { registerAiHandlers } from './ai.handlers.js';
 import { registerPlatformHandlers } from './platforms.handlers.js';
 import { registerFacebookSetupHandlers } from './setup.facebook.handlers.js';
 import { registerThreadsSetupHandlers } from './setup.threads.handlers.js';
+import { registerPlannerHandlers } from './planner.handlers.js';
+import { registerPublishingHandlers } from './publishing.handlers.js';
+import { registerAppHandlers } from './app.handlers.js';
 
 /** Wraps a handler so the renderer always receives { ok, data } | { ok: false, error }.*/
 export function handle(channel, fn) {
@@ -41,7 +44,10 @@ function safeLang() {
 }
 
 /** progressBus events forwarded to every window (keep in sync with preload.cjs `on`). */
-const RENDERER_EVENTS = ['sync:progress', 'sync:done', 'token:warning', 'update:status', 'app:navigate'];
+export const RENDERER_EVENTS = [
+  'sync:progress', 'sync:done', 'token:warning', 'update:status', 'app:navigate',
+  'planner:changed', 'publish:progress', 'publish:missed', // v1.4: { postIds, reason, … } | { targetId, postId, state, pct? } | { count }
+];
 
 export function registerIpc() {
   registerSetupHandlers(handle);
@@ -57,6 +63,9 @@ export function registerIpc() {
   registerPlatformHandlers(handle);
   registerFacebookSetupHandlers(handle);
   registerThreadsSetupHandlers(handle);
+  registerPlannerHandlers(handle);
+  registerPublishingHandlers(handle);
+  registerAppHandlers(handle);
 
   for (const evt of RENDERER_EVENTS) {
     progressBus.on(evt, (payload) => {

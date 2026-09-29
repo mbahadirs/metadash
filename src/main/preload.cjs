@@ -1,6 +1,14 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const invoke = (channel, ...args) => ipcRenderer.invoke(channel, ...args);
+
+/** Main → renderer events (keep in sync with RENDERER_EVENTS in ipc/index.js). */
+const EVENTS = ['sync:progress', 'sync:done', 'token:warning', 'update:status', 'app:navigate', 'planner:changed', 'publish:progress', 'publish:missed'];
+
+/** Absolute path of a dropped File (File.path was removed in Electron 32). Returns '' for non-file objects. */
+function pathForFile(file) {
+  try { return webUtils.getPathForFile(file) || ''; } catch { return ''; }
+}
 
 /** Serialises the chart wrapper's SVG (data-chart-id) and rasterises it to PNG via canvas. */
 async function pngChart({ chartId, scale = 2, background = '#10131A', name }) {
@@ -182,13 +190,66 @@ const api = {
     ask: (p) => invoke('ai:ask', p),
     askCancel: (requestId) => invoke('ai:askCancel', { requestId }),
   },
+  // v1.4 Planner — payload objects mirror the channels (see ipc/planner.handlers.js and lib/types.ts).
+  planner: {
+    posts: {
+      list: (p) => invoke('planner:posts:list', p ?? {}),
+      get: (id) => invoke('planner:posts:get', id),
+      create: (p) => invoke('planner:posts:create', p),
+      update: (p) => invoke('planner:posts:update', p),
+      reschedule: (p) => invoke('planner:posts:reschedule', p),
+      duplicate: (p) => invoke('planner:posts:duplicate', p),
+      delete: (p) => invoke('planner:posts:delete', p),
+      setStatus: (p) => invoke('planner:posts:setStatus', p),
+      setAssets: (p) => invoke('planner:posts:setAssets', p),
+    },
+    validate: (draft) => invoke('planner:validate', { draft }),
+    assets: {
+      import: (paths) => invoke('planner:assets:import', paths ? { paths } : {}),
+      importData: (p) => invoke('planner:assets:importData', p),
+      setThumb: (p) => invoke('planner:assets:setThumb', p),
+      remove: (assetId) => invoke('planner:assets:remove', { assetId }),
+    },
+    suggestSlots: (p) => invoke('planner:suggestSlots', p),
+    audit: (p) => invoke('planner:audit', p ?? {}),
+    approval: {
+      export: (p) => invoke('planner:approval:export', p),
+      import: (code) => invoke('planner:approval:import', { code }),
+    },
+    pathForFile,
+  },
+  publishing: {
+    schedule: (id) => invoke('publishing:schedule', { id }),
+    unschedule: (id) => invoke('publishing:unschedule', { id }),
+    publishNow: (p) => invoke('publishing:publishNow', p),
+    queue: (p) => invoke('publishing:queue', p ?? {}),
+    retry: (targetId) => invoke('publishing:retry', { targetId }),
+    cancel: (targetId) => invoke('publishing:cancel', { targetId }),
+    missed: () => invoke('publishing:missed'),
+    resolveMissed: (p) => invoke('publishing:resolveMissed', p),
+    quota: (p) => invoke('publishing:quota', p),
+    readiness: () => invoke('publishing:readiness'),
+    status: () => invoke('publishing:status'),
+    setPaused: (paused) => invoke('publishing:setPaused', !!paused),
+    mediaHost: {
+      get: () => invoke('publishing:mediaHost:get'),
+      set: (p) => invoke('publishing:mediaHost:set', p),
+      test: () => invoke('publishing:mediaHost:test'),
+    },
+  },
+  app: {
+    background: {
+      get: () => invoke('app:background:get'),
+      set: (patch) => invoke('app:background:set', patch),
+    },
+  },
   transfer: {
     export: (p) => invoke('transfer:export', p ?? {}),
     pick: () => invoke('transfer:pick'),
     import: (p) => invoke('transfer:import', p),
   },
   on: (channel, cb) => {
-    if (!['sync:progress', 'sync:done', 'token:warning', 'update:status', 'app:navigate'].includes(channel)) return () => {};
+    if (!EVENTS.includes(channel)) return () => {};
     const listener = (_e, payload) => cb(payload);
     ipcRenderer.on(channel, listener);
     return () => ipcRenderer.removeListener(channel, listener);

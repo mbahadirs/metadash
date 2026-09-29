@@ -1,6 +1,5 @@
-import { app, BrowserWindow, shell, nativeTheme } from 'electron';
+import { app, BrowserWindow, nativeTheme } from 'electron';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { openDb, closeDb } from './db/index.js';
 import { registerIpc } from './ipc/index.js';
 import { startScheduler, stopScheduler } from './sync/scheduler.js';
@@ -8,44 +7,14 @@ import { getConfig } from './config/store.js';
 import { seedDemo, isSeeded } from './seed/index.js';
 import { startUpdater, stopUpdater } from './updater.js';
 import { startNotifications, stopNotifications } from './notifications.js';
+import { configureAppWindow, createMainWindow } from './appWindow.js';
+import { registerMediaScheme, handleMediaProtocol } from './protocol.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 const SMOKE = process.env.METADASH_SMOKE === '1';
 
-let mainWindow = null;
 if (process.env.METADASH_USER_DATA) app.setPath('userData', process.env.METADASH_USER_DATA);
-
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 900,
-    minWidth: 1100,
-    minHeight: 680,
-    show: false,
-    backgroundColor: '#10131A',
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-      spellcheck: false,
-    },
-  });
-  mainWindow.once('ready-to-show', () => mainWindow.show());
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:/i.test(url)) shell.openExternal(url);
-    return { action: 'deny' };
-  });
-  if (DEV_URL) {
-    mainWindow.loadURL(DEV_URL);
-  } else {
-    mainWindow.loadFile(path.join(__dirname, '../../dist/renderer/index.html'));
-  }
-  if (SMOKE) runSmoke(mainWindow);
-  mainWindow.on('closed', () => { mainWindow = null; });
-}
+registerMediaScheme(); // must run before app ready
+configureAppWindow({ onWindowCreated: SMOKE ? (win) => runSmoke(win) : null });
 
 /** Walks every route, records renderer errors and saves screenshots (METADASH_SMOKE=1). */
 async function runSmoke(win) {
@@ -56,7 +25,7 @@ async function runSmoke(win) {
   win.webContents.on('console-message', (_e, level, message) => { if (level >= 2) errors.push(message); });
   win.webContents.on('did-fail-load', (_e, code, desc) => { console.error('did-fail-load', code, desc); app.exit(2); });
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const routes = (process.env.METADASH_SMOKE_ROUTES ?? '/,/account/17840000,/account/fb-1000000000000001,/account/th-2500000000000001,/content,/compare,/ads,/competitors,/reports,/presentation,/settings,/setup').split(',');
+  const routes = (process.env.METADASH_SMOKE_ROUTES ?? '/,/account/17840000,/account/fb-1000000000000001,/account/th-2500000000000001,/content,/compare,/ads,/competitors,/reports,/presentation,/planner,/settings,/setup').split(',');
   win.webContents.once('did-finish-load', async () => {
     await sleep(1500);
     const ok = await win.webContents.executeJavaScript('!!document.querySelector("[data-app-ready]")');
@@ -101,14 +70,15 @@ app.whenReady().then(() => {
   openDb(path.join(userData, 'data.db'));
   if (!app.isPackaged && process.argv.includes('--demo') && !isSeeded()) seedDemo({ reset: false });
   nativeTheme.themeSource = getConfig('theme') === 'light' ? 'light' : 'dark';
+  handleMediaProtocol();
   registerIpc();
-  createWindow();
+  createMainWindow();
   startScheduler();
   if (!SMOKE) {
     startUpdater();
-    startNotifications({ win: () => mainWindow ?? (createWindow(), mainWindow) });
+    startNotifications();
   }
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createMainWindow(); });
 });
 
 app.on('window-all-closed', () => {

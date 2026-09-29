@@ -6,7 +6,8 @@ import { assertReadOnly } from '../../export/csv.js';
  * sqlite internals, table-valued pragmas, extension loading and recursive CTEs (unbounded run time).
  * False positives (e.g. the word "token" inside a string literal) are acceptable: the model gets the error and rephrases.
  */
-export const EXCLUDED_TABLES = ['settings', 'profiles'];
+// planner_uploads holds presigned media URLs; planner_approval_packs holds the packs' HMAC keys (v1.4).
+export const EXCLUDED_TABLES = ['settings', 'profiles', 'planner_uploads', 'planner_approval_packs'];
 export const SQL_MAX = 4000;
 
 const BLOCKED_WORDS = new Set([...EXCLUDED_TABLES, 'load_extension', 'recursive']);

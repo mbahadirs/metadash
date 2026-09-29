@@ -14,6 +14,8 @@ import { fmtDate } from '../analytics/util.js';
 import { analyzeCaption } from '../sync/caption.js';
 import { rng, pick, between, gauss } from './random.js';
 import { seedPlatformAccounts, extendPlatformDay, PLATFORM_DEMO_COUNTS } from './platforms.js';
+import { seedPlanner } from './planner.js';
+import { PLANNER_TABLES } from '../db/queries/planner.js';
 import { platformOfKey } from '../providers/capabilities.js';
 import { BRANDS, CAPTIONS, CITIES, COUNTRIES, AGE_BUCKETS, COMPETITOR_NAMES, COMMENTERS, COMMENT_TEXTS, CAMPAIGN_NAMES, ADSET_NAMES, AD_NAMES } from './data.js';
 
@@ -33,7 +35,7 @@ export function canLoadDemo() {
 
 export function clearAll() {
   const db = getDb();
-  const tables = ['sync_errors', 'sync_runs', 'notes', 'ad_insights_breakdown', 'ad_insights_daily', 'ad_media_links', 'ad_budget_overrides', 'ad_accounts', 'competitor_snapshots', 'competitors', 'comments', 'stories', 'media_latest', 'media_insight_snapshots', 'media', 'account_demographics', 'account_insights_daily', 'account_snapshots', 'account_tags', 'account_logos', 'tags', 'accounts', 'profiles', 'disabled_metrics', 'metric_resolution'];
+  const tables = [...PLANNER_TABLES, 'sync_errors', 'sync_runs', 'notes', 'ad_insights_breakdown', 'ad_insights_daily', 'ad_media_links', 'ad_budget_overrides', 'ad_accounts', 'competitor_snapshots', 'competitors', 'comments', 'stories', 'media_latest', 'media_insight_snapshots', 'media', 'account_demographics', 'account_insights_daily', 'account_snapshots', 'account_tags', 'account_logos', 'tags', 'accounts', 'profiles', 'disabled_metrics', 'metric_resolution'];
   db.transaction(() => { for (const t of tables) db.exec(`DELETE FROM ${t}`); })();
 }
 
@@ -85,6 +87,7 @@ export function seedDemo({ reset = false, onProgress } = {}) {
       q.run('UPDATE sync_runs SET started_at = ? WHERE id = ?', at, id);
     }
   })();
+  db.transaction(() => seedPlanner({ now: Date.now() }))();
   setSetting('setupStep', 6);
   setSetting('setupComplete', true);
   setSetting('demoMode', true);

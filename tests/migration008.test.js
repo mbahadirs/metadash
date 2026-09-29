@@ -43,7 +43,7 @@ afterAll(() => { closeDb(); fs.rmSync(dir, { recursive: true, force: true }); })
 
 describe('migration 008 on a v7 database', () => {
   it('records version 8 and creates metric_resolution + the platform index', () => {
-    expect(q.get('SELECT MAX(version) AS v FROM schema_version').v).toBe(8);
+    expect(q.get('SELECT COUNT(*) AS n FROM schema_version WHERE version = 8').n).toBe(1); // later migrations (009+) apply on top
     expect(q.get("SELECT name FROM sqlite_master WHERE type='table' AND name='metric_resolution'")).toBeTruthy();
     expect(q.get("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_accounts_platform'")).toBeTruthy();
   });

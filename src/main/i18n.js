@@ -1,7 +1,10 @@
 import { getConfig } from './config/store.js';
+import { PLANNER_MESSAGES } from './i18n/planner.js';
+import { PUBLISHING_MESSAGES } from './i18n/publishing.js';
+import { BACKGROUND_MESSAGES } from './i18n/background.js';
 
-/** Main-process user-facing messages: { key: [en, tr] }. English is the default. */
-const M = {
+/** Main-process user-facing messages: { key: [en, tr] }. English is the default. Feature dictionaries live in ./i18n/*.js. */
+const CORE = {
   // setup
   app_id_digits: ['App ID must contain digits only.', 'App ID yalnızca rakamlardan oluşmalı.'],
   app_secret_short: ['App Secret is missing or too short.', 'App Secret eksik veya çok kısa.'],
@@ -109,6 +112,8 @@ const M = {
   ai_bad_input: ['Invalid AI request: {field}', 'Geçersiz yapay zekâ isteği: {field}'],
   ai_prefill: ['Internal error: the conversation cannot end with an assistant message.', 'İç hata: konuşma bir asistan mesajıyla bitemez.'],
 };
+
+const M = { ...CORE, ...PLANNER_MESSAGES, ...PUBLISHING_MESSAGES, ...BACKGROUND_MESSAGES };
 
 /** Current UI language from config ('en' | 'tr'); falls back to 'en'. */
 export function currentLang() {
