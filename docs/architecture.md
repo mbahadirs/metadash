@@ -176,7 +176,7 @@ The UI language defaults to English and is stored in the `lang` setting. Reports
 - **Window:** `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. The renderer only sees the preload API.
 - **Content Security Policy** (`src/renderer/index.html`): `default-src 'self'`, `script-src 'self'`; images are allowed from `https:` and `data:` (Meta CDN thumbnails and profile pictures); `connect-src` only allows the local Vite dev server.
 - **Navigation:** `setWindowOpenHandler` denies all new windows; `http(s)` links are opened in the system browser. `system:openExternal` rejects non-http(s) URLs.
-- **Network:** only the main process makes requests, and only to `graph.facebook.com`. No telemetry.
+- **Network:** only the main process makes requests: to `graph.facebook.com`, and in packaged builds to GitHub (`api.github.com` / `github.com` release downloads) for update checks, which can be turned off in Settings. No telemetry.
 - **SQL console:** read-only statements only (see Exports).
 - **Electron fuses** (`scripts/afterPack.cjs`, applied to packaged binaries by electron-builder):
 

@@ -1,7 +1,7 @@
 {
   "name": "metadash",
   "productName": "MetaDash",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Local-first desktop analytics for Instagram accounts and Meta Ads — for agencies managing many accounts.",
   "license": "MIT",
   "author": "Bahadır Şahin <mbhdrshn@gmail.com>",
@@ -37,6 +37,7 @@
   "dependencies": {
     "better-sqlite3": "^11.7.0",
     "date-fns": "^4.1.0",
+    "electron-updater": "^6.8.9",
     "exceljs": "^4.4.0",
     "p-queue": "^8.0.1"
   },

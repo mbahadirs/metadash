@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/icon.png" width="112" alt="MetaDash icon"></p>
+
 # MetaDash
 
 [English](README.md)
@@ -67,6 +69,8 @@ Tüm ekran görüntüleri yerleşik [demo verisiyle](#demo-verisi) alınmıştı
 | **Raporlar** | Şablonlar: aylık müşteri raporu, haftalık müşteri raporu, özel tarih aralığı, portföy özeti, kampanya raporu (organik + ücretli), haftalık değişim özeti, seçilen gönderiler raporu. Bölümleri seçin, logo ve değerlendirme ekleyin, rapor dilini belirleyin, ön ayar kaydedin. Tek dosyalık HTML (grafikler SVG olarak gömülü, çevrimdışı çalışır), PDF veya çok sayfalı Excel olarak dışa aktarın. |
 | **Sunum** | Verilerinizden üretilen tam ekran slayt destesi (kapak, KPI'lar, büyüme, içerik, en iyi gönderiler, öne çıkan gönderi, hashtag'ler, en iyi zaman, reklamlar, kampanyalar, kırılımlar, reklamlı gönderiler, rapor sepeti, sonraki adımlar). Ok tuşlarıyla ilerleme, `F` tam ekran, `Esc` çıkış. |
 | **Her yerde dışa aktarım** | Her veri tablosu `.xlsx` veya yatay A4 PDF, her grafik PNG olarak kaydedilebilir. |
+| **Bildirimler** | Her senkronizasyondan sonra ve günde bir kez isteğe bağlı masaüstü bildirimleri: son 2 gündeki olağandışı değişiklikler, aylık bütçesinin %90'ına ulaşan reklam hesapları, 7+ gündür paylaşım yapmayan hesaplar ve süresinin dolmasına 7 günden az kalan Meta token'ı. Her tür Ayarlar'dan kapatılabilir; bildirime tıklamak ilgili ekranı açar. |
+| **Güncellemeler** | Kurulu sürümler GitHub Releases'te yeni sürüm olup olmadığını denetler. Windows ve Linux AppImage'da uygulama içinden indirilip yüklenir (yüklemek için yeniden başlatılır); macOS ve `.deb` sürümlerinde sürüm sayfasına bağlantı verilir. Ayarlar'dan kapatılabilir. |
 | **Senkronizasyon** | Tür bazlı kuyruklarla artımlı senkronizasyon, Meta kullanım başlıkları yükseldikçe otomatik yavaşlama, gönderi yaşına göre kademeli insights yenileme, belirli aralıklarla story yenileme, uygulama açıkken isteğe bağlı günlük otomatik güncelleme. |
 | **Ayarlar ve veri** | Hesap yönetimi (müşteri adı, renk, etiketler, takip), reklam hesabı eşleme, token durumu ve yenileme, senkronizasyon geçmişi ve hataları, desteklenmeyen metrik yönetimi, veritabanı yedekleme ve geri yükleme, bilgisayarlar arası tam veri taşıma (`.metadash` dosyaları), CSV dışa aktarım, salt okunur SQL konsolu, koyu/açık tema, İngilizce/Türkçe arayüz. |
 
@@ -124,7 +128,9 @@ Arayüz varsayılan olarak **İngilizce**dir. **Settings → Theme · Language**
   | Linux | `$XDG_CONFIG_HOME/MetaDash/` (genellikle `~/.config/MetaDash/`) |
 
 - **Sırlar şifreli saklanır.** Meta erişim token'ı ve App Secret, makine kimliğinden (macOS'ta donanım UUID'si, Windows'ta `MachineGuid`, Linux'ta `/etc/machine-id`) türetilen bir anahtarla AES-256-GCM kullanılarak şifrelenir. Kopyalanan bir veritabanı başka bilgisayarda bu sırları çözemez. Yeni bir makineye geçmek için **Ayarlar → Veri taşıma**'yı kullanın; sırlar sizin belirlediğiniz bir parolayla yeniden şifrelenerek taşınabilir.
-- **Telemetri, analitik, güncelleme denetimi ya da MetaDash sunucusu yoktur.** Main process yalnızca `https://graph.facebook.com` adresine istek yapar (API çağrıları ve çevrimiçi kontrolü). Profil fotoğrafları ve gönderi küçük resimleri, API'nin döndürdüğü Meta CDN adreslerinden gösterilir.
+- **Telemetri, analitik ya da MetaDash sunucusu yoktur.** Main process `https://graph.facebook.com` adresine istek yapar (API çağrıları ve çevrimiçi kontrolü). Profil fotoğrafları ve gönderi küçük resimleri, API'nin döndürdüğü Meta CDN adreslerinden gösterilir.
+- **Güncelleme denetimi (yalnızca kurulu sürümlerde).** Kurulu sürümler, açılıştan kısa süre sonra ve 6 saatte bir GitHub'da yeni sürüm olup olmadığını denetler: macOS ve `.deb` sürümleri `https://api.github.com` adresini (son sürüm) sorgular; Windows ve Linux AppImage sürümleri sürüm bilgisini (`latest*.yml`) `https://github.com` sürüm indirmelerinden okur ve kurulum dosyasını yalnızca **İndir**'e tıkladığınızda indirir. Sizinle veya verilerinizle ilgili hiçbir bilgi gönderilmez. **Ayarlar → Hakkında → Güncellemeleri otomatik denetle** ile kapatabilirsiniz; geliştirme sürümleri hiç denetlemez.
+- **Masaüstü bildirimleri** tamamen yerel veritabanınızdan üretilir; bilgisayarınızdan hiçbir veri çıkmaz.
 - "Instagram'da aç" gibi bağlantılar varsayılan tarayıcınızda açılır.
 
 ## Geliştirme

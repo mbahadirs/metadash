@@ -8,10 +8,9 @@ import { upsertAccount, setTrackedAccounts, insertSnapshot, listAccounts, update
 import { upsertAdAccount, linkAdAccount, listAdAccounts } from '../db/queries/ads.js';
 import { findOrCreateTag, setAccountTags } from '../db/queries/tags.js';
 import { isDemoProfile } from '../sync/orchestrator.js';
-import { seedDemo, isSeeded, clearAll } from '../seed/index.js';
+import { seedDemo, isSeeded, clearAll, canLoadDemo } from '../seed/index.js';
 import { fmtDate } from '../analytics/util.js';
 import { MetaError } from '../meta/errors.js';
-import { app } from 'electron';
 import { msg } from '../i18n.js';
 
 function requireToken() {
@@ -124,7 +123,7 @@ export function registerSetupHandlers(handle) {
   handle('setup:complete', () => { setSetting('setupComplete', true); setSetting('setupStep', 6); return true; });
 
   handle('setup:loadDemo', ({ reset = false } = {}) => {
-    if (app.isPackaged) throw new Error(msg('demo_dev_only'));
+    if (!canLoadDemo()) throw new Error(msg('demo_real_connected'));
     const res = seedDemo({ reset });
     return { ...res, seeded: isSeeded() };
   });

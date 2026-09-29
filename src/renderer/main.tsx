@@ -5,9 +5,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './styles/tokens.css';
 import { hydrateStore, useAppStore } from './store/app';
 import { useSyncEvents } from './hooks/useSyncEvents';
+import { useNavigateEvents } from './hooks/useNavigateEvents';
 import { Layout } from './components/Layout';
-import { api, call } from './lib/api';
-import type { SetupState } from './lib/types';
+import { useSetupState } from './hooks/queries';
 import { SetupPage } from './routes/Setup';
 import { OverviewPage } from './routes/Overview';
 import { AccountPage } from './routes/Account';
@@ -23,18 +23,15 @@ const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30
 
 function App() {
   useSyncEvents();
-  const [ready, setReady] = useState(false);
-  const [setup, setSetup] = useState<SetupState | null>(null);
+  useNavigateEvents();
+  const [hydrated, setHydrated] = useState(false);
+  // Setup state comes from the query cache so finishing setup or loading demo data (invalidateQueries) re-routes immediately.
+  const setupQ = useSetupState();
+  const setup = setupQ.data ?? null;
   const setDemo = useAppStore((s) => s.setDemo);
-  useEffect(() => {
-    (async () => {
-      await hydrateStore();
-      const s = await call<SetupState>(api.setup.getState()).catch(() => null);
-      setSetup(s);
-      setDemo(!!s?.demo);
-      setReady(true);
-    })();
-  }, [setDemo]);
+  useEffect(() => { hydrateStore().finally(() => setHydrated(true)); }, []);
+  useEffect(() => { if (setupQ.data) setDemo(!!setupQ.data.demo); }, [setupQ.data, setDemo]);
+  const ready = hydrated && !setupQ.isLoading;
   if (!ready) return <div className="h-full flex items-center justify-center text-ink-2">MetaDash…</div>;
   const needsSetup = !setup?.complete;
   return (

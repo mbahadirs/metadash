@@ -7,6 +7,7 @@ import { api, call } from '@/lib/api';
 import { PeriodPicker } from './PeriodPicker';
 import { Icon } from './Icons';
 import { Spinner } from './ui';
+import { UpdateBadge } from './UpdateBadge';
 import { useRunSync } from '@/hooks/useSyncEvents';
 import { useSyncHistory } from '@/hooks/queries';
 
@@ -59,6 +60,7 @@ export function Layout() {
         <header className="drag relative h-12 flex items-center justify-between px-4 border-b border-line bg-surface-1 gap-4">
           <PeriodPicker />
           <div className="no-drag flex items-center gap-2">
+            <UpdateBadge />
             {!online && <span className="badge badge-warn" title={t('offline')}><Icon.warn /> offline</span>}
             {demo && <span className="badge badge-muted">{t('demo_mode')}</span>}
             <button className="btn btn-ghost btn-sm text-ink-2 num" onClick={() => setPanelOpen((o) => !o)} title={t('last_sync')}>

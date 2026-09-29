@@ -33,8 +33,6 @@ export function SetupPage() {
   // Persisted `setupStep` is 0-based from Welcome (0 = Welcome … 5 = First sync), so wizard step n ↔ n - 1.
   const go = (n: number) => { setStep(n); api.setup.setStep(Math.max(0, n - 1)); };
   const titles = [t('step_welcome'), t('step_app'), t('step_token'), t('step_accounts'), t('step_ad_accounts'), t('step_first_sync')];
-  const [packaged, setPackaged] = useState(true);
-  useEffect(() => { call<{ isPackaged: boolean }>(api.system.info()).then((i) => setPackaged(!!i.isPackaged)).catch(() => {}); }, []);
 
   return (
     <div className="h-full flex bg-surface-0">
@@ -46,13 +44,13 @@ export function SetupPage() {
         ))}</ol>
         <div className="flex-1" />
         {state.data?.complete && <button className="btn" onClick={() => nav('/')}>{t('nav_overview')} →</button>}
-        {!packaged && state.data && !state.data.complete && <DemoShortcut onDone={() => { qc.invalidateQueries(); nav('/'); }} />}
+        {state.data && !state.data.complete && <DemoShortcut onDone={() => { qc.invalidateQueries(); nav('/'); }} />}
       </aside>
       <main className="flex-1 overflow-auto p-10">
         <div className="max-w-3xl">
           <div className="text-xs text-ink-2 mb-1">{t('setup_step')} {step} / {STEPS}</div>
           <h1 className="text-xl font-semibold m-0 mb-6">{titles[step - 1]}</h1>
-          {step === 1 && <Welcome onNext={() => go(2)} />}
+          {step === 1 && <Welcome onNext={() => go(2)} complete={!!state.data?.complete} onDemo={() => { qc.invalidateQueries(); nav('/'); }} />}
           {step === 2 && <AppStep initialAppId={state.data?.appId ?? ''} onNext={() => go(3)} onBack={() => go(1)} />}
           {step === 3 && <TokenStep required={state.data?.requiredScopes ?? []} optional={state.data?.optionalScopes ?? []} onNext={() => go(4)} onBack={() => go(2)} />}
           {step === 4 && <AccountsStep onNext={() => go(5)} onBack={() => go(3)} />}
@@ -89,8 +87,15 @@ function Nav({ onBack, onNext, nextLabel, disabled }: { onBack?: () => void; onN
   );
 }
 
-function Welcome({ onNext }: { onNext: () => void }) {
+function Welcome({ onNext, complete, onDemo }: { onNext: () => void; complete: boolean; onDemo: () => void }) {
   const t = useT();
+  const setDemo = useAppStore((s) => s.setDemo);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const loadDemo = async () => {
+    setBusy(true); setErr(null);
+    try { await call(api.setup.loadDemo({ reset: false })); setDemo(true); onDemo(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  };
   return (
     <div className="space-y-4 text-base leading-relaxed">
       <p>{t('welcome_intro')}</p>
@@ -100,6 +105,13 @@ function Welcome({ onNext }: { onNext: () => void }) {
         <li><strong>{t('welcome_nosub_title')}</strong> {t('welcome_nosub')}</li>
       </ul>
       <p className="text-sm text-ink-2">{t('welcome_prereq')}</p>
+      {!complete && (
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <button className="panel p-4 text-left hover:border-accent" onClick={onNext}><div className="font-semibold mb-1">{t('welcome_connect_title')}</div><div className="text-sm text-ink-2">{t('welcome_connect_desc')}</div></button>
+          <button className="panel p-4 text-left hover:border-accent" disabled={busy} onClick={loadDemo}><div className="font-semibold mb-1 flex items-center gap-2">{t('welcome_demo_title')}{busy && <Spinner size={12} />}</div><div className="text-sm text-ink-2">{t('welcome_demo_desc')}</div></button>
+        </div>
+      )}
+      {err && <div className="text-sm text-neg">{err}</div>}
       <Nav onNext={onNext} />
     </div>
   );

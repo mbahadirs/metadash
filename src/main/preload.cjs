@@ -144,13 +144,20 @@ const api = {
     all: () => invoke('settings:all'),
   },
   sql: { run: (query, limit) => invoke('sql:run', { query, limit }) },
+  update: {
+    status: () => invoke('update:status'),
+    check: () => invoke('update:check'),
+    download: () => invoke('update:download'),
+    install: () => invoke('update:install'),
+    openRelease: () => invoke('update:openRelease'),
+  },
   transfer: {
     export: (p) => invoke('transfer:export', p ?? {}),
     pick: () => invoke('transfer:pick'),
     import: (p) => invoke('transfer:import', p),
   },
   on: (channel, cb) => {
-    if (!['sync:progress', 'sync:done', 'token:warning'].includes(channel)) return () => {};
+    if (!['sync:progress', 'sync:done', 'token:warning', 'update:status', 'app:navigate'].includes(channel)) return () => {};
     const listener = (_e, payload) => cb(payload);
     ipcRenderer.on(channel, listener);
     return () => ipcRenderer.removeListener(channel, listener);

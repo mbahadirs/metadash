@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/icon.png" width="112" alt="MetaDash icon"></p>
+
 # MetaDash
 
 [🇹🇷 Türkçe](README.tr.md)
@@ -67,6 +69,8 @@ All screenshots use the built-in [demo data](#demo-data) — the accounts and po
 | **Reports** | Templates: monthly client report, weekly client report, custom date range, portfolio summary, campaign report (organic + paid), weekly change digest, selected-posts report. Choose sections, add a logo and commentary, pick the report language, save presets. Export as self-contained HTML (charts embedded as SVG, works offline), PDF, or multi-sheet Excel. |
 | **Presentation** | Full-screen slide deck generated from your data (cover, KPIs, growth, content, top posts, spotlight, hashtags, best time, ads, campaigns, breakdowns, boosted posts, report basket, next steps). Arrow keys to navigate, `F` for full screen, `Esc` to exit. |
 | **Exports everywhere** | Every data table can be saved as `.xlsx` or landscape A4 PDF, every chart as PNG. |
+| **Notifications** | Optional desktop notifications after each sync and once a day: unusual changes in the last 2 days, ad accounts at 90% of their monthly budget, accounts silent for 7+ days, and a Meta token that expires within 7 days. Each type can be turned off in Settings; clicking a notification opens the matching screen. |
+| **Updates** | Packaged builds check GitHub Releases for new versions. Windows and Linux AppImage download and install in-app (restart to install); macOS and `.deb` builds link to the release page. Can be turned off in Settings. |
 | **Sync** | Incremental sync with per-type queues, automatic slow-down when Meta's usage headers climb, tiered refresh of post insights by post age, stories refreshed on an interval, optional daily auto-sync while the app is open. |
 | **Settings and data** | Account management (client name, color, tags, tracking), ad account linking, token health and renewal, sync history and errors, unsupported-metric management, database backup and restore, full data transfer between computers (`.metadash` files), CSV export, read-only SQL console, dark/light theme, English/Turkish UI. |
 
@@ -124,7 +128,9 @@ The UI is in **English** by default. Switch to **Türkçe** in **Settings → Th
   | Linux | `$XDG_CONFIG_HOME/MetaDash/` (usually `~/.config/MetaDash/`) |
 
 - **Secrets are encrypted at rest.** The Meta access token and App Secret are encrypted with AES-256-GCM using a key derived from a machine identifier (hardware UUID on macOS, `MachineGuid` on Windows, `/etc/machine-id` on Linux). A copied database cannot decrypt them on another computer. To move to a new machine, use **Settings → Data transfer**, which can carry the secrets re-encrypted with a passphrase you choose.
-- **No telemetry, no analytics, no update checks, no MetaDash server.** The main process only makes network requests to `https://graph.facebook.com` (API calls and an online check). Profile pictures and post thumbnails are displayed from the Meta CDN URLs returned by the API.
+- **No telemetry, no analytics, no MetaDash server.** The main process makes network requests to `https://graph.facebook.com` (API calls and an online check). Profile pictures and post thumbnails are displayed from the Meta CDN URLs returned by the API.
+- **Update checks (packaged builds only).** Installed builds check GitHub for a newer release shortly after start and every 6 hours: macOS and `.deb` builds query `https://api.github.com` (latest release); Windows and Linux AppImage builds read the release metadata (`latest*.yml`) from `https://github.com` release downloads and fetch the installer only when you click **Download**. Nothing about you or your data is sent. Turn it off in **Settings → About → Check for updates automatically**; development builds never check.
+- **Desktop notifications** are generated locally from your own database; nothing leaves the computer.
 - Links such as "Open in Instagram" open in your default browser.
 
 ## Development

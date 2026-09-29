@@ -37,6 +37,11 @@ export function isSeeded() {
   return !!q.get("SELECT 1 FROM profiles WHERE token_ref LIKE 'demo%' LIMIT 1");
 }
 
+/** Demo data may only be loaded when no real Meta connection exists (it would mix fake and real accounts). */
+export function canLoadDemo() {
+  return !q.get("SELECT 1 FROM profiles WHERE token_ref NOT LIKE 'demo%' LIMIT 1");
+}
+
 export function clearAll() {
   const db = getDb();
   const tables = ['sync_errors', 'sync_runs', 'notes', 'ad_insights_breakdown', 'ad_insights_daily', 'ad_media_links', 'ad_budget_overrides', 'ad_accounts', 'competitor_snapshots', 'competitors', 'comments', 'stories', 'media_latest', 'media_insight_snapshots', 'media', 'account_demographics', 'account_insights_daily', 'account_snapshots', 'account_tags', 'tags', 'accounts', 'profiles', 'disabled_metrics'];

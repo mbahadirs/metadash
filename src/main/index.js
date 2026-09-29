@@ -6,6 +6,8 @@ import { registerIpc } from './ipc/index.js';
 import { startScheduler, stopScheduler } from './sync/scheduler.js';
 import { getConfig } from './config/store.js';
 import { seedDemo, isSeeded } from './seed/index.js';
+import { startUpdater, stopUpdater } from './updater.js';
+import { startNotifications, stopNotifications } from './notifications.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
@@ -102,6 +104,10 @@ app.whenReady().then(() => {
   registerIpc();
   createWindow();
   startScheduler();
+  if (!SMOKE) {
+    startUpdater();
+    startNotifications({ win: () => mainWindow ?? (createWindow(), mainWindow) });
+  }
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
@@ -111,5 +117,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   stopScheduler();
+  stopUpdater();
+  stopNotifications();
   closeDb();
 });

@@ -176,7 +176,7 @@ Arayüz dili varsayılan olarak İngilizcedir ve `lang` ayarında saklanır. Rap
 - **Pencere:** `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. Renderer yalnızca preload API'sini görür.
 - **Content Security Policy** (`src/renderer/index.html`): `default-src 'self'`, `script-src 'self'`; görsellere `https:` ve `data:` kaynaklarından izin verilir (Meta CDN küçük resimleri ve profil fotoğrafları); `connect-src` yalnızca yerel Vite geliştirme sunucusuna izin verir.
 - **Gezinme:** `setWindowOpenHandler` tüm yeni pencereleri reddeder; `http(s)` bağlantıları sistem tarayıcısında açılır. `system:openExternal` http(s) dışındaki adresleri reddeder.
-- **Ağ:** yalnızca main process istek yapar, yalnızca `graph.facebook.com`'a. Telemetri yoktur.
+- **Ağ:** yalnızca main process istek yapar: `graph.facebook.com`'a ve kurulu sürümlerde güncelleme denetimi için GitHub'a (`api.github.com` / `github.com` sürüm indirmeleri); bu denetim Ayarlar'dan kapatılabilir. Telemetri yoktur.
 - **SQL konsolu:** yalnızca salt okunur ifadeler (bkz. Dışa aktarım).
 - **Electron fuse'ları** (`scripts/afterPack.cjs`, electron-builder tarafından paketlenmiş uygulamaya uygulanır):
 

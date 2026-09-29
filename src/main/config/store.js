@@ -22,6 +22,12 @@ export const DEFAULTS = {
   disabledMetrics: [],
   setupStep: 0,
   lastPeriod: 28,
+  autoUpdateCheck: true,
+  'notify.enabled': true,
+  'notify.anomalies': true,
+  'notify.budget': true,
+  'notify.silent': true,
+  'notify.token': true,
 };
 
 export function getConfig(key) {

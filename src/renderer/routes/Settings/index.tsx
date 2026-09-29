@@ -10,6 +10,8 @@ import type { Account, TransferInfo } from '@/lib/types';
 import { Section, Toggle, Loading, Avatar, TagChip } from '@/components/ui';
 import { ExcelButton } from '@/components/ExcelButton';
 import { useRef } from 'react';
+import { UpdatesPanel } from './UpdatesPanel';
+import { NotificationsSection } from './NotificationsSection';
 
 const SERIES_COLORS = ['#4F7CFF', '#3FBF8F', '#E8B44A', '#C06CE8', '#E5605F', '#48C3D6'];
 
@@ -23,8 +25,6 @@ export function SettingsPage() {
   const set = async (key: string, value: unknown) => { await call(api.settings.set(key, value)); qc.invalidateQueries({ queryKey: ['settings'] }); };
   const s = (settings.data ?? {}) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   const [msg, setMsg] = useState<string | null>(null);
-  const [packaged, setPackaged] = useState(true);
-  useEffect(() => { call<{ isPackaged: boolean }>(api.system.info()).then((i) => setPackaged(!!i.isPackaged)).catch(() => {}); }, []);
 
   if (settings.isLoading) return <Loading />;
   return (
@@ -53,6 +53,8 @@ export function SettingsPage() {
         </div>
       </Section>
 
+      <NotificationsSection />
+
       <MetricsSection />
       <AccountsSection />
       <AdAccountsSection />
@@ -66,10 +68,11 @@ export function SettingsPage() {
           {msg && <span className="text-xs text-ink-2">{msg}</span>}
         </div>
         <div className="flex items-center gap-2 mt-4 pt-4 border-t border-line">
-          {!packaged && <button className="btn" onClick={async () => { await call(api.setup.loadDemo({ reset: false })); setDemo(true); qc.invalidateQueries(); }}>{t('load_demo')}</button>}
-          {!packaged && <button className="btn" onClick={async () => { if (!confirm(t('reset_demo') + '?')) return; await call(api.setup.loadDemo({ reset: true })); setDemo(true); qc.invalidateQueries(); }}>{t('reset_demo')}</button>}
+          <button className="btn" onClick={async () => { try { await call(api.setup.loadDemo({ reset: false })); setDemo(true); qc.invalidateQueries(); } catch (e) { setMsg((e as Error).message); } }}>{t('load_demo')}</button>
+          <button className="btn" onClick={async () => { if (!confirm(t('reset_demo') + '?')) return; try { await call(api.setup.loadDemo({ reset: true })); setDemo(true); qc.invalidateQueries(); } catch (e) { setMsg((e as Error).message); } }}>{t('reset_demo')}</button>
           <button className="btn btn-danger" onClick={async () => { if (!confirm(t('clear_all') + '?')) return; await call(api.setup.resetAll()); setDemo(false); qc.invalidateQueries(); }}>{t('clear_all')}</button>
           {setup.data?.demo && <span className="text-xs text-ink-2">{t('demo_banner')}</span>}
+          {msg && <span className="text-xs text-neg">{msg}</span>}
         </div>
       </Section>
 
@@ -299,6 +302,7 @@ function SystemInfo() {
           <div className="flex items-center justify-end gap-1">DB: <span className="max-w-[320px] truncate inline-block align-bottom">{info.dbPath}</span><button className="btn btn-ghost btn-sm" onClick={() => api.system.revealFile(info.dbPath)}>↗</button></div>
         </div>
       </div>
+      <UpdatesPanel version={info.version} />
     </Section>
   );
 }

@@ -8,7 +8,7 @@ const M = {
   save_app_first: ['Save the App ID and App Secret first (step 2).', 'Önce App ID ve App Secret kaydedin (2. adım).'],
   token_empty: ['The token looks empty. Copy it from Graph API Explorer and paste it here.', 'Token boş görünüyor. Graph API Explorer\'dan kopyalayıp yapıştırın.'],
   meta_connection: ['Meta connection', 'Meta bağlantısı'],
-  demo_dev_only: ['Demo data is only available in development builds.', 'Demo verisi yalnızca geliştirme sürümünde kullanılabilir.'],
+  demo_real_connected: ['Demo data cannot be loaded while a real Meta connection exists. Use "Delete all data" in Settings first.', 'Gerçek bir Meta bağlantısı varken demo verisi yüklenemez. Önce Ayarlar\'dan "Tüm verileri sil"i kullanın.'],
   // sync
   sync_running: ['An update is already running.', 'Bir güncelleme zaten çalışıyor.'],
   no_profile: ['Complete setup first (no Meta connection).', 'Önce kurulumu tamamlayın (Meta bağlantısı yok).'],
@@ -45,6 +45,21 @@ const M = {
   no_tables_in_file: ['The file contains no MetaDash tables.', 'Dosyada MetaDash tabloları yok.'],
   passphrase_required: ['The Meta token/secret in this file is passphrase-encrypted; enter the passphrase.', 'Bu dosyadaki Meta token/secret parola ile şifrelenmiş; parolayı girin.'],
   passphrase_wrong: ['Wrong passphrase.', 'Parola yanlış.'],
+  // desktop notifications
+  notify_more: ['+{n} more', '+{n} diğer'],
+  notify_anomalies_title: ['Unusual changes detected', 'Olağandışı değişiklikler'],
+  notify_anomalies_one: ['{names} shows unusual changes in the last 2 days.', '{names} hesabında son 2 günde olağandışı değişiklikler var.'],
+  notify_anomalies_many: ['{n} accounts have unusual changes in the last 2 days: {names}.', '{n} hesapta son 2 günde olağandışı değişiklikler var: {names}.'],
+  notify_budget_title: ['Ad budget almost spent', 'Reklam bütçesi dolmak üzere'],
+  notify_budget_one: ['{name} has spent {pct}% of its monthly budget.', '{name} aylık bütçesinin %{pct} kadarını harcadı.'],
+  notify_budget_many: ['{n} ad accounts have spent at least 90% of their monthly budget: {names}.', '{n} reklam hesabı aylık bütçesinin en az %90 kadarını harcadı: {names}.'],
+  notify_silent_title: ['Accounts without new posts', 'Paylaşım yapmayan hesaplar'],
+  notify_silent_one: ['{names} hasn\'t posted for {days} days.', '{names} {days} gündür paylaşım yapmadı.'],
+  notify_silent_many: ['{n} accounts haven\'t posted for 7+ days: {names}.', '{n} hesap 7 gün veya daha uzun süredir paylaşım yapmadı: {names}.'],
+  notify_token_title: ['Meta token expiring', 'Meta token süresi doluyor'],
+  notify_token_body: ['Your Meta access token expires in {days} days. Renew it in Settings to keep syncing.', 'Meta erişim token\'ınızın süresi {days} gün içinde doluyor. Senkronizasyonun sürmesi için Ayarlar\'dan yenileyin.'],
+  notify_token_body_one: ['Your Meta access token expires within a day. Renew it in Settings to keep syncing.', 'Meta erişim token\'ınızın süresi bir gün içinde doluyor. Senkronizasyonun sürmesi için Ayarlar\'dan yenileyin.'],
+  notify_token_expired: ['Your Meta access token has expired. Renew it in Settings to resume syncing.', 'Meta erişim token\'ınızın süresi doldu. Senkronizasyona devam etmek için Ayarlar\'dan yenileyin.'],
 };
 
 /** Current UI language from config ('en' | 'tr'); falls back to 'en'. */

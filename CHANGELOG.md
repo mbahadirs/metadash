@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-29
+
+### Added
+
+- **Try it without a Meta app:** the Welcome step offers "Connect my accounts" or "Explore with demo data" (40 fictional accounts), now also in packaged builds.
+- **App icon** for macOS, Windows and Linux (source: `resources/icon-src/icon.svg`).
+
+- **Update checks and auto-update** (packaged builds only). MetaDash checks GitHub Releases shortly after start and every 6 hours. On Windows (NSIS) and Linux AppImage the update is downloaded in-app on request and installed on restart (electron-updater); on macOS (unsigned builds) and Linux `.deb` the app shows the new version and links to the release page. A top-bar badge appears when an update is available; **Settings → About** shows the installed version, a "Check for updates" button and a toggle to turn automatic checks off.
+- **Desktop notifications** after each sync and once a day: unusual changes in the last 2 days, ad accounts at 90% of their monthly budget, accounts without posts for 7+ days, and a Meta token that expires within 7 days. Alerts are de-duplicated, never shown in demo mode, and each type can be turned off in **Settings → Notifications**. Clicking a notification opens the matching screen.
+
+### Changed
+
+- Demo data can be loaded in packaged builds (refused while a real Meta connection exists).
+
+### Fixed
+
+- After finishing setup or loading demo data, the Overview opens right away instead of redirecting back to Setup until the app is restarted.
+- The app now also contacts `api.github.com` / `github.com` for update checks in packaged builds (can be turned off in Settings).
+
 ## [1.0.0] - 2026-09-28
 
 First open-source release under the MIT License.
@@ -40,5 +59,6 @@ First open-source release under the MIT License.
 - **Data:** local SQLite database, AES-256-GCM encrypted secrets, backup/restore, passphrase-protected data transfer between computers.
 - **Security:** sandboxed renderer with context isolation, strict CSP, Electron fuses on packaged builds, hardened runtime on macOS.
 
-[Unreleased]: https://github.com/mbahadirs/metadash/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/mbahadirs/metadash/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/mbahadirs/metadash/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mbahadirs/metadash/releases/tag/v1.0.0
