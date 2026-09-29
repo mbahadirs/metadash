@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAccounts, useTags, useDigest, useSettings } from '@/hooks/queries';
 import { useAppStore } from '@/store/app';
-import { useT, type Key } from '@/lib/i18n';
+import { useT, type Key, type Lang } from '@/lib/i18n';
+import { LanguagePicker } from '@/components/LanguagePicker';
 import { api, call } from '@/lib/api';
 import { fmtNum, fmtPct, fmtCompact, fmtDateTime, isoDate, daysAgo } from '@/lib/format';
 import { Section, Toggle, Loading, Avatar, TagChip } from '@/components/ui';
@@ -19,7 +20,7 @@ const SECTION_CAPS: Record<string, keyof PlatformCapabilities> = { stories: 'sto
 
 type Template = 'monthly' | 'weekly_client' | 'custom' | 'portfolio' | 'campaign' | 'weekly' | 'basket';
 type PeriodPreset = 'topbar' | 'today' | 'yesterday' | 7 | 30 | 28 | 'this_month' | 'last_month' | 'custom';
-interface Preset { name: string; template: Template; igIds: string[]; tagIds: number[]; sections: Record<string, boolean>; lang: 'tr' | 'en'; coverTitle: string; commentary: string; periodPreset: PeriodPreset; from?: string; to?: string }
+interface Preset { name: string; template: Template; igIds: string[]; tagIds: number[]; sections: Record<string, boolean>; lang: Lang; coverTitle: string; commentary: string; periodPreset: PeriodPreset; from?: string; to?: string }
 interface HistoryEntry { template: Template; filePath: string; kind: 'html' | 'pdf'; from: string; to: string; igIds: string[]; at: number }
 
 const TEMPLATES: Template[] = ['monthly', 'weekly_client', 'custom', 'portfolio', 'campaign', 'weekly', 'basket'];
@@ -50,7 +51,7 @@ export function ReportsPage() {
   const [customTo, setCustomTo] = useState(period.to);
   const [coverTitle, setCoverTitle] = useState('');
   const [logo, setLogo] = useState<{ name: string; dataUrl: string } | null>(null);
-  const [lang, setLang] = useState<'tr' | 'en'>(uiLang);
+  const [lang, setLang] = useState<Lang>(uiLang);
   const [commentary, setCommentary] = useState('');
   const [sectionDefs, setSectionDefs] = useState<Record<string, string[]>>({});
   const [sections, setSections] = useState<Record<string, boolean>>({});
@@ -204,7 +205,7 @@ export function ReportsPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <label className="block"><div className="text-xs text-ink-2 mb-1">{t('cover_title')}</div><input className="input" value={coverTitle} onChange={(e) => setCoverTitle(e.target.value)} placeholder={t(`tpl_${template}` as Key)} /></label>
-              <div><div className="text-xs text-ink-2 mb-1">{t('report_lang')}</div><div className="flex gap-1 h-8 items-center"><button className={`chip ${lang === 'en' ? 'active' : ''}`} onClick={() => setLang('en')}>English</button><button className={`chip ${lang === 'tr' ? 'active' : ''}`} onClick={() => setLang('tr')}>Türkçe</button></div></div>
+              <div><div className="text-xs text-ink-2 mb-1">{t('report_lang')}</div><LanguagePicker className="h-8 items-center" value={lang} onChange={setLang} /></div>
             </div>
             <div className="flex items-center gap-3"><button className="btn btn-sm" onClick={async () => setLogo(await call(api.export.pickLogo()))}>{t('upload_logo')}</button>{logo && <><img src={logo.dataUrl} alt="" className="h-7" /><span className="text-xs text-ink-2">{logo.name}</span><button className="btn btn-ghost btn-sm" onClick={() => setLogo(null)}>✕</button></>}</div>
             <div>

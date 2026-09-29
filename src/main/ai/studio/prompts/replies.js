@@ -1,10 +1,10 @@
+import { LANGUAGE } from '../../../locales/catalog.js';
 import { CONTENT_DATA_RULES } from '../../prompts.js';
 
 /**
  * Prompts for comment reply suggestions (v1.5 chunk D). The comment, the post caption and the brand brief are quoted
  * data inside tags; commenter handles are anonymized (@user1 …) before anything is sent (anonymizeComment).
  */
-const LANGUAGE = { en: 'English', tr: 'Turkish' };
 export const REPLY_CATEGORIES = ['question', 'praise', 'complaint', 'spam', 'other'];
 export const REPLY_SUGGESTION_MAX = 400;
 const CAPTION_MAX = 600;

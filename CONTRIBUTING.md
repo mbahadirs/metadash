@@ -53,21 +53,15 @@ If `npm test` fails with a native module error (`NODE_MODULE_VERSION` mismatch),
 
 ## Translations
 
-MetaDash ships with English (default) and Turkish. All user-visible text must exist in both languages.
+MetaDash ships complete in English (default) and Turkish; German and Spanish are partial and fall back to English for anything not yet translated. Strings live in one JSON file per language and feature:
 
-| What | File | Format |
-| --- | --- | --- |
-| UI strings | [`src/renderer/lib/i18n.ts`](src/renderer/lib/i18n.ts) | `key: ['Türkçe', 'English']` |
-| Report strings (HTML/PDF/Excel) | [`src/main/export/reportI18n.js`](src/main/export/reportI18n.js) | `key: ['Türkçe', 'English']` |
-| Main-process messages (errors, dialogs) | [`src/main/i18n.js`](src/main/i18n.js) | `key: ['English', 'Türkçe']` (note the reversed order) |
+| What | Files |
+| --- | --- |
+| UI strings | `src/renderer/locales/<lang>/<namespace>.json` |
+| Main-process messages, errors, report and approval-pack labels | `src/main/locales/<lang>/<namespace>.json` |
+| Language list (native name, Intl locale, partial flag) | `src/main/locales/index.json` |
 
-To add or change a string:
-
-1. Add the key with both translations to the right file.
-2. Use it through the helper in that layer (`t('key')` / `useT()` in the renderer).
-3. Check both languages in the app (Settings → Theme · Language).
-
-Adding a new language requires extending these tuples and the language switcher; please open an issue first to discuss it.
+To add or change a string, add the key to the English file and to `tr` (both are required), use it through `t('key')` / `useT()` in the renderer or `msg('key')` in the main process, then run `npm run i18n:check`. To translate or add a language, see [docs/translating.md](docs/translating.md) ([Türkçe](docs/tr/translating.md)).
 
 Documentation is also bilingual: English files live in the repository root and `docs/`, Turkish translations in `README.tr.md` and `docs/tr/`. If you change one, update the other or mention it in the PR so someone can help.
 

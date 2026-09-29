@@ -1,3 +1,4 @@
+import { isSupportedLang } from '../../locales/catalog.js';
 import { currentLang } from '../../i18n.js';
 import { AiError } from '../errors.js';
 import { assertAiEnabled, readApiKey } from '../settings.js';
@@ -18,7 +19,7 @@ const REQUEST_ID_MAX = 100;
 /** In-flight requests by renderer-supplied id, so ai:askCancel can abort them. */
 const inflight = new Map();
 
-const pickLang = (lang) => (lang === 'tr' || lang === 'en' ? lang : currentLang());
+const pickLang = (lang) => (isSupportedLang(lang) ? lang : currentLang());
 
 /** Prior turns as plain text only (no tool traces): valid { question, answer } strings, trimmed, last HISTORY_TURNS. */
 export function historyTurns(history) {

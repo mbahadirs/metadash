@@ -1,3 +1,4 @@
+import { isSupportedLang, LANGUAGE } from '../../locales/catalog.js';
 import { msg } from '../../i18n.js';
 import { AiError } from '../errors.js';
 import { runGeneration } from './runtime.js';
@@ -163,7 +164,7 @@ const CONCLUSION_SCHEMA = {
 };
 
 function conclusionPrompt(lang) {
-  return `You are a social media analyst. Summarize the learnings of an A/B caption experiment in ${lang === 'tr' ? 'Turkish' : 'English'}, in at most 4 short sentences, plain text.
+  return `You are a social media analyst. Summarize the learnings of an A/B caption experiment in ${LANGUAGE[lang] ?? 'English'}, in at most 4 short sentences, plain text.
 The "experiment" tags separate posts to arms; it is not a randomized split test, so describe results as directional at best.
 Use only the numbers given. Lift 1.00 = on par with the account's usual results for that post type. State the verdict honestly (need more posts / inconclusive / directional), name the better arm only when the verdict is directional, and suggest one next test.
 
@@ -192,7 +193,7 @@ export async function concludeTest({ id, conclusion, summarizeWithAi, requestId,
     const out = await runGeneration(
       { feature: 'abtest', requestId, accountIds: accountIdsOf(test.id), sentSummary: { arms: r.arms.length, posts: r.arms.reduce((s, a) => s + a.n, 0) } },
       ({ structured }) => structured({
-        system: conclusionPrompt(lang === 'tr' || lang === 'en' ? lang : undefined),
+        system: conclusionPrompt(isSupportedLang(lang) ? lang : undefined),
         userText: `Summarize this experiment.\n\n<experiment_json>\n${JSON.stringify(data)}\n</experiment_json>`,
         schema: CONCLUSION_SCHEMA, maxTokens: 600,
       }),

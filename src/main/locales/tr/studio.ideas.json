@@ -1,0 +1,19 @@
+{
+  "ideas_bad_month": "Bu aydan başlayarak en fazla 12 ay sonrasına kadar bir ay seçin.",
+  "ideas_no_ideas": "En az bir fikir seçin.",
+  "ideas_special_days_invalid": "Özel günler: \"{field}\" girdisini kontrol edin (tarih AA-GG veya YYYY-AA-GG ve bir ad).",
+  "ideas_note_hook": "Kanca",
+  "ideas_note_why": "Neden",
+  "ideas_note_pillar": "İçerik ekseni",
+  "ideas_note_based_on": "{n} en iyi gönderiye dayanıyor.",
+  "rp_source_missing": "Dönüştürülecek gönderi bulunamadı (silinmiş veya henüz senkronize edilmemiş olabilir).",
+  "rp_source_empty": "Bu gönderide dönüştürülecek açıklama yok. Önce bir döküm yapıştırın veya açıklama ekleyin.",
+  "rp_bad_account": "@{account} ({platform}) \"{to}\" taslağı yayınlayamaz.",
+  "rp_default_title": "Dönüştürüldü: {title}",
+  "rp_note_slides": "Karusel slaytları (görselleri bu metinlerle tasarlayın):",
+  "rp_note_slide": "Slayt {n}",
+  "rp_note_chain": "Zincir: yalnızca ilk gönderi yayınlanır; kalanları yayından sonra yanıt olarak ekleyin.",
+  "rp_note_frames": "Hikâye kareleri:",
+  "rp_note_frame": "Kare {n}",
+  "rp_note_source": "{source} kaynağından dönüştürüldü."
+}

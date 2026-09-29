@@ -1,10 +1,11 @@
+import { LANGUAGE } from '../../../locales/catalog.js';
 import { CONTENT_DATA_RULES } from '../../prompts.js';
 
 /**
  * Prompts for brand-voice derivation (v1.5 chunk B). Captions and stats are quoted data inside tags; @handles in
  * captions are replaced with "@mention" before sending, and nothing identifies the account (no ids, usernames, clients).
  */
-export const LANGUAGE = { en: 'English', tr: 'Turkish' };
+export { LANGUAGE };
 export const VOICE_CAPTION_MAX = 600;
 export const VOICE_TOP_MAX = 22;
 export const VOICE_LOW_MAX = 8;

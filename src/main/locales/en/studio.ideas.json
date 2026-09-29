@@ -1,0 +1,19 @@
+{
+  "ideas_bad_month": "Pick a month from this month up to 12 months ahead.",
+  "ideas_no_ideas": "Select at least one idea.",
+  "ideas_special_days_invalid": "Special days: check the entry \"{field}\" (date MM-DD or YYYY-MM-DD and a name).",
+  "ideas_note_hook": "Hook",
+  "ideas_note_why": "Why",
+  "ideas_note_pillar": "Pillar",
+  "ideas_note_based_on": "Based on {n} top posts.",
+  "rp_source_missing": "The post to repurpose was not found (it may have been deleted or not synced yet).",
+  "rp_source_empty": "This post has no caption to repurpose. Paste a transcript or add a caption first.",
+  "rp_bad_account": "@{account} ({platform}) cannot publish a \"{to}\" draft.",
+  "rp_default_title": "Repurposed: {title}",
+  "rp_note_slides": "Carousel slides (design the images from these texts):",
+  "rp_note_slide": "Slide {n}",
+  "rp_note_chain": "Thread chain: only the first post is published; add the rest as replies after publishing.",
+  "rp_note_frames": "Story frames:",
+  "rp_note_frame": "Frame {n}",
+  "rp_note_source": "Repurposed from {source}."
+}

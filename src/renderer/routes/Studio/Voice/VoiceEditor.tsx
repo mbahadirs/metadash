@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useT } from '@/lib/i18n';
+import { useT, contentLangFor, type ContentLang } from '@/lib/i18n';
 import { useAppStore } from '@/store/app';
 import { fmtDateTime } from '@/lib/format';
 import { ErrorState, InfoTip, Loading, Section, Toggle } from '@/components/ui';
@@ -14,7 +14,7 @@ import { lineDiff } from './diff';
 
 type Voice = BrandVoice & { stats?: VoiceStatsData };
 type Derived = StudioCost & { proposal: { brief: string; profile: BrandVoiceProfile }; derivedFrom?: number; visionUsed?: boolean; visionDropped?: boolean };
-type Lang = 'tr' | 'en';
+type Lang = ContentLang;
 const LIST_FIELDS = ['tone', 'hooks', 'ctaPatterns', 'doList', 'dontList'] as const;
 type ListField = (typeof LIST_FIELDS)[number];
 interface Form { brief: string; formality: string; pronoun: string; visualStyle: string; lists: Record<ListField, string> }
@@ -68,7 +68,7 @@ export function VoiceEditor({ accountId }: { accountId: string }) {
   const [adopted, setAdopted] = useState<Derived | null>(null);
   const [proposal, setProposal] = useState<Derived | null>(null);
   const [n, setN] = useState(50);
-  const [deriveLang, setDeriveLang] = useState<Lang>(lang);
+  const [deriveLang, setDeriveLang] = useState<Lang>(contentLangFor(lang));
   const [useImages, setUseImages] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const req = useStudioRequest<Derived>();

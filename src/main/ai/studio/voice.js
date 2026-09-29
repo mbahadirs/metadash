@@ -1,3 +1,4 @@
+import { isSupportedLang } from '../../locales/catalog.js';
 import { listMedia, mediaTypeKey } from '../../db/queries/media.js';
 import { getAccount } from '../../db/queries/accounts.js';
 import { getBrandVoice, upsertBrandVoice } from '../../db/queries/studio.js';
@@ -134,7 +135,7 @@ function requireAccount(accountId) {
   return account;
 }
 
-const pickLang = (lang) => (lang === 'tr' || lang === 'en' ? lang : currentLang());
+const pickLang = (lang) => (isSupportedLang(lang) ? lang : currentLang());
 const clampN = (n) => (Number.isInteger(n) && n >= 5 ? Math.min(n, N_MAX) : 50);
 
 /** Everything the derive call would send; shared by the real call and the studio:preview builder. */

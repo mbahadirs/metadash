@@ -1,0 +1,17 @@
+{
+  "err_network": "İnternet bağlantısı yok. Mevcut veriler görüntülenmeye devam ediyor.",
+  "err_network_hint": "Bağlantı geldiğinde Güncelle düğmesine basın.",
+  "err_threads_token": "Threads bağlantınızın süresi doldu veya geçersiz. Ayarlar > Bağlantılar'dan yeniden bağlayın.",
+  "err_threads_token_hint": "Threads adımına dönüp yeni bir token veya kod yapıştırın.",
+  "err_meta_token": "Meta bağlantınızın süresi doldu. Ayarlar > Bağlantı'dan yenileyin.",
+  "err_meta_token_hint": "Kurulumun 3. adımına dönüp yeni bir token alın.",
+  "err_rate_limit": "Meta geçici olarak istek sınırına ulaştı. Güncelleme otomatik olarak yavaşlatıldı.",
+  "err_rate_limit_hint": "Birkaç dakika sonra tekrar deneyin.",
+  "err_permission": "Bu veri için {perm} izni gerekiyor. Kurulum adımlarını tekrarlayın.",
+  "err_permission_hint": "Graph API Explorer'da izni ekleyip yeni token alın.",
+  "err_invalid_param": "Meta isteği reddetti: {detail}",
+  "err_invalid_param_hint": "Desteklenmeyen metrikler Ayarlar'da listelenir.",
+  "err_generic_hint": "Sorun sürerse token'ı yenileyin.",
+  "err_unexpected": "Beklenmeyen bir hata oluştu.",
+  "err_chart_not_found": "Grafik bulunamadı."
+}

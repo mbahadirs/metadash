@@ -6,15 +6,16 @@ import { getConfig, setConfig, getAllConfig, DEFAULTS } from '../config/store.js
 import { runReadOnly } from '../export/csv.js';
 import { METRIC_SETS } from '../meta/metricMap.js';
 import { exportAll, importAll, inspectTransfer } from '../export/transfer.js';
-import { msg, currentLang } from '../i18n.js';
+import { msg, currentLang, isSupportedLang, resolveLang } from '../i18n.js';
 
 const SAFE_URL = /^https?:\/\//i;
 const GUIDE = 'meta-app-setup.md';
 
-/** Setup guide path for the current language (Turkish under docs/tr), falling back to English. */
+/** Setup guide path for the current language (translations under docs/<lang>/), falling back to English. */
 function findGuide(lang) {
   const roots = [path.join(process.resourcesPath ?? '', 'docs'), path.join(app.getAppPath(), '..', '..', 'docs'), path.join(process.cwd(), 'docs')];
-  const rels = lang === 'tr' ? [path.join('tr', GUIDE), GUIDE] : [GUIDE];
+  const code = resolveLang(lang);
+  const rels = code === 'en' ? [GUIDE] : [path.join(code, GUIDE), GUIDE];
   return rels.flatMap((rel) => roots.map((r) => path.join(r, rel))).find((f) => fs.existsSync(f)) ?? null;
 }
 
@@ -48,10 +49,13 @@ export function registerSystemHandlers(handle) {
   handle('settings:get', (key) => getConfig(key));
   handle('settings:set', (key, value) => {
     if (!(key in DEFAULTS) && !String(key).startsWith('ui.')) throw new Error(msg('unknown_setting', { k: key }));
+    if (key === 'lang' && !isSupportedLang(value)) throw new Error(msg('unsupported_lang', { lang: String(value).slice(0, 20) }));
     setConfig(key, value);
     return value;
   });
   handle('settings:all', () => getAllConfig());
+  // Localized main-process string for the preload (e.g. its chart-export error), in the configured language.
+  handle('i18n:msg', (key) => msg(String(key)));
 
   handle('db:backup', async (_p, event) => {
     const win = BrowserWindow.fromWebContents(event.sender);

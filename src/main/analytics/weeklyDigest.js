@@ -2,9 +2,10 @@ import { portfolio } from './portfolio.js';
 import { listMedia } from '../db/queries/media.js';
 import { rangeMs, fmtDate, toDate, round } from './util.js';
 import { subDays, addDays } from 'date-fns';
+import { makeL } from '../export/reportI18n.js';
+import { intlLocale } from '../locales/catalog.js';
 
-const fmtPct = (v, lang) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${round(v, 0)}%`);
-const fmtNum = (v, lang) => new Intl.NumberFormat(lang === 'en' ? 'en-US' : 'tr-TR').format(Math.round(v ?? 0));
+const fmtPct = (v) => (v == null ? '—' : `${v >= 0 ? '+' : ''}${round(v, 0)}%`);
 
 /** Template-based weekly summary. weekOf = any date inside the week; week = 7 days ending on that date. */
 export function weeklyDigest({ weekOf, lang = 'en', tagIds, platforms } = {}) {
@@ -20,35 +21,27 @@ export function weeklyDigest({ weekOf, lang = 'en', tagIds, platforms } = {}) {
   const topPosts = p.rows.length ? listMedia({ from: fromMs, to: toMs, igIds: p.rows.map((r) => r.igId), sort: 'reach', limit: 3 }) : [];
   const growth = [...rows].sort((a, b) => (b.followersChange ?? 0) - (a.followersChange ?? 0));
   const sentences = [];
-  const tr = lang === 'tr';
+  const L = makeL(lang);
+  const nf = new Intl.NumberFormat(intlLocale(lang));
+  const fmtNum = (v) => nf.format(Math.round(v ?? 0));
   const avgReachChange = p.kpis.totalReach.changePct;
 
-  sentences.push(tr
-    ? `Bu hafta ${up.length} hesapta erişim arttı; portföy erişimi ${fmtPct(avgReachChange)} (${fmtNum(p.kpis.totalReach.value)} kişi).`
-    : `Reach grew on ${up.length} accounts this week; portfolio reach ${fmtPct(avgReachChange)} (${fmtNum(p.kpis.totalReach.value, 'en')} people).`);
+  sentences.push(L('wd_reach', { up: up.length, pct: fmtPct(avgReachChange), reach: fmtNum(p.kpis.totalReach.value) }));
   if (best && worst && best !== worst) {
-    sentences.push(tr
-      ? `En çok yükselen @${best.username} (${fmtPct(best.reachChangePct)}), en çok düşen @${worst.username} (${fmtPct(worst.reachChangePct)}).`
-      : `Biggest riser @${best.username} (${fmtPct(best.reachChangePct)}), biggest drop @${worst.username} (${fmtPct(worst.reachChangePct)}).`);
+    sentences.push(L('wd_movers', { best: best.username, bestPct: fmtPct(best.reachChangePct), worst: worst.username, worstPct: fmtPct(worst.reachChangePct) }));
   }
-  sentences.push(tr
-    ? `Net takipçi değişimi ${p.kpis.netFollowers.value >= 0 ? '+' : ''}${fmtNum(p.kpis.netFollowers.value)}; en çok kazanan @${growth[0]?.username ?? '—'} (+${fmtNum(growth[0]?.followersChange)}).`
-    : `Net follower change ${p.kpis.netFollowers.value >= 0 ? '+' : ''}${fmtNum(p.kpis.netFollowers.value, 'en')}; top gainer @${growth[0]?.username ?? '—'} (+${fmtNum(growth[0]?.followersChange, 'en')}).`);
+  const net = p.kpis.netFollowers.value;
+  sentences.push(L('wd_followers', { net: `${net >= 0 ? '+' : ''}${fmtNum(net)}`, top: growth[0]?.username ?? '—', gain: fmtNum(growth[0]?.followersChange) }));
   if (topPosts[0]) {
     const t = topPosts[0];
-    sentences.push(tr
-      ? `En iyi gönderi: @${t.username} — "${(t.caption ?? '').slice(0, 60)}${(t.caption ?? '').length > 60 ? '…' : ''}" (${fmtNum(t.reach)} erişim, ER %${round(t.engagementRate, 2)}).`
-      : `Top post: @${t.username} — "${(t.caption ?? '').slice(0, 60)}${(t.caption ?? '').length > 60 ? '…' : ''}" (${fmtNum(t.reach, 'en')} reach, ER ${round(t.engagementRate, 2)}%).`);
+    const caption = `${(t.caption ?? '').slice(0, 60)}${(t.caption ?? '').length > 60 ? '…' : ''}`;
+    sentences.push(L('wd_top_post', { user: t.username, caption, reach: fmtNum(t.reach), er: round(t.engagementRate, 2) }));
   }
   if (p.attention.silent.length) {
-    sentences.push(tr
-      ? `${p.attention.silent.length} hesap 7+ gündür paylaşım yapmadı: ${p.attention.silent.slice(0, 5).map((s) => '@' + s.username).join(', ')}.`
-      : `${p.attention.silent.length} accounts have not posted for 7+ days: ${p.attention.silent.slice(0, 5).map((s) => '@' + s.username).join(', ')}.`);
+    sentences.push(L('wd_silent', { n: p.attention.silent.length, list: p.attention.silent.slice(0, 5).map((s) => '@' + s.username).join(', ') }));
   }
   if (p.kpis.totalSpend.value) {
-    sentences.push(tr
-      ? `Reklam harcaması ${fmtNum(p.kpis.totalSpend.value)} ${p.kpis.totalSpend.currency} (${fmtPct(p.kpis.totalSpend.changePct)}).`
-      : `Ad spend ${fmtNum(p.kpis.totalSpend.value, 'en')} ${p.kpis.totalSpend.currency} (${fmtPct(p.kpis.totalSpend.changePct)}).`);
+    sentences.push(L('wd_spend', { spend: fmtNum(p.kpis.totalSpend.value), currency: p.kpis.totalSpend.currency, pct: fmtPct(p.kpis.totalSpend.changePct) }));
   }
   return { from, to, text: sentences.join(' '), sentences, kpis: p.kpis, best, worst, topPosts, silent: p.attention.silent, nextWeekStart: fmtDate(addDays(toDate(to), 1)) };
 }

@@ -13,11 +13,16 @@ function pathForFile(file) {
   try { return webUtils.getPathForFile(file) || ''; } catch { return ''; }
 }
 
+/** Localized "Chart not found." from the main process (the preload has no dictionaries). */
+async function chartNotFoundMessage() {
+  try { const res = await invoke('i18n:msg', 'err_chart_not_found'); return res?.ok ? res.data : 'Chart not found.'; } catch { return 'Chart not found.'; }
+}
+
 /** Serialises the chart wrapper's SVG (data-chart-id) and rasterises it to PNG via canvas. */
 async function pngChart({ chartId, scale = 2, background = '#10131A', name }) {
   const wrapper = document.querySelector(`[data-chart-id="${chartId}"]`);
   const svg = wrapper?.querySelector('svg');
-  if (!svg) return { ok: false, error: { code: 'NO_CHART', message: document.documentElement.lang === 'tr' ? 'Grafik bulunamadı.' : 'Chart not found.', hint: null } };
+  if (!svg) return { ok: false, error: { code: 'NO_CHART', message: await chartNotFoundMessage(), hint: null } };
   const clone = svg.cloneNode(true);
   const rect = svg.getBoundingClientRect();
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');

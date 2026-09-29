@@ -1,3 +1,4 @@
+import { isSupportedLang } from '../locales/catalog.js';
 import { currentLang } from '../i18n.js';
 import { assertAiEnabled, readApiKey } from './settings.js';
 import { createProvider } from './providers/index.js';
@@ -8,7 +9,7 @@ import { commentarySystemPrompt, anomalySystemPrompt, dataMessage } from './prom
 import { withUsage } from './usage.js';
 
 const REQUEST_TIMEOUT_MS = 180_000;
-const pickLang = (lang) => (lang === 'tr' || lang === 'en' ? lang : currentLang());
+const pickLang = (lang) => (isSupportedLang(lang) ? lang : currentLang());
 
 /** Resolves the configured provider. Throws "AI is turned off" before touching any key or network. */
 function activeProvider() {

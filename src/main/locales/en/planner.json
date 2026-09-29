@@ -1,0 +1,17 @@
+{
+  "planner_post_not_found": "Planned post not found.",
+  "planner_version_conflict": "This post was changed elsewhere. Reload it and try again.",
+  "planner_post_locked": "This post is being published or already published and cannot be changed.",
+  "planner_target_locked": "An account that is already scheduled on the platform or publishing cannot be removed. Unschedule the post first.",
+  "planner_invalid_payload": "Invalid planner request: {field}",
+  "planner_account_unknown": "Unknown account: {id}",
+  "planner_format_invalid": "The format \"{format}\" is not available for {platform}.",
+  "planner_time_past": "The scheduled time is in the past.",
+  "planner_status_use_publishing": "Use Schedule / Unschedule to change the schedule state.",
+  "planner_asset_not_found": "Media file not found.",
+  "planner_asset_unsupported": "Unsupported file: {name}. Use JPEG, PNG, WebP, GIF, MP4 or MOV.",
+  "planner_asset_too_large": "The file is too large ({mb} MB).",
+  "planner_asset_in_use": "This media file is used by {n} post(s) and cannot be removed.",
+  "planner_asset_missing_file": "The media file is missing on disk.",
+  "planner_media_filter": "Images and videos"
+}

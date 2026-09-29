@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAccounts, useAccountAnalytics, useBestTime, useBlended, useContentAnalysis, useAdInsights, useSettings, useComparePosts } from '@/hooks/queries';
 import { useAppStore } from '@/store/app';
-import { useT, t as tr, type Key } from '@/lib/i18n';
+import { useT, t as tr, decimalSeparator, type Key, type Lang } from '@/lib/i18n';
 import { api, call } from '@/lib/api';
 import { fmtNum, fmtPct, fmtCompact, fmtMoney, fmtDate, fmtDateTime, WEEKDAYS, locale } from '@/lib/format';
 import type { Media, TypeKey } from '@/lib/types';
@@ -235,7 +235,7 @@ export function PresentationRun() {
 
 const BUCKET_KEYS: Record<string, Key> = { female: 'female', male: 'male', unknown: 'unknown' };
 const BUCKET_NAMES: Record<string, string> = { instagram: 'Instagram', facebook: 'Facebook', audience_network: 'Audience Network', messenger: 'Messenger' };
-function bucketLabel(b: string, lang: 'tr' | 'en') {
+function bucketLabel(b: string, lang: Lang) {
   return BUCKET_KEYS[b] ? tr(BUCKET_KEYS[b], lang) : BUCKET_NAMES[b] ?? b;
 }
 
@@ -284,7 +284,7 @@ function CountUp({ text, ms = 700 }: { text: string; ms?: number }) {
     const [, pre, numStr, post] = m;
     const decimals = (numStr.split(/[.,]/).pop() ?? '').length < numStr.length && /[.,]\d{1,2}$/.test(numStr) ? (numStr.match(/[.,](\d{1,2})$/)?.[1].length ?? 0) : 0;
     const loc = locale();
-    const target = Number(loc === 'tr-TR' ? numStr.replace(/\./g, '').replace(',', '.') : numStr.replace(/,/g, ''));
+    const target = Number(decimalSeparator(useAppStore.getState().lang) === ',' ? numStr.replace(/\./g, '').replace(',', '.') : numStr.replace(/,/g, ''));
     if (!Number.isFinite(target)) { setShown(text); return; }
     const start = performance.now();
     let raf = 0;

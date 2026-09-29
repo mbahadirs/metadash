@@ -1,0 +1,7 @@
+{
+  "ai_schema_invalid": "The AI answer did not have the expected format ({detail}). Try again or pick another model.",
+  "ai_account_disabled": "AI is turned off for {account}. No data from this account is sent to the AI provider (Studio → Voice).",
+  "ai_vision_unavailable": "Your model can't see images; describe the image in the notes.",
+  "ai_vision_dropped": "The model rejected the images, so the request was sent as text only.",
+  "ai_budget_exceeded": "Estimated AI spend this month (${spent}) is over your budget (${budget})."
+}

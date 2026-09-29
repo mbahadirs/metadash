@@ -1,3 +1,5 @@
+import { translate } from '../locales/catalog.js';
+
 export const RETRYABLE_CODES = new Set([4, 17, 32, 613]);
 
 export class MetaError extends Error {
@@ -45,58 +47,25 @@ const PERMISSION_HINTS = {
   accounts: 'pages_show_list',
 };
 
-/** Translates any error into the user-facing envelope { code, message, hint }. */
+/** Translates any error into the user-facing envelope { code, message, hint }. Strings: locales/<lang>/errors.json. */
 export function toUserError(err, lang = 'en') {
-  const tr = lang === 'tr';
+  const m = (key, vars) => translate(key, vars, lang);
   if (err instanceof NetworkError || err?.code === 'NETWORK' || err?.name === 'FetchError' || err?.cause?.code === 'ENOTFOUND') {
-    return {
-      code: 'NETWORK',
-      message: tr ? 'İnternet bağlantısı yok. Mevcut veriler görüntülenmeye devam ediyor.' : 'No internet connection. Existing data remains available.',
-      hint: tr ? 'Bağlantı geldiğinde Güncelle düğmesine basın.' : 'Press Update once the connection is back.',
-    };
+    return { code: 'NETWORK', message: m('err_network'), hint: m('err_network_hint') };
   }
   if (err instanceof MetaError) {
-    if (err.isTokenError && err.source === 'threads') {
-      return {
-        code: err.code,
-        message: tr ? 'Threads bağlantınızın süresi doldu veya geçersiz. Ayarlar > Bağlantılar\'dan yeniden bağlayın.' : 'Your Threads connection has expired or is invalid. Reconnect it in Settings > Connections.',
-        hint: tr ? 'Threads adımına dönüp yeni bir token veya kod yapıştırın.' : 'Go back to the Threads step and paste a new token or code.',
-      };
-    }
-    if (err.isTokenError) {
-      return {
-        code: err.code,
-        message: tr ? 'Meta bağlantınızın süresi doldu. Ayarlar > Bağlantı\'dan yenileyin.' : 'Your Meta connection has expired. Renew it in Settings > Connection.',
-        hint: tr ? 'Kurulumun 3. adımına dönüp yeni bir token alın.' : 'Go back to setup step 3 and obtain a new token.',
-      };
-    }
-    if (err.isRetryable) {
-      return {
-        code: err.code,
-        message: tr ? 'Meta geçici olarak istek sınırına ulaştı. Güncelleme otomatik olarak yavaşlatıldı.' : 'Meta reached a temporary rate limit. Updates were slowed automatically.',
-        hint: tr ? 'Birkaç dakika sonra tekrar deneyin.' : 'Try again in a few minutes.',
-      };
-    }
+    if (err.isTokenError && err.source === 'threads') return { code: err.code, message: m('err_threads_token'), hint: m('err_threads_token_hint') };
+    if (err.isTokenError) return { code: err.code, message: m('err_meta_token'), hint: m('err_meta_token_hint') };
+    if (err.isRetryable) return { code: err.code, message: m('err_rate_limit'), hint: m('err_rate_limit_hint') };
     if (err.isPermissionError) {
-      const perm = guessPermission(err.endpoint);
-      return {
-        code: err.code,
-        message: tr ? `Bu veri için ${perm} izni gerekiyor. Kurulum adımlarını tekrarlayın.` : `This data requires the ${perm} permission. Repeat the setup steps.`,
-        hint: tr ? 'Graph API Explorer\'da izni ekleyip yeni token alın.' : 'Add the permission in Graph API Explorer and obtain a new token.',
-      };
+      return { code: err.code, message: m('err_permission', { perm: guessPermission(err.endpoint) }), hint: m('err_permission_hint') };
     }
-    if (err.isInvalidParam) {
-      return {
-        code: err.code,
-        message: tr ? `Meta isteği reddetti: ${err.message}` : `Meta rejected the request: ${err.message}`,
-        hint: tr ? 'Desteklenmeyen metrikler Ayarlar\'da listelenir.' : 'Unsupported metrics are listed in Settings.',
-      };
-    }
-    return { code: err.code, message: err.message, hint: tr ? 'Sorun sürerse token\'ı yenileyin.' : 'If this persists, renew the token.' };
+    if (err.isInvalidParam) return { code: err.code, message: m('err_invalid_param', { detail: err.message }), hint: m('err_invalid_param_hint') };
+    return { code: err.code, message: err.message, hint: m('err_generic_hint') };
   }
   return {
     code: err?.code ?? 'UNKNOWN',
-    message: err?.message ?? (tr ? 'Beklenmeyen bir hata oluştu.' : 'An unexpected error occurred.'),
+    message: err?.message ?? m('err_unexpected'),
     hint: null,
   };
 }

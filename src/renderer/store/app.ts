@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { daysAgo, isoDate } from '@/lib/format';
 import type { AuthPlatform, Platform, SyncProgress, SyncStatus } from '@/lib/types';
+import { isLang, isRtl, DEFAULT_LANG, type Lang } from '@/lib/i18nCore';
 
 export interface TokenWarningState { platform: AuthPlatform; message: string }
 const PLATFORM_KEYS: Platform[] = ['instagram', 'facebook', 'threads'];
@@ -9,7 +10,7 @@ export type Preset = 'today' | 'yesterday' | 7 | 30 | 'this_month' | 'last_month
 export interface Period { from: string; to: string; preset: Preset }
 
 interface AppState {
-  lang: 'tr' | 'en';
+  lang: Lang;
   theme: 'dark' | 'light';
   sidebarCollapsed: boolean;
   period: Period;
@@ -23,7 +24,7 @@ interface AppState {
   tokenWarning: TokenWarningState | null;
   online: boolean;
   demo: boolean;
-  setLang: (l: 'tr' | 'en') => void;
+  setLang: (l: Lang) => void;
   setTheme: (t: 'dark' | 'light') => void;
   toggleSidebar: () => void;
   setPreset: (p: Preset) => void;
@@ -59,8 +60,9 @@ function applyTheme(theme: 'dark' | 'light') {
   document.documentElement.setAttribute('data-theme', theme);
 }
 
-function applyLang(lang: 'tr' | 'en') {
+function applyLang(lang: Lang) {
   document.documentElement.lang = lang;
+  document.documentElement.dir = isRtl(lang) ? 'rtl' : 'ltr';
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -77,7 +79,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   tokenWarning: null,
   online: true,
   demo: false,
-  setLang: (lang) => { applyLang(lang); set({ lang }); window.api?.settings?.set('lang', lang); },
+  setLang: (lang) => { if (!isLang(lang)) return; applyLang(lang); set({ lang }); window.api?.settings?.set('lang', lang); },
   setTheme: (theme) => { applyTheme(theme); set({ theme }); window.api?.settings?.set('theme', theme); },
   toggleSidebar: () => set({ sidebarCollapsed: !get().sidebarCollapsed }),
   setPreset: (preset) => { set({ period: presetPeriod(preset) }); window.api?.settings?.set('lastPeriod', preset); },
@@ -100,15 +102,15 @@ export async function hydrateStore() {
   try {
     const res = await window.api.settings.all();
     if (!res?.ok) return;
-    const s = res.data as { lang?: 'tr' | 'en'; theme?: 'dark' | 'light'; lastPeriod?: Preset; demoMode?: boolean; 'ui.basket'?: string[]; 'ui.platformFilter'?: unknown };
+    const s = res.data as { lang?: unknown; theme?: 'dark' | 'light'; lastPeriod?: Preset; demoMode?: boolean; 'ui.basket'?: string[]; 'ui.platformFilter'?: unknown };
     const theme = s.theme === 'light' ? 'light' : 'dark';
-    const lang = s.lang === 'tr' ? 'tr' : 'en';
+    const lang: Lang = isLang(s.lang) ? (s.lang as Lang) : DEFAULT_LANG;
     applyTheme(theme);
     applyLang(lang);
     useAppStore.setState({ lang, theme, period: presetPeriod(s.lastPeriod && s.lastPeriod !== 'custom' ? s.lastPeriod : 30), basket: Array.isArray(s['ui.basket']) ? s['ui.basket'] : [], platformFilter: parsePlatformFilter(s['ui.platformFilter']) });
   } catch {
     applyTheme('dark');
-    applyLang('en');
+    applyLang(DEFAULT_LANG);
   }
 }
 

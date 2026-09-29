@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useT } from '@/lib/i18n';
+import { useT, type Lang } from '@/lib/i18n';
 import { useAppStore } from '@/store/app';
 import { fmtDateTime } from '@/lib/format';
 import { api, call } from '@/lib/api';
@@ -11,7 +11,7 @@ import { errorText, tx } from './lib';
 const PAGE = 100;
 
 /** One-line human summary of an audit entry's detail JSON. */
-function detailText(e: AuditEntry, lang: 'tr' | 'en'): string {
+function detailText(e: AuditEntry, lang: Lang): string {
   const d = (e.detail ?? {}) as Record<string, unknown>;
   const parts: string[] = [];
   const st = (v: unknown) => tx(`st_${String(v)}`, lang, undefined, String(v));

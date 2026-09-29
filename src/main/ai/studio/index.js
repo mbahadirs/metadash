@@ -1,3 +1,4 @@
+import { isSupportedLang } from '../../locales/catalog.js';
 import { notImplemented } from '../../ipc/notImplemented.js';
 import { currentLang } from '../../i18n.js';
 import { commentarySummary } from '../summaries/commentary.js';
@@ -26,7 +27,7 @@ export const STUDIO_CHANNELS = [
 ];
 
 const REGISTRIES = { voice, ideas, inbox };
-const pickLang = (lang) => (lang === 'tr' || lang === 'en' ? lang : currentLang());
+const pickLang = (lang) => (isSupportedLang(lang) ? lang : currentLang());
 
 /** Previews for the pre-studio AI features (same builders as ai/service.js and ai/ask/service.js). */
 const CORE_PREVIEWS = {

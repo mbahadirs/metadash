@@ -1,3 +1,4 @@
+import { LANGUAGE } from '../../../locales/catalog.js';
 import { CONTENT_DATA_RULES } from '../../prompts.js';
 
 /**
@@ -5,7 +6,6 @@ import { CONTENT_DATA_RULES } from '../../prompts.js';
  * data inside tags. Nothing identifies the account: no ids, usernames or client names; top posts are referred to by
  * short refs (p1…p10) that are mapped back to media ids locally.
  */
-const LANGUAGE = { en: 'English', tr: 'Turkish' };
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 export const IDEA_FORMATS = ['reel', 'carousel', 'image', 'story', 'text'];
 /** Formats the model may propose per platform ('text' only where a text-only post exists). */

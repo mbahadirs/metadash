@@ -27,6 +27,7 @@
     "smoke": "npm run build:renderer && cross-env METADASH_SMOKE=1 electron .",
     "test": "cross-env ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "i18n:check": "node scripts/i18n-check.mjs",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
     "build:mac": "npm run build:renderer && electron-builder --mac && electron-rebuild -f -w better-sqlite3",

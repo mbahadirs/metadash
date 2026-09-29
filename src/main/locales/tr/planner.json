@@ -1,0 +1,17 @@
+{
+  "planner_post_not_found": "Planlanan gönderi bulunamadı.",
+  "planner_version_conflict": "Bu gönderi başka bir yerde değiştirildi. Yeniden yükleyip tekrar deneyin.",
+  "planner_post_locked": "Bu gönderi yayımlanıyor veya zaten yayımlandı; değiştirilemez.",
+  "planner_target_locked": "Platformda zamanlanmış veya yayımlanmakta olan bir hesap kaldırılamaz. Önce zamanlamayı kaldırın.",
+  "planner_invalid_payload": "Geçersiz planlayıcı isteği: {field}",
+  "planner_account_unknown": "Bilinmeyen hesap: {id}",
+  "planner_format_invalid": "\"{format}\" biçimi {platform} için kullanılamıyor.",
+  "planner_time_past": "Planlanan zaman geçmişte.",
+  "planner_status_use_publishing": "Zamanlama durumunu değiştirmek için Zamanla / Zamanlamayı kaldır kullanın.",
+  "planner_asset_not_found": "Medya dosyası bulunamadı.",
+  "planner_asset_unsupported": "Desteklenmeyen dosya: {name}. JPEG, PNG, WebP, GIF, MP4 veya MOV kullanın.",
+  "planner_asset_too_large": "Dosya çok büyük ({mb} MB).",
+  "planner_asset_in_use": "Bu medya dosyası {n} gönderide kullanılıyor ve kaldırılamaz.",
+  "planner_asset_missing_file": "Medya dosyası diskte bulunamadı.",
+  "planner_media_filter": "Görseller ve videolar"
+}

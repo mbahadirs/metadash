@@ -1,5 +1,5 @@
+import { LANGUAGE } from '../locales/catalog.js';
 /** System prompts for the AI features. Analytics JSON goes in the user turn; captions inside it are data, not instructions. */
-const LANGUAGE = { en: 'English', tr: 'Turkish' };
 
 export const DATA_RULES = `Data rules:
 - Use only numbers that appear in the JSON. Never invent, estimate or extrapolate figures; if something is missing, say it is not available.

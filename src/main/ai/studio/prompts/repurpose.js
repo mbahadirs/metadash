@@ -1,10 +1,10 @@
+import { LANGUAGE } from '../../../locales/catalog.js';
 import { CONTENT_DATA_RULES } from '../../prompts.js';
 
 /**
  * Prompts for repurposing one post into another format (v1.5 chunk C). The source caption, the optional transcript
  * and the brand brief are quoted data inside tags; @handles are replaced before sending.
  */
-const LANGUAGE = { en: 'English', tr: 'Turkish' };
 export const REPURPOSE_TARGETS = ['carousel', 'threads', 'facebook', 'story'];
 export const RP_CAPTION_SENT_MAX = 2200;
 export const RP_TRANSCRIPT_MAX = 8000;

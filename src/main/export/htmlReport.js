@@ -14,7 +14,7 @@ import { rangeMs, round, previousPeriod, pctChange, mean, fmtDate, toDate } from
 import { lineChart, barChart, heatmap, sparkline, esc, fmt } from './svgCharts.js';
 import { makeL, kpiLabelKey, metricLabelKey } from './reportI18n.js';
 import { capabilitiesFor, platformLabel, platformsIn } from '../analytics/platform.js';
-import { msg, locale } from '../i18n.js';
+import { msg, locale, reportLocale } from '../i18n.js';
 import { resolveBranding, safeLogo } from './branding.js';
 import { brandBar, footerHtml, recolorAccent, BRAND_CSS } from './brandingHtml.js';
 import { getClientLogo, sharedClientLogo } from '../db/queries/accountLogos.js';
@@ -41,7 +41,7 @@ td{padding:7px 10px;border-bottom:1px solid var(--line);height:36px}td.n,th.n{te
 
 const pct = (v) => (v == null ? '<span class="muted">—</span>' : `<span class="${v >= 0 ? 'pos' : 'neg'}">${v >= 0 ? '▲' : '▼'} ${Math.abs(round(v, 1))}%</span>`);
 const money = (v, cur) => new Intl.NumberFormat(locale(), { style: 'currency', currency: cur ?? 'TRY', maximumFractionDigits: 0 }).format(v ?? 0);
-const dateStr = (d, lang) => new Date(d).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB');
+const dateStr = (d, lang) => new Date(d).toLocaleDateString(reportLocale(lang));
 const TYPE_KEY = (p) => mediaTypeKey(p);
 const PALETTE = ['#4F7CFF', '#3FBF8F', '#E8B44A', '#C06CE8', '#E5605F', '#48C3D6'];
 const platformBadge = (L, platform) => `<span class="badge">${esc(L(platform ?? 'instagram'))}</span>`;
@@ -73,7 +73,7 @@ function shell({ lang, title, subtitle, logoDataUrl, clientLogo, branding, body 
   const L = makeL(lang);
   const b = resolveBranding(branding);
   const coverLogo = safeLogo(logoDataUrl) ?? safeLogo(clientLogo);
-  const when = new Date().toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB');
+  const when = new Date().toLocaleString(reportLocale(lang));
   const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${CSS}${BRAND_CSS}:root{--accent:${b.accent}}</style></head><body><div class="page">
 ${brandBar(b)}<header class="cover"><div><h1>${esc(title)}</h1><div class="sub">${subtitle}</div></div>${coverLogo ? `<img src="${coverLogo}" alt="logo">` : ''}</header>
 ${body}
@@ -397,7 +397,7 @@ ${metricRows.map(([k, label, f]) => `<tr><td class="muted">${label}</td>${cmp.it
       const m = d.media;
       const tiles = metricRows.map(([k, label, f]) => kpiBox(L, label, f(m[k]), d.deltas[k] ?? null)).join('');
       parts.push(`<h2>@${esc(m.username)} · ${dateStr(m.postedAt, lang)} · ${L(m.typeKey)}</h2>
-<div class="panel"><div style="font-size:14px;line-height:1.6">${esc(m.caption ?? '')}</div><div class="note" style="margin-top:6px">${m.captionLength} ${lang === 'tr' ? 'karakter' : 'chars'} · ${m.hashtagCount} hashtag · ${m.mentionCount} mention · ${d.rank.rank != null ? `${L('reach_rank')}: #${d.rank.rank}/${d.rank.total}` : ''}${m.permalink ? ` · <a href="${esc(m.permalink)}" style="color:var(--accent)">${esc(platformLabel(m.platform ?? 'instagram'))}</a>` : ''}</div></div>
+<div class="panel"><div style="font-size:14px;line-height:1.6">${esc(m.caption ?? '')}</div><div class="note" style="margin-top:6px">${m.captionLength} ${L('chars')} · ${m.hashtagCount} hashtag · ${m.mentionCount} mention · ${d.rank.rank != null ? `${L('reach_rank')}: #${d.rank.rank}/${d.rank.total}` : ''}${m.permalink ? ` · <a href="${esc(m.permalink)}" style="color:var(--accent)">${esc(platformLabel(m.platform ?? 'instagram'))}</a>` : ''}</div></div>
 <div class="kpis">${tiles}</div>${d.benchmark ? `<div class="note">${L('bench_note', { n: d.benchmark.posts, t: L(m.typeKey), d: d.benchmark.days })}</div>` : ''}
 ${d.paid ? `<h4>${L('ad')}</h4><div class="kpis">${kpiBox(L, L('spend'), money(d.paid.totals.spend, d.paid.currency), null)}${kpiBox(L, L('paid_reach'), fmt(d.paid.totals.reach), null)}${kpiBox(L, L('impressions'), fmt(d.paid.totals.impressions), null)}${kpiBox(L, L('clicks'), fmt(d.paid.totals.clicks), null)}${kpiBox(L, L('results'), fmt(d.paid.totals.results), null)}${kpiBox(L, L('paid_share'), round(d.derived.paidShare, 1) ?? '—', null, '%')}</div>` : ''}`);
     }

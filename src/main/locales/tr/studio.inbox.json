@@ -1,0 +1,13 @@
+{
+  "inbox_comment_not_found": "Bu yorum artık yerel verilerde yok. Gelen kutusunu yenileyin.",
+  "inbox_confirm_required": "Yanıtlar yalnızca siz onayladıktan sonra gönderilir.",
+  "inbox_reply_empty": "Önce bir yanıt yazın.",
+  "inbox_reply_too_long": "Yanıt çok uzun (en fazla {max} karakter).",
+  "inbox_not_replyable": "Burada yalnızca başkalarının yazdığı ana yorumlar yanıtlanabilir.",
+  "inbox_platform_unsupported": "Yanıtlama yalnızca Instagram yorumları için kullanılabilir.",
+  "inbox_missing_scope": "Yanıt göndermek için {scope} izni gerekiyor. Ayarlar → Bağlantı'dan Meta'yı yeniden bağlayıp bu izni verin.",
+  "inbox_not_connected": "Önce Meta hesabınızı bağlayın (Ayarlar → Bağlantı).",
+  "inbox_send_failed": "Yanıt gönderilemedi ({detail}).",
+  "ab_not_found": "Bu deney artık yok.",
+  "ab_already_tagged": "Bu gönderi zaten deneyde."
+}

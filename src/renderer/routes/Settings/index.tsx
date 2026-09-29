@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSettings, useTokenHealth, useAccounts, useTags, useAdAccounts, useSyncHistory, useApiMutation, useSetupState } from '@/hooks/queries';
 import { useAppStore } from '@/store/app';
 import { useT } from '@/lib/i18n';
+import { LanguagePicker } from '@/components/LanguagePicker';
 import { api, call } from '@/lib/api';
 import { fmtDateTime, fmtNum, fmtRelative } from '@/lib/format';
 import type { Account, TransferInfo } from '@/lib/types';
@@ -106,7 +107,7 @@ export function SettingsPage() {
       <Section title={`${t('theme')} · ${t('language')}`}>
         <div className="flex items-center gap-6">
           <div className="flex gap-1"><button className={`chip ${theme === 'dark' ? 'active' : ''}`} onClick={() => setTheme('dark')}>{t('dark')}</button><button className={`chip ${theme === 'light' ? 'active' : ''}`} onClick={() => setTheme('light')}>{t('light')}</button></div>
-          <div className="flex gap-1"><button className={`chip ${lang === 'en' ? 'active' : ''}`} onClick={() => setLang('en')}>English</button><button className={`chip ${lang === 'tr' ? 'active' : ''}`} onClick={() => setLang('tr')}>Türkçe</button></div>
+          <LanguagePicker value={lang} onChange={setLang} showCompleteness />
         </div>
       </Section>
 

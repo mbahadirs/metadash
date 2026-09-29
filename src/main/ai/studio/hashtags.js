@@ -1,3 +1,4 @@
+import { isSupportedLang } from '../../locales/catalog.js';
 import { getAccount } from '../../db/queries/accounts.js';
 import { currentLang } from '../../i18n.js';
 import { AiError } from '../errors.js';
@@ -59,7 +60,7 @@ export async function suggestTags(payload = {}, deps = {}) {
   const base = suggestHashtags({ ...input, now, perf });
   if (!input.useAi) return base;
   const pool = suggestHashtags({ ...input, count: 30, now, perf }).tested.slice(0, CANDIDATES);
-  const lang = input.lang === 'tr' || input.lang === 'en' ? input.lang : currentLang();
+  const lang = isSupportedLang(input.lang) ? input.lang : currentLang();
   const userText = hashtagUserText({ caption: input.caption, notes: input.notes, tags: pool });
   const out = await runGeneration(
     { feature: 'hashtags', requestId: input.requestId, accountId: input.accountId, sentSummary: { tags: pool.length, chars: userText.length } },
@@ -76,7 +77,7 @@ export async function suggestTags(payload = {}, deps = {}) {
 export function hashtagsPreview(params = {}) {
   const input = normalizeHashtagInput(params);
   const pool = suggestHashtags({ ...input, count: 30 }).tested.slice(0, CANDIDATES);
-  const lang = input.lang === 'tr' || input.lang === 'en' ? input.lang : currentLang();
+  const lang = isSupportedLang(input.lang) ? input.lang : currentLang();
   const userText = hashtagUserText({ caption: input.caption, notes: input.notes, tags: pool });
   return {
     items: [

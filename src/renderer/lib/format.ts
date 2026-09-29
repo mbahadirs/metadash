@@ -1,8 +1,10 @@
 import { useAppStore } from '@/store/app';
 import { t } from '@/lib/i18n';
+import { intlLocale, LOCALES, type Lang } from '@/lib/i18nCore';
 
-export function locale(lang: 'tr' | 'en' = useAppStore.getState().lang) {
-  return lang === 'tr' ? 'tr-TR' : 'en-US';
+/** Intl locale for the UI language (from locales/index.json). */
+export function locale(lang: Lang = useAppStore.getState().lang) {
+  return intlLocale(lang);
 }
 
 export function fmtNum(v: number | null | undefined, digits = 0): string {
@@ -73,14 +75,14 @@ export function daysAgo(n: number): string {
 }
 
 /** Short weekday names indexed Sunday = 0, derived from Intl so no names are hardcoded. */
-function weekdayNames(lang: 'tr' | 'en'): string[] {
+function weekdayNames(lang: Lang): string[] {
   const fmt = new Intl.DateTimeFormat(locale(lang), { weekday: 'short' });
   return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2024, 0, 7 + i)));
 }
 
-export const WEEKDAYS: Record<'tr' | 'en', string[]> = { tr: weekdayNames('tr'), en: weekdayNames('en') };
+export const WEEKDAYS: Readonly<Record<Lang, string[]>> = Object.fromEntries(LOCALES.map((l) => [l.code, weekdayNames(l.code)]));
 
-export function mediaTypeLabel(m: { mediaProductType: string; mediaType: string }, lang: 'tr' | 'en'): string {
+export function mediaTypeLabel(m: { mediaProductType: string; mediaType: string }, lang: Lang): string {
   if (m.mediaProductType === 'REELS') return 'Reels';
   if (m.mediaProductType === 'STORY') return 'Story';
   if (m.mediaType === 'LINK') return t('type_link', lang);

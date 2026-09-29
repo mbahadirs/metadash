@@ -1,3 +1,4 @@
+import { isSupportedLang } from '../../locales/catalog.js';
 import { getConfig } from '../../config/store.js';
 import { msg } from '../../i18n.js';
 import { AiError } from '../errors.js';
@@ -100,7 +101,7 @@ function readBrief(accountId) {
 export function buildReplyRequest(comment, { lang, anonymize = safeConfig('studio.anonymizeCommenters', true) !== false } = {}) {
   const brief = readBrief(comment.accountId);
   const anon = anonymizeComment({ username: comment.username, text: comment.text, ownerUsername: comment.accountUsername, enabled: anonymize });
-  const system = replySystemPrompt(lang === 'tr' || lang === 'en' ? lang : safeConfig('lang', 'en'));
+  const system = replySystemPrompt(isSupportedLang(lang) ? lang : safeConfig('lang', 'en'));
   const userText = replyUserText({ comment: anon.text, handle: anon.handle, caption: comment.caption, brief });
   return { system, userText, map: anon.map, brief, anon };
 }

@@ -1,0 +1,13 @@
+{
+  "inbox_comment_not_found": "This comment is no longer in the local data. Refresh the inbox.",
+  "inbox_confirm_required": "Replies are only sent after you confirm them.",
+  "inbox_reply_empty": "Write a reply first.",
+  "inbox_reply_too_long": "The reply is too long (max {max} characters).",
+  "inbox_not_replyable": "Only top-level comments from other people can be answered here.",
+  "inbox_platform_unsupported": "Replying is only available for Instagram comments.",
+  "inbox_missing_scope": "Sending replies needs the {scope} permission. Reconnect Meta in Settings → Connection and grant it.",
+  "inbox_not_connected": "Connect your Meta account first (Settings → Connection).",
+  "inbox_send_failed": "The reply could not be sent ({detail}).",
+  "ab_not_found": "This experiment no longer exists.",
+  "ab_already_tagged": "This post is already part of the experiment."
+}

@@ -3,6 +3,8 @@
  * hidden-start detection and tray/quit summaries of scheduled targets. No Electron imports; lifecycle.js and tray.js
  * feed these with app/process state.
  */
+import { translate, intlLocale } from './locales/catalog.js';
+
 export const HIDDEN_ARG = '--hidden';
 /** macOS 13+ no longer reports wasOpenedAtLogin; an app started this soon after boot with launch-at-login on counts as a login start. */
 export const BOOT_GRACE_SEC = 300;
@@ -13,10 +15,6 @@ const PENDING_STATES = new Set(SCHEDULED_TARGET_STATES);
 const APP_PENDING_STATES = new Set(['queued', 'hosting', 'container', 'ready', 'publishing', 'commenting']);
 const PLATFORM_SHORT = { instagram: 'IG', facebook: 'FB', threads: 'Threads' };
 const BACKGROUND_KEYS = ['trayMode', 'launchAtLogin', 'startHidden', 'keepAwakeForPosts'];
-const TEXT = {
-  en: { next: 'Next', none: 'Nothing scheduled' },
-  tr: { next: 'Sıradaki', none: 'Planlanmış gönderi yok' },
-};
 
 /** window-all-closed: quit? Smoke runs and explicit quits (update install, tray Quit) always quit. */
 export function shouldQuitOnAllClosed({ platform, trayMode = false, smoke = false, quitting = false }) {
@@ -97,15 +95,14 @@ const upcoming = (items, now) => (items ?? [])
 
 /** "Next: Tue 14:00 · @brand (IG)" / "Nothing scheduled". */
 export function nextPostLine(items, now, lang = 'en') {
-  const L = TEXT[lang === 'tr' ? 'tr' : 'en'];
   const next = upcoming(items, now)[0];
-  if (!next) return L.none;
+  if (!next) return translate('lc_none', null, lang);
   const d = new Date(next.scheduledAt);
-  const locale = lang === 'tr' ? 'tr-TR' : 'en-US';
+  const locale = intlLocale(lang);
   const day = d.toLocaleDateString(locale, { weekday: 'short' });
   const time = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
   const who = next.username ? `@${next.username}` : next.postRef ?? '';
-  return `${L.next}: ${day} ${time} · ${who} (${PLATFORM_SHORT[next.platform] ?? next.platform})`;
+  return `${translate('lc_next', null, lang)}: ${day} ${time} · ${who} (${PLATFORM_SHORT[next.platform] ?? next.platform})`;
 }
 
 /** Distinct posts still to publish between now and local midnight. */

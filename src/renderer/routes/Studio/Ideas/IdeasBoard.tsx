@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useT } from '@/lib/i18n';
+import { useT, contentLangFor, type ContentLang } from '@/lib/i18n';
 import { useAppStore } from '@/store/app';
 import { useAccounts } from '@/hooks/queries';
 import { STUDIO_KEY, studio, useStudioCapabilities, useStudioRequest } from '@/hooks/useStudio';
@@ -16,7 +16,7 @@ import { SpecialDaysEditor, type CustomDay } from './SpecialDaysEditor';
 
 interface SpecialDay { id: string; date: string; name: string; region: string; approx: boolean; solemn: boolean; custom: boolean }
 type Schedule = 'suggested' | 'none';
-type Lang = 'tr' | 'en';
+type Lang = ContentLang;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 /** This month until the 20th, then next month. */
@@ -41,7 +41,7 @@ export function IdeasBoard() {
   const [accountId, setAccountId] = useState('');
   const [month, setMonth] = useState(defaultMonth);
   const [count, setCount] = useState(12);
-  const [lang, setLang] = useState<Lang>(uiLang);
+  const [lang, setLang] = useState<Lang>(contentLangFor(uiLang));
   const [pillarText, setPillarText] = useState('');
   const [includeDays, setIncludeDays] = useState(true);
   const [editDays, setEditDays] = useState(false);

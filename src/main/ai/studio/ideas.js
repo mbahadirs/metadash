@@ -1,5 +1,6 @@
+import { isSupportedLang } from '../../locales/catalog.js';
 import { AiError } from '../errors.js';
-import { currentLang, msg } from '../../i18n.js';
+import { currentLang, msg, locale } from '../../i18n.js';
 import { getConfig, setConfig } from '../../config/store.js';
 import { getAccount } from '../../db/queries/accounts.js';
 import { listMedia, mediaTypeKey } from '../../db/queries/media.js';
@@ -144,7 +145,7 @@ export function buildIdeasContext(input, { now = Date.now() } = {}) {
   const days = includeSpecialDays ? specialDaysFor(month.year, month.month, { custom: customSpecialDays(), lang }) : [];
   const specialDays = days.map((d) => ({ date: d.date, name: d.name, region: d.region, ...(d.approx ? { approx: true } : {}), ...(d.solemn ? { solemn: true } : {}), ...(d.days > 1 ? { days: d.days } : {}) }));
   const brief = clip(getBrandVoice(account.igId)?.brief ?? '', IDEA_BRIEF_MAX);
-  const monthLabel = new Date(month.start).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { month: 'long', year: 'numeric' });
+  const monthLabel = new Date(month.start).toLocaleDateString(locale(lang), { month: 'long', year: 'numeric' });
   return {
     platform, formats: PLATFORM_IDEA_FORMATS[platform] ?? IDEA_FORMATS, month: month.key, monthLabel, count, pillars, lang, brief,
     historyDays: HISTORY_DAYS, formatMix: formatMix(history), topPosts, bestTimes, specialDays, refMap,
@@ -320,7 +321,7 @@ export function ideasSpecialDays(p = {}) {
   if (p.month != null) {
     const m = MONTH_RE.exec(String(p.month));
     if (!m) throw new AiError('ideas_bad_month');
-    days = specialDaysFor(Number(m[1]), Number(m[2]), { custom, lang: p.lang === 'tr' || p.lang === 'en' ? p.lang : currentLang() });
+    days = specialDaysFor(Number(m[1]), Number(m[2]), { custom, lang: isSupportedLang(p.lang) ? p.lang : currentLang() });
   }
   return { days, custom };
 }

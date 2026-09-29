@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useT } from '@/lib/i18n';
+import { useT, intlLocale } from '@/lib/i18n';
 import { useAppStore } from '@/store/app';
 import { WEEKDAYS } from '@/lib/format';
 import type { PlannerPostSummary } from '@/lib/types';
@@ -46,7 +46,7 @@ export function CalendarMonth({ anchor, weekStartsOn, posts, dnd, onOpen, onResc
             <div
               key={k}
               role="gridcell"
-              aria-label={`${d.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' })}: ${t('pl_n_posts', { n: list.length })}`}
+              aria-label={`${d.toLocaleDateString(intlLocale(lang), { weekday: 'long', day: 'numeric', month: 'long' })}: ${t('pl_n_posts', { n: list.length })}`}
               className={`min-h-[112px] border-b border-r border-line p-1 flex flex-col gap-1 ${dnd.overKey === `m:${k}` ? 'bg-[var(--accent-soft)]' : inMonth ? '' : 'bg-surface-0'}`}
               {...(past ? {} : drop)}
             >

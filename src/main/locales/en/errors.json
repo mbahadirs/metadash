@@ -1,0 +1,17 @@
+{
+  "err_network": "No internet connection. Existing data remains available.",
+  "err_network_hint": "Press Update once the connection is back.",
+  "err_threads_token": "Your Threads connection has expired or is invalid. Reconnect it in Settings > Connections.",
+  "err_threads_token_hint": "Go back to the Threads step and paste a new token or code.",
+  "err_meta_token": "Your Meta connection has expired. Renew it in Settings > Connection.",
+  "err_meta_token_hint": "Go back to setup step 3 and obtain a new token.",
+  "err_rate_limit": "Meta reached a temporary rate limit. Updates were slowed automatically.",
+  "err_rate_limit_hint": "Try again in a few minutes.",
+  "err_permission": "This data requires the {perm} permission. Repeat the setup steps.",
+  "err_permission_hint": "Add the permission in Graph API Explorer and obtain a new token.",
+  "err_invalid_param": "Meta rejected the request: {detail}",
+  "err_invalid_param_hint": "Unsupported metrics are listed in Settings.",
+  "err_generic_hint": "If this persists, renew the token.",
+  "err_unexpected": "An unexpected error occurred.",
+  "err_chart_not_found": "Chart not found."
+}

@@ -1,3 +1,4 @@
+import { isSupportedLang, LANGUAGE } from '../../locales/catalog.js';
 import { subDays } from 'date-fns';
 import { accountAnalytics } from '../../analytics/account.js';
 import { portfolio } from '../../analytics/portfolio.js';
@@ -12,7 +13,6 @@ const PORTFOLIO_TEMPLATES = ['portfolio', 'weekly'];
 const MAX_ACCOUNTS = 8;
 const MAX_BASKET = 12;
 const TOP_N = 3;
-const LANGUAGE = { en: 'English', tr: 'Turkish' };
 
 /**
  * Compact JSON summary of the analytics behind a report (same params as export:preview), for the AI commentary prompt.
@@ -20,7 +20,7 @@ const LANGUAGE = { en: 'English', tr: 'Turkish' };
  */
 export function commentarySummary(params = {}) {
   const { template } = params;
-  const lang = params.lang === 'tr' ? 'tr' : 'en';
+  const lang = isSupportedLang(params.lang) ? params.lang : 'en';
   if (ACCOUNT_TEMPLATES.includes(template)) return accountReport(params, lang);
   if (PORTFOLIO_TEMPLATES.includes(template)) return portfolioReport(params, lang);
   if (template === 'basket') return basketReport(params, lang);

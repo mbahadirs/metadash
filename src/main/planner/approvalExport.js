@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { q } from '../db/index.js';
-import { msg, currentLang } from '../i18n.js';
+import { msg, currentLang, isSupportedLang } from '../i18n.js';
 import { loadBranding } from '../export/brandingStore.js';
 import { resolveMediaFile } from './assets.js';
 import { buildApprovalHtml } from './approvalHtml.js';
@@ -89,7 +89,7 @@ export async function exportApprovalPack(p = {}, event) {
   if (!p || typeof p !== 'object') throw invalid('payload');
   const format = p.format === 'pdf' ? 'pdf' : p.format === 'html' || p.format == null ? 'html' : null;
   if (!format) throw invalid('format');
-  const lang = p.lang === 'tr' || p.lang === 'en' ? p.lang : currentLang();
+  const lang = isSupportedLang(p.lang) ? p.lang : currentLang();
   const title = cleanText(p.title, TITLE_MAX);
   const clientName = cleanText(p.clientName, TITLE_MAX);
   const posts = selectPackPosts(p);

@@ -1,6 +1,6 @@
 import { useState, type RefObject } from 'react';
 import { api, call } from '@/lib/api';
-import { useT } from '@/lib/i18n';
+import { useT, decimalSeparator, type Lang } from '@/lib/i18n';
 import { useAppStore } from '@/store/app';
 
 export type XlsxType = 'text' | 'int' | 'float' | 'percent' | 'money' | 'date' | 'datetime';
@@ -45,7 +45,7 @@ export function ExcelButton({ name, getData, tableRef, small = true, label, pdf 
 const NUM_RE = /^[▲▼+−-]?\s*[\d.,]+\s*%?$/;
 
 /** Reads a rendered table. Stacked cells (value + delta) become "value" and "value Δ" columns. */
-export function domTableToSheet(root: HTMLElement, name: string, lang: 'tr' | 'en'): XlsxSheet {
+export function domTableToSheet(root: HTMLElement, name: string, lang: Lang): XlsxSheet {
   const table = root.tagName === 'TABLE' ? root : root.querySelector('table');
   if (!table) return { name, columns: [], rows: [] };
   const headers = [...table.querySelectorAll('thead th')].map((th, i) => (th.textContent ?? '').replace(/[▲▼]/g, '').trim() || `col${i + 1}`);
@@ -86,13 +86,13 @@ function cellParts(td: Element): string[] {
   return [(td.textContent ?? '').replace(/\s+/g, ' ').trim()];
 }
 
-function parseCell(text: string, lang: 'tr' | 'en'): { value: unknown; type: XlsxType } {
+function parseCell(text: string, lang: Lang): { value: unknown; type: XlsxType } {
   const s = text.replace(/\s+/g, ' ').trim();
   if (!s || s === '—' || s === '-') return { value: null, type: 'text' };
   const m = /^([▲▼+−-]?)\s*([\d.,]+)\s*(%?)$/.exec(s.replace(/^[▲▼]\s*/, (x) => x));
   if (m && NUM_RE.test(s)) {
     const sign = m[1] === '▼' || m[1] === '−' || m[1] === '-' ? -1 : 1;
-    const raw = lang === 'en' ? m[2].replace(/,/g, '') : m[2].replace(/\./g, '').replace(',', '.');
+    const raw = decimalSeparator(lang) === '.' ? m[2].replace(/,/g, '') : m[2].replace(/\./g, '').replace(',', '.');
     const n = Number(raw);
     if (Number.isFinite(n)) return { value: sign * n, type: m[3] ? 'percent' : Number.isInteger(n) ? 'int' : 'float' };
   }

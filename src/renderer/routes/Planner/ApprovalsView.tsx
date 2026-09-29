@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useT } from '@/lib/i18n';
+import { useT, LOCALES } from '@/lib/i18n';
 import { useAppStore } from '@/store/app';
 import { fmtDateTime } from '@/lib/format';
 import { api } from '@/lib/api';
@@ -117,8 +117,8 @@ function ExportPackDialog({ open, postIds, onClose }: { open: boolean; postIds: 
             </select>
           </label>
           <label className="flex items-center gap-2"><span className="text-ink-2">{t('language')}</span>
-            <select className="input w-auto" value={form.lang} onChange={(e) => setForm({ ...form, lang: e.target.value as 'tr' | 'en' })}>
-              <option value="tr">Türkçe</option><option value="en">English</option>
+            <select className="input w-auto" value={form.lang} onChange={(e) => setForm({ ...form, lang: e.target.value })}>
+              {LOCALES.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
             </select>
           </label>
         </div>

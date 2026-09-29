@@ -1,0 +1,6 @@
+[
+  { "code": "en", "name": "English", "englishName": "English", "dir": "ltr", "intl": "en-US", "reportIntl": "en-GB", "dateFns": "enUS" },
+  { "code": "tr", "name": "Türkçe", "englishName": "Turkish", "dir": "ltr", "intl": "tr-TR", "reportIntl": "tr-TR", "dateFns": "tr" },
+  { "code": "de", "name": "Deutsch", "englishName": "German", "dir": "ltr", "intl": "de-DE", "reportIntl": "de-DE", "dateFns": "de", "partial": true },
+  { "code": "es", "name": "Español", "englishName": "Spanish", "dir": "ltr", "intl": "es-ES", "reportIntl": "es-ES", "dateFns": "es", "partial": true }
+]

@@ -4,7 +4,7 @@ import { api, call } from '@/lib/api';
 import { useAiEnabled, type AiAnswer } from '@/hooks/useAi';
 
 /** Report params the main process needs to rebuild the analytics summary (logo, sections, commentary are not sent). */
-export interface CommentaryParams { template: string; igIds?: string[]; igId?: string; tagIds?: number[]; from: string; to: string; weekOf?: string; basket?: string[]; lang: 'tr' | 'en' }
+export interface CommentaryParams { template: string; igIds?: string[]; igId?: string; tagIds?: number[]; from: string; to: string; weekOf?: string; basket?: string[]; lang: string }
 
 /** "Write with AI" for the report commentary. Hidden unless the AI assistant is enabled in Settings. */
 export function AiCommentaryButton({ getParams, current, onText, disabled }: { getParams: () => CommentaryParams; current: string; onText: (text: string) => void; disabled?: boolean }) {

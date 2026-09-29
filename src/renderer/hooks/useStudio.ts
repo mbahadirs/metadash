@@ -29,7 +29,7 @@ export const studio = {
   },
   voice: {
     get: (accountId: string) => call<BrandVoice | null>(api.studio.voice.get(accountId)),
-    derive: (p: { accountId: string; n?: number; lang?: 'tr' | 'en'; requestId?: string }) => call<StudioCost & { proposal: { brief: string; profile: BrandVoiceProfile } }>(api.studio.voice.derive(p)),
+    derive: (p: { accountId: string; n?: number; lang?: string; requestId?: string }) => call<StudioCost & { proposal: { brief: string; profile: BrandVoiceProfile } }>(api.studio.voice.derive(p)),
     save: (p: { accountId: string; brief: string; profile?: BrandVoiceProfile | null; aiDisabled?: boolean }) => call<null>(api.studio.voice.save(p)),
   },
   captions: {
@@ -50,7 +50,7 @@ export const studio = {
   replies: {
     inbox: (p?: { accountIds?: string[]; onlyUnanswered?: boolean; limit?: number; before?: number }) => call<InboxItem[]>(api.studio.replies.inbox(p)),
     refresh: (p: { accountIds: string[] }) => call<{ fetched: number; errors: number }>(api.studio.replies.refresh(p)),
-    suggest: (p: { requestId?: string; commentId: string; lang?: 'tr' | 'en' }) => call<ReplySuggestResult>(api.studio.replies.suggest(p)),
+    suggest: (p: { requestId?: string; commentId: string; lang?: string }) => call<ReplySuggestResult>(api.studio.replies.suggest(p)),
     send: (p: { commentId: string; text: string }) => call<{ replyId: string }>(api.studio.replies.send(p)),
     dismiss: (commentId: string) => call<null>(api.studio.replies.dismiss(commentId)),
   },

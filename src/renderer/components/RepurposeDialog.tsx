@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useT, type Key } from '@/lib/i18n';
+import { useT, contentLangFor, type Key } from '@/lib/i18n';
 import { useAppStore } from '@/store/app';
 import { useAccounts } from '@/hooks/queries';
 import { useAiEnabled } from '@/hooks/useAi';
@@ -50,7 +50,7 @@ export function RepurposeDialog({ source, sourceAccountIds, isVideo, onClose, on
   const caps = useStudioCapabilities();
   const accountsQ = useAccounts({ onlyTracked: true });
   const [to, setTo] = useState<RepurposeTarget>(isVideo ? 'carousel' : 'threads');
-  const [lang, setLang] = useState<'tr' | 'en'>(uiLang);
+  const [lang, setLang] = useState<'tr' | 'en'>(contentLangFor(uiLang));
   const [transcript, setTranscript] = useState('');
   const [result, setResult] = useState<Result | null>(null);
   const [draft, setDraft] = useState<RpDraft | null>(null);

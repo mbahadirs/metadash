@@ -1,4 +1,4 @@
-import { t, type Key, type Lang } from '@/lib/i18n';
+import { t, intlLocale, type Key, type Lang } from '@/lib/i18n';
 import { fmtDateTime } from '@/lib/format';
 import { ApiCallError } from '@/lib/api';
 import type { Issue, Platform, PlannerFormat, PostStatus, TargetState } from '@/lib/types';
@@ -87,15 +87,15 @@ export function fromLocalInput(v: string): number | null {
 }
 
 export function fmtTime(ms: number, lang: Lang): string {
-  return new Intl.DateTimeFormat(lang === 'tr' ? 'tr-TR' : 'en-US', { hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
+  return new Intl.DateTimeFormat(intlLocale(lang), { hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
 }
 
 export function fmtMonthTitle(d: Date, lang: Lang): string {
-  return new Intl.DateTimeFormat(lang === 'tr' ? 'tr-TR' : 'en-US', { month: 'long', year: 'numeric' }).format(d);
+  return new Intl.DateTimeFormat(intlLocale(lang), { month: 'long', year: 'numeric' }).format(d);
 }
 
 export function fmtDayTitle(d: Date, lang: Lang): string {
-  return new Intl.DateTimeFormat(lang === 'tr' ? 'tr-TR' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short' }).format(d);
+  return new Intl.DateTimeFormat(intlLocale(lang), { weekday: 'short', day: 'numeric', month: 'short' }).format(d);
 }
 
 // ---- statuses ------------------------------------------------------------------------------------------------

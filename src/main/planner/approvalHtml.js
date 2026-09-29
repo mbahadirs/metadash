@@ -1,31 +1,13 @@
 import { esc, brandBar, footerHtml, recolorAccent, BRAND_CSS } from '../export/brandingHtml.js';
 import { CODE_PREFIX, clientScript } from './approvalClient.js';
+import { namespaceFor, reportLocale, resolveLang } from '../locales/catalog.js';
 
 /**
  * Self-contained client approval pack (v1.4 plan §8): one HTML file with inline CSS, base64 thumbnails and an offline
  * response form. Pure — callers pass posts, account names and image data URLs. `pdf: true` drops the form and script
  * (printToPDF) and asks the client to reply by email quoting the refs instead.
  */
-const L = {
-  en: {
-    title: 'Content for approval', client: 'Client', posts: '{n} posts', version: 'version {v}', unscheduled: 'Not scheduled yet',
-    caption: 'Caption', first_comment: 'First comment', notes: 'Internal notes', caption_for: 'Caption for {p}', no_media: 'Text post', video: 'Video',
-    approve: 'Approve', changes: 'Request changes', none: 'No decision', comment: 'Comment (optional)', your_name: 'Your name',
-    respond_title: 'Your response', respond_help: 'Choose Approve or Request changes for each post, then press "Copy response" and send the code back (email, chat…). Nothing is sent from this page.',
-    copy: 'Copy response', empty: 'No decisions yet.', ready: 'Response for {n} post(s) is ready — copy and send it.', copied: 'Copied. Paste it into your reply.',
-    pdf_reply: 'To respond, reply by email quoting each reference, e.g. "P-0042: approved" or "P-0043: change the first line".',
-    generated: 'Prepared on {d}.', credit: 'Prepared with MetaDash — the preview approximates how the post will look.',
-  },
-  tr: {
-    title: 'Onay bekleyen içerikler', client: 'Müşteri', posts: '{n} gönderi', version: 'sürüm {v}', unscheduled: 'Henüz planlanmadı',
-    caption: 'Metin', first_comment: 'İlk yorum', notes: 'İç notlar', caption_for: '{p} metni', no_media: 'Metin gönderisi', video: 'Video',
-    approve: 'Onayla', changes: 'Değişiklik iste', none: 'Karar yok', comment: 'Yorum (isteğe bağlı)', your_name: 'Adınız',
-    respond_title: 'Yanıtınız', respond_help: 'Her gönderi için Onayla veya Değişiklik iste seçin, ardından "Yanıtı kopyala"ya basıp kodu geri gönderin (e-posta, mesaj…). Bu sayfadan hiçbir şey gönderilmez.',
-    copy: 'Yanıtı kopyala', empty: 'Henüz karar yok.', ready: '{n} gönderi için yanıt hazır — kopyalayıp gönderin.', copied: 'Kopyalandı. Yanıtınıza yapıştırın.',
-    pdf_reply: 'Yanıt vermek için her referansı belirterek e-postayla dönün, ör. "P-0042: onaylandı" veya "P-0043: ilk satırı değiştirin".',
-    generated: '{d} tarihinde hazırlandı.', credit: 'MetaDash ile hazırlandı — önizleme gönderinin görünümüne yaklaşık bir örnektir.',
-  },
-};
+/** Labels: src/main/locales/<lang>/approval.json (English fills gaps). */
 const PLATFORM = {
   instagram: { name: 'Instagram', short: 'IG', color: '#E1306C' },
   facebook: { name: 'Facebook', short: 'FB', color: '#1877F2' },
@@ -56,7 +38,7 @@ const fill = (s, vars = {}) => Object.entries(vars).reduce((acc, [k, v]) => acc.
 function fmtWhen(at, timezone, lang) {
   if (at == null) return null;
   const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false };
-  const locale = lang === 'tr' ? 'tr-TR' : 'en-GB';
+  const locale = reportLocale(lang);
   try {
     return new Date(at).toLocaleString(locale, timezone ? { ...opts, timeZone: timezone, timeZoneName: 'short' } : opts);
   } catch {
@@ -114,12 +96,12 @@ function postCard(post, ctx) {
 
 /**
  * @param {{ pack: { id, secret, items: { postId, ref, version }[] }, posts: object[], accounts?: Record<string, { username, platform }>,
- *   images?: Record<number, string>, branding: object, lang?: 'en'|'tr', title?: string, clientName?: string, includeNotes?: boolean,
+ *   images?: Record<number, string>, branding: object, lang?: string, title?: string, clientName?: string, includeNotes?: boolean,
  *   pdf?: boolean, now?: number }} p
  * @returns {string} HTML document
  */
 export function buildApprovalHtml({ pack, posts, accounts = {}, images = {}, branding, lang = 'en', title, clientName, includeNotes = false, pdf = false, now = Date.now() }) {
-  const labels = L[lang === 'tr' ? 'tr' : 'en'];
+  const labels = namespaceFor(lang, 'approval');
   const ctx = { accounts, images, labels, includeNotes, pdf, lang };
   const heading = title?.trim() || labels.title;
   const dateText = fmtWhen(now, null, lang);
@@ -138,7 +120,7 @@ export function buildApprovalHtml({ pack, posts, accounts = {}, images = {}, bra
     + `${posts.map((p) => postCard(p, ctx)).join('')}${respond}`
     + `<div class="foot">${footerHtml(branding, labels.credit, fill(labels.generated, { d: dateText }))}</div></div>`;
   const script = pdf ? '' : `<script>${clientScript(clientData)}</script>`;
-  const html = `<!doctype html><html lang="${lang === 'tr' ? 'tr' : 'en'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">`
+  const html = `<!doctype html><html lang="${resolveLang(lang)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">`
     + `<meta http-equiv="Content-Security-Policy" content="${csp}"><meta name="referrer" content="no-referrer"><title>${esc(heading)}</title>`
     + `<style>${CSS}${BRAND_CSS}</style></head><body>${body}${script}</body></html>`;
   return recolorAccent(html, branding?.accent);

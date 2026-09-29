@@ -13,7 +13,7 @@ import { PUBLISH_CAPABILITIES, formatRule, needsPublicUrl, displayRatio } from '
  *           durationMs, videoCodec, audioCodec, fps, role? ('media'|'cover') }]
  *  context  { mediaHostType ('none'|'s3'|'fbpage'|'url'), missingScopes?: { [platform]: string[] } (omit when unknown),
  *           quota?: { [accountId]: { used, total } }, existing?: [{ postId, ref?, accountId, scheduledAt }], minGapHours? }
- * Codes are i18n keys (renderer lib/i18n/planner.ts); `params` fill the {placeholders}.
+ * Codes are i18n keys (renderer locales/<lang>/planner.json); `params` fill the {placeholders}.
  */
 export const ISSUE_CODES = Object.freeze([
   'v_no_targets', 'v_format_unsupported', 'v_caption_too_long', 'v_caption_near_limit', 'v_hashtags_too_many', 'v_mentions_too_many',

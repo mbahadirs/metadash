@@ -132,7 +132,7 @@ export interface PlannerAsset {
 }
 export interface PlannerPostAsset { assetId: number; role: 'media' | 'cover'; position: number; altText: string | null; asset: PlannerAsset }
 export type IssueLevel = 'error' | 'warn' | 'info';
-/** Validation issue; `code` is an i18n key in lib/i18n/planner.ts, `params` fill its {placeholders}. */
+/** Validation issue; `code` is an i18n key in locales/<lang>/planner.json, `params` fill its {placeholders}. */
 export interface Issue { level: IssueLevel; code: string; platform: Platform | null; targetId: number | null; accountId: string | null; assetId: number | null; field: string; params: Record<string, string | number | null> }
 export type AuditActor = 'user' | 'worker' | 'system' | 'client';
 export interface AuditEntry { id: number; at: number; postId: number | null; targetId: number | null; actor: AuditActor; action: string; detail: Record<string, unknown> | null; ref: string | null }
@@ -162,7 +162,7 @@ export interface PlannerSetStatusInput { ids: number[]; status: PostStatus; note
 export interface PlannerSetStatusResult { updated: number[]; rejected: { id: number; reason: 'not_found' | 'use_publishing' | 'transition_not_allowed' | 'approval_required' | 'worker_only' | 'same_status' | 'unknown_status' }[] }
 export type PlannerRescheduled = PlannerPost & { warnings: Issue[] };
 export interface Slot { at: number; weekday: number; hour: number; score: number; avgEr: number | null; posts: number; qualified: boolean; source: 'account' | 'portfolio' | 'default'; conflicts: { postId: number; ref: string; accountId: string; scheduledAt: number }[] }
-export interface ApprovalExportInput { postIds?: number[]; from?: number; to?: number; accountIds?: string[]; format: 'html' | 'pdf'; title?: string; clientName?: string; lang?: 'tr' | 'en'; includeNotes?: boolean }
+export interface ApprovalExportInput { postIds?: number[]; from?: number; to?: number; accountIds?: string[]; format: 'html' | 'pdf'; title?: string; clientName?: string; lang?: string; includeNotes?: boolean }
 export interface ApprovalExportResult { filePath: string; packId: string; count: number }
 export interface ApprovalImportResult { applied: { ref: string; decision: 'approved' | 'changes_requested'; note: string | null }[]; stale: { ref: string; packVersion: number; currentVersion: number }[]; unknown: string[] }
 
