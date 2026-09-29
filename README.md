@@ -26,15 +26,32 @@ MetaDash pulls organic Instagram data (Graph API) and Meta Ads data for every ac
 
 ## Screenshots
 
-Screenshots will be added to [`docs/images/`](docs/images/).
+All screenshots use the built-in [demo data](#demo-data) — the accounts and posts are fictional.
 
-<!--
-![Overview](docs/images/overview.png)
-![Account detail](docs/images/account.png)
-![Ads and budget tracking](docs/images/ads.png)
-![Reports](docs/images/reports.png)
-![Presentation](docs/images/presentation.png)
--->
+![Overview — every account in one table with KPIs, tags and ad columns](docs/images/en/overview.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/en/account.png" alt="Account detail"><br><sub>Account detail</sub></td>
+    <td width="50%"><img src="docs/images/en/content.png" alt="Content — all posts, filterable, with ad metrics"><br><sub>Content — all posts, filterable, with ad metrics</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/en/compare.png" alt="Compare accounts"><br><sub>Compare accounts</sub></td>
+    <td width="50%"><img src="docs/images/en/ads.png" alt="Ads — ad accounts and budget tracking"><br><sub>Ads — ad accounts and budget tracking</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/en/competitors.png" alt="Competitors"><br><sub>Competitors</sub></td>
+    <td width="50%"><img src="docs/images/en/reports.png" alt="Reports — live preview, HTML/PDF/Excel export"><br><sub>Reports — live preview, HTML/PDF/Excel export</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/en/presentation.png" alt="Presentation mode"><br><sub>Presentation mode</sub></td>
+    <td width="50%"><img src="docs/images/en/presentation-builder.png" alt="Presentation builder"><br><sub>Presentation builder</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/en/setup.png" alt="Setup wizard"><br><sub>Setup wizard</sub></td>
+    <td width="50%"><img src="docs/images/en/settings.png" alt="Settings"><br><sub>Settings</sub></td>
+  </tr>
+</table>
 
 ## Features
 

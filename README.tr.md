@@ -26,15 +26,32 @@ MetaDash, yönettiğiniz tüm hesapların organik Instagram verisini (Graph API)
 
 ## Ekran görüntüleri
 
-Ekran görüntüleri [`docs/images/`](docs/images/) klasörüne eklenecek.
+Tüm ekran görüntüleri yerleşik [demo verisiyle](#demo-verisi) alınmıştır; hesaplar ve gönderiler kurgusaldır.
 
-<!--
-![Genel Bakış](docs/images/overview.png)
-![Hesap ayrıntısı](docs/images/account.png)
-![Reklamlar ve bütçe takibi](docs/images/ads.png)
-![Raporlar](docs/images/reports.png)
-![Sunum](docs/images/presentation.png)
--->
+![Genel Bakış — tüm hesaplar tek tabloda: KPI'lar, etiketler, reklam kolonları](docs/images/tr/overview.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/tr/account.png" alt="Hesap ayrıntısı"><br><sub>Hesap ayrıntısı</sub></td>
+    <td width="50%"><img src="docs/images/tr/content.png" alt="İçerik — tüm gönderiler, filtreler ve reklam metrikleri"><br><sub>İçerik — tüm gönderiler, filtreler ve reklam metrikleri</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/tr/compare.png" alt="Hesap karşılaştırma"><br><sub>Hesap karşılaştırma</sub></td>
+    <td width="50%"><img src="docs/images/tr/ads.png" alt="Reklamlar — reklam hesapları ve bütçe takibi"><br><sub>Reklamlar — reklam hesapları ve bütçe takibi</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/tr/competitors.png" alt="Rakipler"><br><sub>Rakipler</sub></td>
+    <td width="50%"><img src="docs/images/tr/reports.png" alt="Raporlar — canlı önizleme, HTML/PDF/Excel dışa aktarım"><br><sub>Raporlar — canlı önizleme, HTML/PDF/Excel dışa aktarım</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/tr/presentation.png" alt="Sunum modu"><br><sub>Sunum modu</sub></td>
+    <td width="50%"><img src="docs/images/tr/presentation-builder.png" alt="Sunum hazırlama"><br><sub>Sunum hazırlama</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/tr/setup.png" alt="Kurulum sihirbazı"><br><sub>Kurulum sihirbazı</sub></td>
+    <td width="50%"><img src="docs/images/tr/settings.png" alt="Ayarlar"><br><sub>Ayarlar</sub></td>
+  </tr>
+</table>
 
 ## Özellikler
 
