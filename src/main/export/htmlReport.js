@@ -14,13 +14,16 @@ import { rangeMs, round, previousPeriod, pctChange, mean, fmtDate, toDate } from
 import { lineChart, barChart, heatmap, sparkline, esc, fmt } from './svgCharts.js';
 import { makeL } from './reportI18n.js';
 import { msg, locale } from '../i18n.js';
+import { resolveBranding, safeLogo } from './branding.js';
+import { brandBar, footerHtml, recolorAccent, BRAND_CSS } from './brandingHtml.js';
+import { getClientLogo, sharedClientLogo } from '../db/queries/accountLogos.js';
 
 const CSS = `
 :root{--surface-0:#10131A;--surface-1:#171B24;--surface-2:#1F2430;--ink-1:#E8EAF0;--ink-2:#9AA3B2;--line:#2A3040;--accent:#4F7CFF;--pos:#3FBF8F;--neg:#E5605F;--warn:#E8B44A}
 *{box-sizing:border-box}body{margin:0;background:var(--surface-0);color:var(--ink-1);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13px;line-height:1.5}
 .page{max-width:960px;margin:0 auto;padding:40px 32px}.cover{padding:80px 0 48px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-end;gap:24px}
 .cover h1{font-size:34px;font-weight:600;margin:0 0 8px;letter-spacing:-.01em}.cover .sub{color:var(--ink-2);font-size:15px}.cover img{max-height:64px;max-width:200px}
-h2{font-size:18px;font-weight:600;margin:40px 0 12px;page-break-after:avoid}h3{font-size:15px;font-weight:600;margin:24px 0 8px;color:var(--ink-1)}h4{font-size:13px;font-weight:600;margin:16px 0 6px;color:var(--ink-2)}
+h2{font-size:18px;font-weight:600;margin:40px 0 12px;page-break-after:avoid;border-left:3px solid var(--accent);padding-left:10px}h3{font-size:15px;font-weight:600;margin:24px 0 8px;color:var(--ink-1)}h4{font-size:13px;font-weight:600;margin:16px 0 6px;color:var(--ink-2)}
 .kpis{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;flex-wrap:wrap}.kpi{flex:1 1 140px;padding:14px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
 .kpi .l{color:var(--ink-2);font-size:12px}.kpi .v{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}.kpi .d{font-size:12px;font-variant-numeric:tabular-nums}
 .pos{color:var(--pos)}.neg{color:var(--neg)}.muted{color:var(--ink-2)}
@@ -44,12 +47,17 @@ function kpiBox(L, label, value, change, suffix = '', prev = null) {
   return `<div class="kpi"><div class="l">${esc(label)}</div><div class="v">${value}${suffix}</div><div class="d">${change !== null ? `${pct(change)} <span class="muted">${L('vs_prev')}</span>` : ''}${prev != null ? `<span class="muted"> · ${L('prev')}: ${prev}${suffix}</span>` : ''}</div></div>`;
 }
 
-function shell({ lang, title, subtitle, logoDataUrl, body }) {
+/** Page frame: optional agency bar, cover (report logo or client logo), body, footer — all branded. */
+function shell({ lang, title, subtitle, logoDataUrl, clientLogo, branding, body }) {
   const L = makeL(lang);
-  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${CSS}</style></head><body><div class="page">
-<header class="cover"><div><h1>${esc(title)}</h1><div class="sub">${subtitle}</div></div>${logoDataUrl ? `<img src="${logoDataUrl}" alt="logo">` : ''}</header>
+  const b = resolveBranding(branding);
+  const coverLogo = safeLogo(logoDataUrl) ?? safeLogo(clientLogo);
+  const when = new Date().toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB');
+  const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${CSS}${BRAND_CSS}:root{--accent:${b.accent}}</style></head><body><div class="page">
+${brandBar(b)}<header class="cover"><div><h1>${esc(title)}</h1><div class="sub">${subtitle}</div></div>${coverLogo ? `<img src="${coverLogo}" alt="logo">` : ''}</header>
 ${body}
-<footer class="foot">${esc(L('generated', { d: new Date().toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB') }))}</footer></div></body></html>`;
+<footer class="foot">${footerHtml(b, L('generated', { d: when }), L('generated_plain', { d: when }))}</footer></div></body></html>`;
+  return recolorAccent(html, b.accent);
 }
 
 function postsGrid(L, lang, posts) {
@@ -186,7 +194,7 @@ function commentarySection(L, text) {
 
 /** Client report: monthly / weekly / custom period, one or more accounts. */
 export function clientReport(params) {
-  const { template = 'monthly', from, to, coverTitle, logoDataUrl, sections = {}, lang = 'en', commentary, basket } = params;
+  const { template = 'monthly', from, to, coverTitle, logoDataUrl, branding, sections = {}, lang = 'en', commentary, basket } = params;
   const igIds = params.igIds?.length ? params.igIds : params.igId ? [params.igId] : [];
   if (!igIds.length) throw new Error(msg('no_account_selected', null, lang));
   const L = makeL(lang);
@@ -247,11 +255,11 @@ export function clientReport(params) {
   const names = analyses.map((a) => a.account.name ?? a.account.username);
   const title = coverTitle || `${multi ? (analyses[0].account.clientName ?? names[0]) : names[0]} — ${L(template === 'weekly_client' ? 'weekly_client' : template === 'custom' ? 'custom' : 'monthly')}`;
   const subtitle = `${analyses.map((a) => '@' + a.account.username).join(', ')} · ${from} – ${to}<br><span style="font-size:12px">${L('compare_prev', { a: prev.from, b: prev.to })}</span>`;
-  return shell({ lang, title, subtitle, logoDataUrl, body: parts.filter(Boolean).join('') });
+  return shell({ lang, title, subtitle, logoDataUrl, branding, clientLogo: sharedClientLogo(analyses.map((x) => x.account.igId)), body: parts.filter(Boolean).join('') });
 }
 
 /** Portfolio summary — all accounts. */
-export function portfolioReport({ from, to, tagIds, coverTitle, logoDataUrl, lang = 'en', sections = {}, commentary }) {
+export function portfolioReport({ from, to, tagIds, coverTitle, logoDataUrl, branding, lang = 'en', sections = {}, commentary }) {
   const L = makeL(lang);
   const inc = (k) => sections[k] !== false;
   const p = portfolio({ from, to, tagIds });
@@ -264,12 +272,12 @@ ${[...p.rows].sort((a, b) => (b.reach ?? 0) - (a.reach ?? 0)).map((r) => `<tr><t
   if (inc('attention')) parts.push(`<h2>${L('attention')}</h2><div class="grid2"><div class="panel"><h3>${L('silent')}</h3>${p.attention.silent.length ? p.attention.silent.map((s) => `<div>@${esc(s.username)} <span class="muted">${s.daysSincePost ?? '—'} ${L('days')}</span></div>`).join('') : `<div class="muted">${L('none')}</div>`}</div><div class="panel"><h3>${L('anomalies')}</h3>${p.attention.anomalies.length ? p.attention.anomalies.slice(0, 10).map((a) => `<div>@${esc(a.username)} <span class="${a.direction === 'up' ? 'pos' : 'neg'}">${a.kind === 'reach' ? L('reach') : 'ER'} ${a.direction === 'up' ? '▲' : '▼'} ${a.z}σ</span></div>`).join('') : `<div class="muted">${L('none')}</div>`}</div></div>`);
   if (inc('content')) parts.push(contentSections(L, lang, contentAnalysis({ from, to, igIds: p.rows.map((r) => r.igId) })));
   if (inc('commentary')) parts.push(commentarySection(L, commentary));
-  return shell({ lang, title: coverTitle || L('portfolio'), subtitle: `${p.rows.length} ${L('accounts')} · ${from} – ${to}`, logoDataUrl, body: parts.join('') });
+  return shell({ lang, title: coverTitle || L('portfolio'), subtitle: `${p.rows.length} ${L('accounts')} · ${from} – ${to}`, logoDataUrl, branding, body: parts.join('') });
 }
 
 /** Campaign report — organic + paid for one account. */
 export function campaignReport(params) {
-  const { from, to, coverTitle, logoDataUrl, lang = 'en', sections = {}, commentary } = params;
+  const { from, to, coverTitle, logoDataUrl, branding, lang = 'en', sections = {}, commentary } = params;
   const igId = params.igIds?.[0] ?? params.igId;
   const L = makeL(lang);
   const inc = (k) => sections[k] !== false;
@@ -288,11 +296,11 @@ export function campaignReport(params) {
   }
   if (inc('posts')) parts.push(`<h2>${L('top6')}</h2>${postsGrid(L, lang, [...a.posts].sort((x, y) => (y.reach ?? 0) - (x.reach ?? 0)).slice(0, 6))}`);
   if (inc('commentary')) parts.push(commentarySection(L, commentary));
-  return shell({ lang, title: coverTitle || `${a.account.name ?? a.account.username} — ${L('campaign')}`, subtitle: `@${a.account.username} · ${from} – ${to}`, logoDataUrl, body: parts.join('') });
+  return shell({ lang, title: coverTitle || `${a.account.name ?? a.account.username} — ${L('campaign')}`, subtitle: `@${a.account.username} · ${from} – ${to}`, logoDataUrl, branding, clientLogo: getClientLogo(igId), body: parts.join('') });
 }
 
 /** Selected-posts report: one detailed block per basket post plus a comparison table. */
-export function basketReport({ basket, coverTitle, logoDataUrl, lang = 'en', sections = {}, commentary, from, to }) {
+export function basketReport({ basket, coverTitle, logoDataUrl, branding, lang = 'en', sections = {}, commentary, from, to }) {
   const L = makeL(lang);
   const inc = (k) => sections[k] !== false;
   const cmp = comparePosts({ mediaIds: basket ?? [] });
@@ -317,11 +325,11 @@ ${d.paid ? `<h4>${L('ad')}</h4><div class="kpis">${kpiBox(L, L('spend'), money(d
   }
   if (inc('commentary')) parts.push(commentarySection(L, commentary));
   const subtitle = `${cmp.items.length} ${L('posts').toLowerCase()}${from && to ? ` · ${from} – ${to}` : ''}`;
-  return shell({ lang, title: coverTitle || L('basket'), subtitle, logoDataUrl, body: parts.join('') });
+  return shell({ lang, title: coverTitle || L('basket'), subtitle, logoDataUrl, branding, body: parts.join('') });
 }
 
 /** Weekly change digest (portfolio). */
-export function weeklyReport({ weekOf, to, tagIds, coverTitle, logoDataUrl, lang = 'en', sections = {}, commentary }) {
+export function weeklyReport({ weekOf, to, tagIds, coverTitle, logoDataUrl, branding, lang = 'en', sections = {}, commentary }) {
   const L = makeL(lang);
   const inc = (k) => sections[k] !== false;
   const d = weeklyDigest({ weekOf: weekOf ?? to, tagIds, lang });
@@ -329,7 +337,7 @@ export function weeklyReport({ weekOf, to, tagIds, coverTitle, logoDataUrl, lang
   if (inc('kpis')) parts.push(`<div class="kpis" style="margin-top:16px">${kpiBox(L, L('reach'), fmt(d.kpis.totalReach.value), d.kpis.totalReach.changePct)}${kpiBox(L, L('net_followers'), fmt(d.kpis.netFollowers.value), d.kpis.netFollowers.changePct)}${kpiBox(L, L('avg_er'), d.kpis.avgEr.value ?? '—', d.kpis.avgEr.changePct, '%')}${kpiBox(L, L('posts'), fmt(d.kpis.totalPosts.value), d.kpis.totalPosts.changePct)}</div>`);
   if (inc('posts')) parts.push(`<h2>${L('week_posts')}</h2>${postsGrid(L, lang, d.topPosts)}`);
   if (inc('commentary')) parts.push(commentarySection(L, commentary));
-  return shell({ lang, title: coverTitle || L('weekly'), subtitle: `${d.from} – ${d.to}`, logoDataUrl, body: parts.join('') });
+  return shell({ lang, title: coverTitle || L('weekly'), subtitle: `${d.from} – ${d.to}`, logoDataUrl, branding, body: parts.join('') });
 }
 
 export const TEMPLATE_SECTIONS = {

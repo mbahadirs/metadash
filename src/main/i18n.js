@@ -32,6 +32,9 @@ const M = {
   // export
   no_tables: ['There is no table to export.', 'Dışa aktarılacak tablo yok.'],
   image_filter: ['Image', 'Görsel'],
+  logo_invalid: ['The logo must be a PNG, JPG, WebP or SVG image (SVG without scripts).', 'Logo PNG, JPG, WebP veya SVG görsel olmalı (script içermeyen SVG).'],
+  logo_too_large: ['The logo is too large (max. 1 MB after resizing).', 'Logo çok büyük (yeniden boyutlandırma sonrası en fazla 1 MB).'],
+  invalid_color: ['Enter the colour as a hex code, e.g. #4F7CFF.', 'Rengi hex kodu olarak girin, ör. #4F7CFF.'],
   unknown_template: ['Unknown template: {t}', 'Bilinmeyen şablon: {t}'],
   basket_empty: ['The report basket is empty.', 'Rapor sepeti boş.'],
   select_only: ['Only SELECT queries are allowed.', 'Yalnızca SELECT sorgularına izin verilir.'],
@@ -60,6 +63,25 @@ const M = {
   notify_token_body: ['Your Meta access token expires in {days} days. Renew it in Settings to keep syncing.', 'Meta erişim token\'ınızın süresi {days} gün içinde doluyor. Senkronizasyonun sürmesi için Ayarlar\'dan yenileyin.'],
   notify_token_body_one: ['Your Meta access token expires within a day. Renew it in Settings to keep syncing.', 'Meta erişim token\'ınızın süresi bir gün içinde doluyor. Senkronizasyonun sürmesi için Ayarlar\'dan yenileyin.'],
   notify_token_expired: ['Your Meta access token has expired. Renew it in Settings to resume syncing.', 'Meta erişim token\'ınızın süresi doldu. Senkronizasyona devam etmek için Ayarlar\'dan yenileyin.'],
+  // AI assistant
+  ai_off: ['The AI assistant is turned off. Enable it in Settings → AI assistant.', 'Yapay zekâ asistanı kapalı. Ayarlar → Yapay zekâ asistanı bölümünden açın.'],
+  ai_no_key: ['No API key is saved for {p}. Add one in Settings → AI assistant.', '{p} için kayıtlı API anahtarı yok. Ayarlar → Yapay zekâ asistanı bölümünden ekleyin.'],
+  ai_bad_provider: ['Unknown AI provider: {p}', 'Bilinmeyen yapay zekâ sağlayıcısı: {p}'],
+  ai_bad_url: ['The Ollama address must be an http(s) URL, e.g. http://127.0.0.1:11434', 'Ollama adresi http(s) ile başlamalı, örn. http://127.0.0.1:11434'],
+  ai_auth: ['The AI provider rejected the API key. Check it in Settings → AI assistant.', 'Yapay zekâ sağlayıcısı API anahtarını reddetti. Ayarlar → Yapay zekâ asistanı bölümünden kontrol edin.'],
+  ai_rate_limit: ['The AI provider is rate limiting requests. Try again in a minute.', 'Yapay zekâ sağlayıcısı istekleri sınırlıyor. Bir dakika sonra tekrar deneyin.'],
+  ai_bad_request: ['The AI provider rejected the request ({status}). {detail}', 'Yapay zekâ sağlayıcısı isteği reddetti ({status}). {detail}'],
+  ai_model_not_found: ['The model "{model}" is not available for this API key.', '"{model}" modeli bu API anahtarıyla kullanılamıyor.'],
+  ai_server: ['The AI provider is temporarily unavailable. Try again shortly.', 'Yapay zekâ sağlayıcısı geçici olarak kullanılamıyor. Birazdan tekrar deneyin.'],
+  ai_network: ['Could not reach the AI provider. Check your internet connection (or that Ollama is running).', 'Yapay zekâ sağlayıcısına ulaşılamadı. İnternet bağlantınızı (veya Ollama\'nın çalıştığını) kontrol edin.'],
+  ai_timeout: ['The AI provider took too long to answer. Try again.', 'Yapay zekâ sağlayıcısı çok geç yanıt verdi. Tekrar deneyin.'],
+  ai_cancelled: ['The AI request was cancelled.', 'Yapay zekâ isteği iptal edildi.'],
+  ai_refusal: ['The AI model declined to answer this request. Try again or adjust the selection.', 'Yapay zekâ modeli bu isteğe yanıt vermedi. Tekrar deneyin veya seçimi değiştirin.'],
+  ai_truncated: ['The AI answer was cut off before any text was produced. Try again.', 'Yapay zekâ yanıtı metin üretilemeden kesildi. Tekrar deneyin.'],
+  ai_empty: ['The AI provider returned an empty answer.', 'Yapay zekâ sağlayıcısı boş yanıt döndürdü.'],
+  ai_max_steps: ['The AI assistant stopped after {n} steps without a final answer.', 'Yapay zekâ asistanı {n} adımdan sonra nihai yanıt vermeden durdu.'],
+  ai_bad_input: ['Invalid AI request: {field}', 'Geçersiz yapay zekâ isteği: {field}'],
+  ai_prefill: ['Internal error: the conversation cannot end with an assistant message.', 'İç hata: konuşma bir asistan mesajıyla bitemez.'],
 };
 
 /** Current UI language from config ('en' | 'tr'); falls back to 'en'. */

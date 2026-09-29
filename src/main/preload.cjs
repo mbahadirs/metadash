@@ -55,6 +55,9 @@ const api = {
     get: (igId) => invoke('accounts:get', igId),
     update: (igId, patch) => invoke('accounts:update', igId, patch),
     setTags: (igId, tagIds) => invoke('accounts:setTags', igId, tagIds),
+    clientLogos: () => invoke('accounts:clientLogos'),
+    getClientLogo: (igId) => invoke('accounts:getClientLogo', igId),
+    setClientLogo: (igId, dataUrl) => invoke('accounts:setClientLogo', igId, dataUrl),
   },
   tags: {
     list: () => invoke('tags:list'),
@@ -126,6 +129,8 @@ const api = {
     clearHistory: () => invoke('export:clearHistory'),
     pngChart,
     pickLogo: () => invoke('export:pickLogo'),
+    branding: () => invoke('export:branding'),
+    setBranding: (patch) => invoke('export:setBranding', patch),
   },
   system: {
     openExternal: (url) => invoke('system:openExternal', url),
@@ -150,6 +155,14 @@ const api = {
     download: () => invoke('update:download'),
     install: () => invoke('update:install'),
     openRelease: () => invoke('update:openRelease'),
+  },
+  ai: {
+    status: () => invoke('ai:status'),
+    setConfig: (patch) => invoke('ai:setConfig', patch),
+    setKey: (provider, key) => invoke('ai:setKey', { provider, key }),
+    test: () => invoke('ai:test'),
+    reportCommentary: (p) => invoke('ai:reportCommentary', p),
+    explainAnomaly: (p) => invoke('ai:explainAnomaly', p),
   },
   transfer: {
     export: (p) => invoke('transfer:export', p ?? {}),

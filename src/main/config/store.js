@@ -28,6 +28,13 @@ export const DEFAULTS = {
   'notify.budget': true,
   'notify.silent': true,
   'notify.token': true,
+  // White-label report branding (the logo data URL lives in 'reportBranding.logo', outside DEFAULTS, to keep settings:all small).
+  reportBranding: { agencyName: '', accent: '#4F7CFF', footerText: '', hideCredit: false },
+  // Optional bring-your-own-key AI assistant (off by default; keys live encrypted under 'token:ai:<provider>').
+  'ai.enabled': false,
+  'ai.provider': 'anthropic',
+  'ai.model': null,
+  'ai.ollamaUrl': 'http://127.0.0.1:11434',
 };
 
 export function getConfig(key) {

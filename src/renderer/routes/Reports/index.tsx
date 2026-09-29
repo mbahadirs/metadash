@@ -9,6 +9,7 @@ import { fmtNum, fmtPct, fmtCompact, fmtDateTime, isoDate, daysAgo } from '@/lib
 import { Section, Toggle, Loading, Avatar, TagChip } from '@/components/ui';
 import { PostThumb } from '@/components/PostThumb';
 import { ExcelButton } from '@/components/ExcelButton';
+import { AiCommentaryButton } from './AiCommentaryButton';
 
 type Template = 'monthly' | 'weekly_client' | 'custom' | 'portfolio' | 'campaign' | 'weekly' | 'basket';
 type PeriodPreset = 'topbar' | 'today' | 'yesterday' | 7 | 30 | 28 | 'this_month' | 'last_month' | 'custom';
@@ -196,7 +197,10 @@ export function ReportsPage() {
               <div><div className="text-xs text-ink-2 mb-1">{t('report_lang')}</div><div className="flex gap-1 h-8 items-center"><button className={`chip ${lang === 'en' ? 'active' : ''}`} onClick={() => setLang('en')}>English</button><button className={`chip ${lang === 'tr' ? 'active' : ''}`} onClick={() => setLang('tr')}>Türkçe</button></div></div>
             </div>
             <div className="flex items-center gap-3"><button className="btn btn-sm" onClick={async () => setLogo(await call(api.export.pickLogo()))}>{t('upload_logo')}</button>{logo && <><img src={logo.dataUrl} alt="" className="h-7" /><span className="text-xs text-ink-2">{logo.name}</span><button className="btn btn-ghost btn-sm" onClick={() => setLogo(null)}>✕</button></>}</div>
-            <label className="block"><div className="text-xs text-ink-2 mb-1">{t('commentary')}</div><textarea className="input" rows={4} value={commentary} onChange={(e) => setCommentary(e.target.value)} placeholder={t('commentary_placeholder')} /></label>
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-1"><label htmlFor="report-commentary" className="text-xs text-ink-2 flex-none">{t('commentary')}</label><AiCommentaryButton getParams={() => ({ template, igIds: needsAccount ? igIds : undefined, igId: needsAccount ? igIds[0] : undefined, from: range.from, to: range.to, weekOf: range.to, tagIds, basket, lang })} current={commentary} onText={setCommentary} disabled={!ready} /></div>
+              <textarea id="report-commentary" className="input" rows={commentary.length > 300 ? 10 : 4} value={commentary} onChange={(e) => setCommentary(e.target.value)} placeholder={t('commentary_placeholder')} />
+            </div>
             <div><div className="text-xs text-ink-2 mb-2">{t('sections')}</div><div className="grid grid-cols-2 gap-1.5">{available.map((s) => <Toggle key={s} checked={sections[s] !== false} onChange={(v) => setSections({ ...sections, [s]: v })} label={t(`sec_${s}` as Key)} />)}</div></div>
             <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-line">
               <button className="btn btn-primary" disabled={busy !== null || !ready} onClick={() => run(['html'])}>{busy === 'html' ? t('loading') : t('export_html')}</button>

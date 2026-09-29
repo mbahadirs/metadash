@@ -14,6 +14,7 @@ import { portfolioSheet } from '@/lib/xlsx';
 import { adMetricList, fmtAdMetric, adMetricLabel } from '@/lib/adMetrics';
 import { Toggle } from '@/components/ui';
 import { useRunSync } from '@/hooks/useSyncEvents';
+import { AttentionPanel } from './AttentionPanel';
 
 export function OverviewPage() {
   const t = useT();
@@ -88,6 +89,7 @@ export function OverviewPage() {
         </KpiStrip>
 
         <div className="grid grid-cols-12 gap-6">
+          <AttentionPanel anomalies={p.attention.anomalies} />
           <Section title={`${t('league')} · ${rows.length}`} className="col-span-12" right={<ExcelButton name="accounts" getData={() => { const sheet = exportRef.current?.('Hesaplar'); const order = sheet ? (sheet.rows as Record<string, unknown>[]).map((r) => r.username as string) : []; const sorted = order.length ? order.map((u) => rows.find((r) => r.username === u)!).filter(Boolean) : rows; return portfolioSheet(t('league'), sorted); }} />}>
             <div className="-m-4">
               <DataTable data={rows} columns={columns} sorting={sorting} onSortingChange={setSorting} getRowId={(r) => r.igId} onRowClick={(r) => nav(`/account/${r.igId}`)} height="calc(100vh - 300px)" empty={t('no_data')} onExportReady={(fn) => { exportRef.current = fn; }} />

@@ -35,6 +35,7 @@
     "build:linux": "npm run build:renderer && electron-builder --linux && electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.129.0",
     "better-sqlite3": "^11.7.0",
     "date-fns": "^4.1.0",
     "electron-updater": "^6.8.9",

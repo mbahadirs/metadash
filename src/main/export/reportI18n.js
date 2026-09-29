@@ -34,6 +34,7 @@ const D = {
   commentary: ['Değerlendirme ve öneriler', 'Assessment and recommendations'],
   accounts_table: ['Hesaplar', 'Accounts'], account_detail: ['Hesap detayı', 'Account detail'],
   generated: ['MetaDash ile {d} tarihinde oluşturuldu. Veriler Meta Graph API\'den alınmıştır; bu dosya çevrimdışı açılabilir.', 'Generated with MetaDash on {d}. Data from the Meta Graph API; this file opens offline.'],
+  generated_plain: ['{d} tarihinde oluşturuldu.', 'Generated on {d}.'],
   age: ['Yaş', 'Age'], gender: ['Cinsiyet', 'Gender'], platform: ['Platform', 'Platform'], breakdown: ['Reklam kırılımı', 'Ad breakdown'], period: ['Dönem', 'Period'],
   image: ['Görsel', 'Image'], carousel: ['Carousel', 'Carousel'], video: ['Video', 'Video'], reels: ['Reels', 'Reels'], story: ['Story', 'Story'],
   week_of: ['Hafta', 'Week'],

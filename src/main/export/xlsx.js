@@ -6,7 +6,8 @@ import ExcelJS from 'exceljs';
  */
 const NUM_FMT = { int: '#,##0', float: '#,##0.00', percent: '0.00"%"', money: '#,##0.00', date: 'dd.mm.yyyy', datetime: 'dd.mm.yyyy hh:mm' };
 
-export async function writeWorkbook(filePath, sheets, { creator = 'MetaDash' } = {}) {
+/** Options: creator (workbook metadata), title (optional bold title row above each sheet's header, e.g. the agency name). */
+export async function writeWorkbook(filePath, sheets, { creator = 'MetaDash', title = '' } = {}) {
   const wb = new ExcelJS.Workbook();
   wb.creator = creator;
   wb.created = new Date();
@@ -41,9 +42,18 @@ export async function writeWorkbook(filePath, sheets, { creator = 'MetaDash' } =
       const r = ws.addRow([sheet.note]);
       r.font = { italic: true, color: { argb: 'FF888888' } };
     }
+    if (title) addTitleRow(ws, String(title), sheet.columns.length, (sheet.rows ?? []).length > 0);
   }
   await wb.xlsx.writeFile(filePath);
   return filePath;
+}
+
+/** Inserts a title row above the header and shifts the frozen pane / filter to the header's new row. */
+function addTitleRow(ws, title, cols, filtered) {
+  ws.spliceRows(1, 0, [title]);
+  ws.getRow(1).font = { bold: true, size: 13 };
+  ws.views = [{ state: 'frozen', ySplit: 2 }];
+  if (filtered) ws.autoFilter = { from: { row: 2, column: 1 }, to: { row: 2, column: cols } };
 }
 
 function coerce(v, type) {

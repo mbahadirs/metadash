@@ -44,7 +44,7 @@ export function canLoadDemo() {
 
 export function clearAll() {
   const db = getDb();
-  const tables = ['sync_errors', 'sync_runs', 'notes', 'ad_insights_breakdown', 'ad_insights_daily', 'ad_media_links', 'ad_budget_overrides', 'ad_accounts', 'competitor_snapshots', 'competitors', 'comments', 'stories', 'media_latest', 'media_insight_snapshots', 'media', 'account_demographics', 'account_insights_daily', 'account_snapshots', 'account_tags', 'tags', 'accounts', 'profiles', 'disabled_metrics'];
+  const tables = ['sync_errors', 'sync_runs', 'notes', 'ad_insights_breakdown', 'ad_insights_daily', 'ad_media_links', 'ad_budget_overrides', 'ad_accounts', 'competitor_snapshots', 'competitors', 'comments', 'stories', 'media_latest', 'media_insight_snapshots', 'media', 'account_demographics', 'account_insights_daily', 'account_snapshots', 'account_tags', 'account_logos', 'tags', 'accounts', 'profiles', 'disabled_metrics'];
   db.transaction(() => { for (const t of tables) db.exec(`DELETE FROM ${t}`); })();
 }
 

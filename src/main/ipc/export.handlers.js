@@ -9,6 +9,8 @@ import { writeWorkbook } from '../export/xlsx.js';
 import { writeTablePdf } from '../export/tablePdf.js';
 import { reportSheets } from '../export/xlsxReport.js';
 import { msg, currentLang } from '../i18n.js';
+import { readLogoFile } from '../export/logoFile.js';
+import { loadBranding, saveBranding } from '../export/brandingStore.js';
 
 async function askPath(event, { defaultName, filters }) {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -19,7 +21,8 @@ async function askPath(event, { defaultName, filters }) {
 
 const stamp = () => new Date().toISOString().slice(0, 10);
 /** Report params with lang defaulting to the configured UI language. */
-const withLang = (params) => ({ ...params, lang: params?.lang ?? currentLang() });
+/** Branding always comes from settings, never from the renderer's params. */
+const withLang = (params) => ({ ...params, lang: params?.lang ?? currentLang(), branding: loadBranding() });
 
 function recordHistory(entry) {
   const list = getSetting('ui.reportHistory', []) ?? [];
@@ -55,7 +58,7 @@ export function registerExportHandlers(handle) {
     const safe = String(name ?? 'table').replace(/[^\p{L}\p{N}_-]+/gu, '-').slice(0, 60);
     const filePath = await askPath(event, { defaultName: `metadash-${safe}-${stamp()}.xlsx`, filters: [{ name: 'Excel', extensions: ['xlsx'] }] });
     if (!filePath) return { canceled: true };
-    await writeWorkbook(filePath, sheets);
+    await writeWorkbook(filePath, sheets, { title: loadBranding().agencyName });
     return { filePath, rows: sheets.reduce((n, s) => n + (s.rows?.length ?? 0), 0) };
   });
   handle('export:tablePdf', async ({ name, title, subtitle, sheets }, event) => {
@@ -63,14 +66,15 @@ export function registerExportHandlers(handle) {
     const safe = String(name ?? 'table').replace(/[^\p{L}\p{N}_-]+/gu, '-').slice(0, 60);
     const filePath = await askPath(event, { defaultName: `metadash-${safe}-${stamp()}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] });
     if (!filePath) return { canceled: true };
-    await writeTablePdf(filePath, { title: title ?? name, subtitle, sheets });
+    await writeTablePdf(filePath, { title: title ?? name, subtitle, sheets, branding: loadBranding() });
     return { filePath };
   });
   handle('export:xlsxReport', async ({ template, params }, event) => {
     const filePath = await askPath(event, { defaultName: `metadash-${template}-${stamp()}.xlsx`, filters: [{ name: 'Excel', extensions: ['xlsx'] }] });
     if (!filePath) return { canceled: true };
-    const sheets = reportSheets(template, withLang(params));
-    await writeWorkbook(filePath, sheets);
+    const full = withLang(params);
+    const sheets = reportSheets(template, full);
+    await writeWorkbook(filePath, sheets, { title: full.branding.agencyName });
     recordHistory({ template, filePath, kind: 'xlsx', from: params.from, to: params.to, igIds: params.igIds ?? (params.igId ? [params.igId] : []) });
     return { filePath, sheets: sheets.length };
   });
@@ -82,13 +86,12 @@ export function registerExportHandlers(handle) {
     fs.writeFileSync(filePath, Buffer.from(base64, 'base64'));
     return { filePath };
   });
+  handle('export:branding', () => loadBranding());
+  handle('export:setBranding', (patch) => saveBranding(patch));
   handle('export:pickLogo', async (_p, event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     const res = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: msg('image_filter'), extensions: ['png', 'jpg', 'jpeg', 'svg', 'webp'] }] });
     if (res.canceled || !res.filePaths[0]) return null;
-    const file = res.filePaths[0];
-    const ext = path.extname(file).slice(1).toLowerCase();
-    const mime = ext === 'svg' ? 'image/svg+xml' : ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
-    return { name: path.basename(file), dataUrl: `data:${mime};base64,${fs.readFileSync(file).toString('base64')}` };
+    return readLogoFile(res.filePaths[0]);
   });
 }

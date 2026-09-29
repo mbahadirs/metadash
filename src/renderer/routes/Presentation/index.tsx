@@ -12,6 +12,7 @@ import { Heatmap } from '@/charts/Heatmap';
 import { BarList } from '@/charts/BarList';
 import { PostThumb } from '@/components/PostThumb';
 import { TypeBadge, typeLabel } from '@/components/TypeFilter';
+import { useBranding } from '@/hooks/useBranding';
 
 const SLIDES = ['cover', 'kpi', 'growth', 'content', 'top', 'spotlight', 'recent', 'hashtags', 'besttime', 'ads', 'campaigns', 'breakdown', 'blended', 'boosted', 'basket', 'next'] as const;
 type SlideId = (typeof SLIDES)[number];
@@ -73,6 +74,7 @@ export function PresentationRun() {
   const { period, basket } = useAppStore();
   const basketCmp = useComparePosts(basket.length >= 2 ? basket : basket.length === 1 ? [...basket, ...basket] : []);
   const a = useAccountAnalytics(igId);
+  const { branding } = useBranding();
   const bt = useBestTime(igId);
   const bl = useBlended(igId);
   const ca = useContentAnalysis({ igIds: [igId], recentDays: 28 }, !!igId);
@@ -106,7 +108,7 @@ export function PresentationRun() {
     <div className="h-full bg-surface-0 flex flex-col select-none" onClick={() => { setDir('fwd'); setI((x) => Math.min(slides.length - 1, x + 1)); }}>
       <div key={`${slide}-${i}`} className={`flex-1 min-h-0 px-16 py-12 flex flex-col max-w-[1500px] w-full mx-auto ${dir === 'fwd' ? 'slide-enter' : 'slide-enter-back'}`}>
         {slide === 'cover' && (
-          <Center><div className="flex items-center gap-8"><Avatar username={acc.username} url={acc.profilePicUrl} color={acc.color} size={120} />
+          <Center>{branding && (branding.agencyName || branding.logo) && <div className="flex items-center gap-4 mb-12 pb-4" style={{ borderBottom: `2px solid ${branding.accent}` }}>{branding.logo && <img src={branding.logo} alt="" className="h-12 max-w-[240px] object-contain" />}{branding.agencyName && <span className="text-xl font-semibold">{branding.agencyName}</span>}</div>}<div className="flex items-center gap-8"><Avatar username={acc.username} url={acc.profilePicUrl} color={acc.color} size={120} />
             <div><div className="text-3xl font-semibold">{acc.name ?? acc.username}</div><div className="text-xl text-ink-2 mt-2">@{acc.username}{acc.clientName ? ` · ${acc.clientName}` : ''}</div><div className="text-lg text-ink-2 mt-6">{fmtDate(period.from, { day: 'numeric', month: 'long' })} – {fmtDate(period.to, { day: 'numeric', month: 'long', year: 'numeric' })}</div></div></div></Center>
         )}
         {slide === 'kpi' && (

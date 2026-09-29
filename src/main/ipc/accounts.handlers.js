@@ -2,11 +2,17 @@ import { listAccounts, getAccount, updateAccount } from '../db/queries/accounts.
 import { listTags, createTag, deleteTag, setAccountTags } from '../db/queries/tags.js';
 import { listNotes, addNote, deleteNote } from '../db/queries/media.js';
 import { msg } from '../i18n.js';
+import { getClientLogo, setClientLogo, clientLogoFlags } from '../db/queries/accountLogos.js';
 
 export function registerAccountHandlers(handle) {
   handle('accounts:list', (params = {}) => listAccounts(params));
   handle('accounts:get', (igId) => getAccount(igId));
   handle('accounts:update', (igId, patch) => { updateAccount(igId, patch ?? {}); return getAccount(igId); });
+  handle('accounts:clientLogos', () => clientLogoFlags());
+  handle('accounts:getClientLogo', (igId) => getClientLogo(igId));
+  handle('accounts:setClientLogo', (igId, dataUrl) => {
+    try { return setClientLogo(igId, dataUrl ?? null); } catch (e) { throw new Error(msg(e.message)); }
+  });
   handle('accounts:setTags', (igId, tagIds) => { setAccountTags(igId, tagIds ?? []); return getAccount(igId); });
   handle('tags:list', () => listTags());
   handle('tags:create', (tag) => {

@@ -12,6 +12,9 @@ import { ExcelButton } from '@/components/ExcelButton';
 import { useRef } from 'react';
 import { UpdatesPanel } from './UpdatesPanel';
 import { NotificationsSection } from './NotificationsSection';
+import { AiSection } from './AiSection';
+import { BrandingSection } from './BrandingSection';
+import { ClientLogoCell, useClientLogoFlags } from './ClientLogoCell';
 
 const SERIES_COLORS = ['#4F7CFF', '#3FBF8F', '#E8B44A', '#C06CE8', '#E5605F', '#48C3D6'];
 
@@ -54,6 +57,10 @@ export function SettingsPage() {
       </Section>
 
       <NotificationsSection />
+
+      <AiSection />
+
+      <BrandingSection />
 
       <MetricsSection />
       <AccountsSection />
@@ -131,16 +138,18 @@ function AccountsSection() {
   const t = useT();
   const accounts = useAccounts({ onlyTracked: false });
   const tags = useTags();
+  const logoFlags = useClientLogoFlags();
   const update = useApiMutation<{ igId: string; patch: Partial<Pick<Account, 'clientName' | 'color' | 'isTracked'>> }>(({ igId, patch }) => api.accounts.update(igId, patch), ['accounts', 'portfolio']);
   const setTags = useApiMutation<{ igId: string; tagIds: number[] }>(({ igId, tagIds }) => api.accounts.setTags(igId, tagIds), ['accounts', 'tags', 'portfolio']);
   return (
     <Section title={`${t('account_management')} · ${accounts.data?.length ?? 0}`} right={<ExcelButton name="account-management" getData={() => ({ name: t('account_management'), columns: [{ key: 'username', label: t('account'), type: 'text' }, { key: 'name', label: t('client'), type: 'text' }, { key: 'clientName', label: t('client'), type: 'text' }, { key: 'followers', label: t('followers'), type: 'int' }, { key: 'mediaCount', label: t('posts'), type: 'int' }, { key: 'isTracked', label: t('tracked'), type: 'text' }, { key: 'lastSyncedAt', label: t('last_sync'), type: 'datetime' }], rows: (accounts.data ?? []).map((a) => ({ ...a, isTracked: a.isTracked ? t('yes') : t('no') })) })} />}>
       <div className="-m-4 max-h-96 overflow-auto"><table className="table">
-        <thead><tr><th>{t('account')}</th><th>{t('client')}</th><th>{t('color')}</th><th>{t('tags')}</th><th>{t('last_sync')}</th><th>{t('tracked')}</th></tr></thead>
+        <thead><tr><th>{t('account')}</th><th>{t('client')}</th><th>{t('client_logo')}</th><th>{t('color')}</th><th>{t('tags')}</th><th>{t('last_sync')}</th><th>{t('tracked')}</th></tr></thead>
         <tbody>{(accounts.data ?? []).map((a) => (
           <tr key={a.igId} className={a.isTracked ? '' : 'opacity-50'}>
             <td><span className="flex items-center gap-2"><Avatar username={a.username} url={a.profilePicUrl} color={a.color} size={22} />@{a.username}</span></td>
             <td><input className="input h-7 text-xs w-44" defaultValue={a.clientName ?? ''} onBlur={(e) => e.target.value !== (a.clientName ?? '') && update.mutate({ igId: a.igId, patch: { clientName: e.target.value } })} /></td>
+            <td><ClientLogoCell igId={a.igId} has={!!logoFlags.data?.[a.igId]} /></td>
             <td><div className="flex gap-1">{SERIES_COLORS.map((c) => <button key={c} className="w-4 h-4 rounded-full border" style={{ background: c, borderColor: a.color === c ? 'var(--ink-1)' : 'transparent' }} onClick={() => update.mutate({ igId: a.igId, patch: { color: c } })} aria-label={c} />)}</div></td>
             <td><div className="flex flex-wrap gap-1">{(tags.data ?? []).map((tg) => <TagChip key={tg.id} small name={tg.name} color={tg.color} active={a.tagIds.includes(tg.id)} onClick={() => setTags.mutate({ igId: a.igId, tagIds: a.tagIds.includes(tg.id) ? a.tagIds.filter((x) => x !== tg.id) : [...a.tagIds, tg.id] })} />)}</div></td>
             <td className="text-ink-2">{fmtRelative(a.lastSyncedAt)}</td>

@@ -11,6 +11,7 @@ import { registerExportHandlers } from './export.handlers.js';
 import { registerSystemHandlers } from './system.handlers.js';
 import { registerCompetitorHandlers } from './competitors.handlers.js';
 import { registerUpdateHandlers } from './update.handlers.js';
+import { registerAiHandlers } from './ai.handlers.js';
 
 /** Wraps a handler so the renderer always receives { ok, data } | { ok: false, error }.*/
 export function handle(channel, fn) {
@@ -49,6 +50,7 @@ export function registerIpc() {
   registerSystemHandlers(handle);
   registerCompetitorHandlers(handle);
   registerUpdateHandlers(handle);
+  registerAiHandlers(handle);
 
   for (const evt of RENDERER_EVENTS) {
     progressBus.on(evt, (payload) => {
