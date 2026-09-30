@@ -1,12 +1,15 @@
 import { useT } from '@/lib/i18n';
 import { Section, Toggle } from '@/components/ui';
 import { useSettingToggle } from './useSettingToggle';
+import { INBOX_READY } from '@/routes/Inbox/feature';
 
 const TYPES = [
   ['notify.anomalies', 'notify_anomalies'],
   ['notify.budget', 'notify_budget'],
   ['notify.silent', 'notify_silent'],
   ['notify.token', 'notify_token'],
+  ...(INBOX_READY ? [['notify.inbox', 'ix_notify_setting'] as const] : []),
+  ['notify.mentions', 'team_notify_setting'],
 ] as const;
 
 /** Master switch and per-type toggles for desktop notifications. */

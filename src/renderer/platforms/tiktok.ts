@@ -1,6 +1,6 @@
 import type { PlatformUi } from './types';
 
-/** TikTok renderer vocabulary (experimental) — owned by chunk C2 (B ships the contract values). */
+/** TikTok renderer vocabulary (experimental, chunk C2). defaultCapabilities mirror main providers/tiktok/meta.js. */
 export const tiktokUi: PlatformUi = {
   platform: 'tiktok',
   label: 'TikTok',
@@ -18,5 +18,6 @@ export const tiktokUi: PlatformUi = {
     { key: 'newFollowers', aliases: ['follower_count'], label: 'new_followers', kind: 'signed' },
     { key: 'er', label: 'er', kind: 'pct', tip: 'er_formula' },
   ],
-  chart: (t) => ({ title: t('views'), series: [{ key: 'views', name: t('views'), color: '#4F7CFF', type: 'area' }] }),
+  // Display API has no daily series: views/day are derived from snapshot deltas (main analytics/derived.js).
+  chart: (t) => ({ title: `${t('views')} · ${t('tt_estimated')}`, series: [{ key: 'views', name: t('views'), color: '#4F7CFF', type: 'area' }] }),
 };

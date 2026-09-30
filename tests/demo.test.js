@@ -42,7 +42,9 @@ describe('demo data per platform', async () => {
     const th = listAccounts({ platforms: ['threads'] });
     expect(fb).toHaveLength(8);
     expect(th).toHaveLength(6);
-    expect(listAccounts()).toHaveLength(54);
+    expect(listAccounts({ platforms: ['youtube'] })).toHaveLength(2);
+    expect(listAccounts({ platforms: ['tiktok'] })).toHaveLength(3);
+    expect(listAccounts()).toHaveLength(59); // 40 IG + 8 FB + 6 Threads + 2 YouTube + 3 TikTok
     for (const a of fb) {
       expect(a.igId).toMatch(/^fb-\d+$/);
       expect(a.externalId).toBe(a.igId.slice(3));

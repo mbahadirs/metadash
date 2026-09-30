@@ -1,0 +1,5 @@
+# Build context is the repository root; only these paths are needed.
+*
+!worker/package.json
+!worker/src/**
+!src/shared/publish/**

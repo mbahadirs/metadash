@@ -84,7 +84,7 @@ export function seedDemo({ reset = false, onProgress } = {}) {
   db.transaction(() => seedPlatformAccounts({ metaProfileId: profileId, threadsProfileId, now, onProgress: report }))();
   // v2.0: enabled providers with a demo hook (YouTube, TikTok, …) seed their own accounts/profiles.
   db.transaction(() => seedProviderDemos({ now, onProgress: report }))();
-  const totalAccounts = BRANDS.length + PLATFORM_DEMO_COUNTS.facebook + PLATFORM_DEMO_COUNTS.threads;
+  const totalAccounts = q.get('SELECT COUNT(*) AS n FROM accounts WHERE is_tracked = 1').n; // every platform incl. provider demos
   report('Sync history');
   db.transaction(() => {
     for (let d = 6; d >= 0; d -= 1) {
@@ -190,10 +190,12 @@ function seedAccount(r, { index, username, name, client, sector, profileId, now,
       const n = Math.min(12, Math.round(final.comments * 0.3));
       for (let c = 0; c < n; c += 1) {
         const cid = `${mediaId}_c${c}`;
-        const createdAt = posted.getTime() + between(r, 0.2, 30) * HOUR;
+        // Never in the future: posts from the last day would otherwise get comments "from tomorrow" (inbox, SLA).
+        const createdAt = Math.min(now.getTime() - 10 * 60_000, posted.getTime() + between(r, 0.2, 30) * HOUR);
         upsertComment({ commentId: cid, mediaId, username: pick(r, COMMENTERS), text: pick(r, COMMENT_TEXTS), likeCount: Math.floor(r() * 8), createdAt, isFromOwner: false });
-        if (r() < ownerReplyRate) {
-          const latency = between(r, 10, 600);
+        const replied = r() < ownerReplyRate;
+        const latency = replied ? between(r, 10, 600) : 0;
+        if (replied && createdAt + latency * 60_000 < now.getTime()) {
           upsertComment({ commentId: `${cid}_r`, mediaId, username, text: 'Thank you! Feel free to send us a DM 🙏', likeCount: 0, createdAt: createdAt + latency * 60_000, isFromOwner: true, parentId: cid, replyLatencyMinutes: Math.round(latency) });
         }
       }

@@ -13,6 +13,8 @@ import { useSyncHistory } from '@/hooks/queries';
 import { useSession, canSeeRoute } from '@/hooks/useSession';
 import { INBOX_READY } from '@/routes/Inbox/feature';
 import { useInboxBadge } from '@/routes/Inbox';
+import { TeamBanners } from './WorkspaceBanner';
+import { MentionsBadge } from './NotesThread';
 
 /** `ready: false` items are hidden (v2.0 features whose chunk has not landed); `badge` = the inbox overdue count. */
 const NAV = [
@@ -62,7 +64,7 @@ export function Layout() {
         </nav>
         <div className="px-2 pb-3 space-y-0.5 border-t border-line pt-2">
           {canSeeRoute(session, '/setup') && <NavLink to="/setup" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title={t('nav_setup')}><Icon.setup />{!sidebarCollapsed && <span>{t('nav_setup')}</span>}</NavLink>}
-          {canSeeRoute(session, '/settings') && <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title={t('nav_settings')}><Icon.settings />{!sidebarCollapsed && <span>{t('nav_settings')}</span>}</NavLink>}
+          {canSeeRoute(session, '/settings') && <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title={t('nav_settings')}><Icon.settings />{!sidebarCollapsed && <span>{t('nav_settings')}</span>}<span className="ml-auto"><MentionsBadge /></span></NavLink>}
           <button className="nav-item w-full" onClick={toggleSidebar} aria-label="toggle sidebar"><Icon.menu />{!sidebarCollapsed && <span className="text-ink-2">{t('collapse')}</span>}</button>
           {!sidebarCollapsed && <div className="px-2 pt-2 text-[11px] text-ink-2">© 2026 Bahadır Şahin</div>}
         </div>
@@ -90,6 +92,7 @@ export function Layout() {
           {panelOpen && <SyncPanel onClose={() => setPanelOpen(false)} />}
         </header>
 
+        <TeamBanners />
         {tokenWarning && (
           <div className="bg-neg/15 text-neg px-4 py-2 text-sm flex items-center justify-between">
             <span>{tokenWarning.platform === 'threads' ? t('token_invalid_threads') : t('token_invalid')}{tokenWarning.message ? `: ${tokenWarning.message}` : ''}</span>

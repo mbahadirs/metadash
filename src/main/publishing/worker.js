@@ -25,6 +25,8 @@ import { electronConvertImage, electronKeepAwake } from './electronAdapters.js';
  *    planner.missedPolicy (ask → missed + publish:missed + notification; skip → missed; publish → still published
  *    when at most planner.maxLateMin late).
  * Dependencies are injected (tests use a fake clock and fake publishers).
+ * v2.0: targets with executor = 'worker' belong to the self-hosted worker (src/main/worker/, not this file) and are
+ * skipped by every query here, so nothing is ever published twice; handover back happens only via recall.
  */
 const DUE_STATES = PENDING_STATES.filter((s) => s !== 'paused');
 const MISSABLE_STATES = ['queued', 'ready'];
@@ -56,7 +58,7 @@ export function defaultDeps(overrides = {}) {
 /** Earliest next_attempt_at among due-able targets of live posts. */
 function earliestDue() {
   const marks = DUE_STATES.map(() => '?').join(',');
-  return q.get(`SELECT MIN(t.next_attempt_at) AS at FROM planner_targets t JOIN planner_posts p ON p.id = t.post_id WHERE p.deleted_at IS NULL AND t.state IN (${marks})`, ...DUE_STATES)?.at ?? null;
+  return q.get(`SELECT MIN(t.next_attempt_at) AS at FROM planner_targets t JOIN planner_posts p ON p.id = t.post_id WHERE p.deleted_at IS NULL AND t.executor = 'local' AND t.state IN (${marks})`, ...DUE_STATES)?.at ?? null;
 }
 
 /** Next scheduled item (tray status line). @returns {null | { targetId, postId, ref, title, accountId, platform, mode, state, scheduledAt, nextAttemptAt }} */
@@ -64,7 +66,7 @@ export function nextDue({ now = Date.now() } = {}) {
   const marks = DUE_STATES.map(() => '?').join(',');
   const r = q.get(
     `SELECT t.id, t.post_id, t.account_id, t.platform, t.mode, t.state, t.next_attempt_at, p.ref, p.title, p.scheduled_at FROM planner_targets t JOIN planner_posts p ON p.id = t.post_id
-     WHERE p.deleted_at IS NULL AND t.state IN (${marks}) AND p.scheduled_at IS NOT NULL AND p.scheduled_at >= ? ORDER BY p.scheduled_at, t.id LIMIT 1`,
+     WHERE p.deleted_at IS NULL AND t.executor = 'local' AND t.state IN (${marks}) AND p.scheduled_at IS NOT NULL AND p.scheduled_at >= ? ORDER BY p.scheduled_at, t.id LIMIT 1`,
     ...DUE_STATES, now - 60 * MIN,
   );
   return r ? { targetId: r.id, postId: r.post_id, ref: r.ref, title: r.title, accountId: r.account_id, platform: r.platform, mode: r.mode, state: r.state, scheduledAt: r.scheduled_at, nextAttemptAt: r.next_attempt_at } : null;
@@ -74,7 +76,7 @@ export function nextDue({ now = Date.now() } = {}) {
 export function countDue({ from, to, mode = 'app' } = {}) {
   const marks = DUE_STATES.map(() => '?').join(',');
   return q.get(
-    `SELECT COUNT(*) AS n FROM planner_targets t JOIN planner_posts p ON p.id = t.post_id WHERE p.deleted_at IS NULL AND t.state IN (${marks}) AND t.mode = ? AND p.scheduled_at >= ? AND p.scheduled_at < ?`,
+    `SELECT COUNT(*) AS n FROM planner_targets t JOIN planner_posts p ON p.id = t.post_id WHERE p.deleted_at IS NULL AND t.executor = 'local' AND t.state IN (${marks}) AND t.mode = ? AND p.scheduled_at >= ? AND p.scheduled_at < ?`,
     ...DUE_STATES, mode, from, to,
   ).n;
 }
@@ -117,7 +119,7 @@ export function createWorker(overrides = {}) {
     if (!leaseTarget(id, deps.owner, now())) return;
     try {
       const target = getTarget(id);
-      if (!target || !DUE_STATES.includes(target.state) || target.nextAttemptAt == null || target.nextAttemptAt > now()) return;
+      if (!target || target.executor === 'worker' || !DUE_STATES.includes(target.state) || target.nextAttemptAt == null || target.nextAttemptAt > now()) return;
       const post = getPost(target.postId);
       if (!post) return;
       const job = buildJob(target, post, deps.makeContext());
@@ -134,7 +136,7 @@ export function createWorker(overrides = {}) {
     const grace = Math.max(0, Number(deps.config('planner.missedGraceMin')) || 0) * MIN;
     const maxLate = Math.max(0, Number(deps.config('planner.maxLateMin')) || 0) * MIN;
     const policy = deps.config('planner.missedPolicy') ?? 'ask';
-    const late = listTargets({ states: MISSABLE_STATES }).filter((t) => t.mode !== 'native' && !t.attempts && t.nextAttemptAt != null
+    const late = listTargets({ states: MISSABLE_STATES, executor: 'local' }).filter((t) => t.mode !== 'native' && !t.attempts && t.nextAttemptAt != null
       && t.nextAttemptAt < t0 - grace && (t.scheduledAt ?? t.nextAttemptAt) < t0 - grace && !inFlight.has(t.id));
     const missed = late.filter((t) => !(policy === 'publish' && t0 - (t.scheduledAt ?? t.nextAttemptAt) <= maxLate));
     for (const t of missed) {
@@ -154,7 +156,7 @@ export function createWorker(overrides = {}) {
 
   /** Auth-paused targets go back to the queue once that auth's token changed (reconnected) or after a restart. */
   function resumeAuth() {
-    const paused = listTargets({ states: ['paused'] });
+    const paused = listTargets({ states: ['paused'], executor: 'local' });
     if (!paused.length) return;
     const resumed = [];
     for (const t of paused) {
@@ -170,7 +172,7 @@ export function createWorker(overrides = {}) {
 
   function dispatch() {
     const limit = Math.max(1, deps.concurrency);
-    for (const t of listTargets({ states: DUE_STATES, dueBefore: now() })) {
+    for (const t of listTargets({ states: DUE_STATES, dueBefore: now(), executor: 'local' })) {
       if (inFlight.size >= limit) break;
       if (inFlight.has(t.id) || busyAccounts.has(t.accountId)) continue;
       busyAccounts.add(t.accountId);
@@ -228,7 +230,7 @@ export function createWorker(overrides = {}) {
 
   /** FB native targets handed off elsewhere (demo seed, older builds) without a reconcile time get one. */
   function normalizeHandedOff() {
-    for (const t of listTargets({ states: ['handed_off'] })) {
+    for (const t of listTargets({ states: ['handed_off'], executor: 'local' })) {
       if (t.nextAttemptAt != null) continue;
       steps.set(t, { nextAttemptAt: t.scheduledAt != null ? nextReconcileAt(t.scheduledAt, now()) ?? now() : now() }, { progress: false });
     }

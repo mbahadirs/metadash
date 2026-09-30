@@ -79,7 +79,7 @@ export function createSteps(env) {
   function pauseAuth(job, c) {
     const auth = authOf(job.target.platform);
     const platforms = auth === 'threads' ? ['threads'] : ['instagram', 'facebook'];
-    const affected = listTargets({ states: APP_PAUSABLE }).filter((t) => platforms.includes(t.platform) && t.mode === 'app');
+    const affected = listTargets({ states: APP_PAUSABLE, executor: 'local' }).filter((t) => platforms.includes(t.platform) && t.mode === 'app');
     const ids = new Set([job.target.id, ...affected.map((t) => t.id)]);
     for (const id of ids) {
       const t = id === job.target.id ? job.target : affected.find((x) => x.id === id);

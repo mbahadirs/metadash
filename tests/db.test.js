@@ -24,7 +24,7 @@ afterAll(() => { closeDb(); fs.rmSync(dir, { recursive: true, force: true }); })
 describe('seed + analytics (integration)', () => {
   it('seeds 40 tracked accounts with ad accounts and competitors', () => {
     expect(listAccounts({ platforms: ['instagram'] })).toHaveLength(40);
-    expect(listAccounts()).toHaveLength(54); // + 8 demo Facebook Pages and 6 Threads profiles (v1.3)
+    expect(listAccounts()).toHaveLength(59); // + 8 Facebook Pages, 6 Threads profiles (v1.3), 2 YouTube channels, 3 TikTok accounts (v2.0)
     expect(seedDemo({}).skipped).toBe(true);
   });
   it('portfolio for 40 accounts computes in under 1 second', () => {

@@ -1,1 +1,20 @@
-{}
+{
+  "tt_client_key_invalid": "The TikTok client key looks wrong. Copy it from your app in TikTok for Developers (letters and digits).",
+  "tt_client_secret_short": "The TikTok client secret looks too short. Copy it again from TikTok for Developers.",
+  "tt_client_missing": "Save your TikTok client key and client secret first.",
+  "tt_client_invalid": "TikTok rejected the client key or secret. Check both in TikTok for Developers. ({detail})",
+  "tt_redirect_https": "The callback page address must start with https:// and have no query or fragment.",
+  "tt_no_code": "No authorization code found. Paste the code or the whole address of the callback page.",
+  "tt_state_mismatch": "This code belongs to a different sign-in attempt. Start the sign-in again.",
+  "tt_state_expired": "This sign-in attempt has expired. Click “Open TikTok sign-in” again and paste the new code.",
+  "tt_code_invalid": "TikTok did not accept the code. Codes can be used once and expire quickly; sign in again. ({detail})",
+  "tt_no_open_id": "TikTok did not return an account id. Try connecting again.",
+  "tt_connect_busy": "A TikTok sign-in is already waiting in your browser. Finish or cancel it first.",
+  "tt_oauth_cancelled": "TikTok sign-in cancelled.",
+  "tt_oauth_timeout": "TikTok sign-in timed out. Try again.",
+  "tt_oauth_denied": "TikTok sign-in was declined.",
+  "tt_oauth_failed": "TikTok sign-in failed: {detail}",
+  "tt_not_connected": "This TikTok account is not connected.",
+  "tt_refresh_expired": "The TikTok login has expired. Reconnect the account in Settings → Connections.",
+  "tt_refresh_expiring": "The TikTok login of {u} expires in {n} days. Reconnect it in Settings → Connections."
+}

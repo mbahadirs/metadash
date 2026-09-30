@@ -5,7 +5,7 @@
   "inbox_reply_too_long": "Yanıt çok uzun (en fazla {max} karakter).",
   "inbox_not_replyable": "Burada yalnızca başkalarının yazdığı ana yorumlar yanıtlanabilir.",
   "inbox_platform_unsupported": "Yanıtlama yalnızca Instagram yorumları için kullanılabilir.",
-  "inbox_missing_scope": "Yanıt göndermek için {scope} izni gerekiyor. Ayarlar → Bağlantı'dan Meta'yı yeniden bağlayıp bu izni verin.",
+  "inbox_missing_scope": "Yanıt göndermek için {scope} izni gerekiyor. Ayarlar → Bağlantılar'dan hesabı yeniden bağlayıp bu izni verin.",
   "inbox_not_connected": "Önce Meta hesabınızı bağlayın (Ayarlar → Bağlantı).",
   "inbox_send_failed": "Yanıt gönderilemedi ({detail}).",
   "ab_not_found": "Bu deney artık yok.",

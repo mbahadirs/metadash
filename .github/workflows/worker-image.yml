@@ -1,0 +1,60 @@
+# Builds the optional self-hosted publish worker image (multi-arch amd64/arm64) and pushes it to
+# ghcr.io/<owner>/metadash-worker. Runs ONLY for version tags (v2.0.0 or worker-v2.0.1), never on normal pushes/PRs.
+name: worker-image
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'worker-v*'
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: worker-image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Smoke test (build + /v1/health)
+        run: sh worker/test/smoke.sh
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/metadash-worker
+          tags: |
+            type=match,pattern=worker-v(\d+\.\d+\.\d+.*),group=1
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref_name, 'worker-v') }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: worker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false

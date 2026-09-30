@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { getSetting, setSetting, getAllSettings } from '../db/queries/settings.js';
 import { machineId } from './machine.js';
+import { INBOX_DEFAULTS } from '../inbox/settings.js';
 
 /**
  * Secrets (Meta token, app secret) are encrypted at rest with AES-256-GCM.
@@ -61,6 +62,15 @@ export const DEFAULTS = {
   'studio.captionLangs': ['tr', 'en'],
   'studio.anonymizeCommenters': true,
   'studio.specialDays': [], // user additions to data/specialDays.js (chunk C validates)
+  // Sync options edited in Settings → Sync (read by sync/jobs/platformAccount.js through getAllConfig()).
+  syncComments: false,
+  metricOverrides: null, // { platform: { metric: [apiName, …] } } manual metric-name overrides (Settings → Metrics)
+  // v2.0 notification rules (notifyRules/{inbox,mentions,worker}.js); notifications.js reads notify.<type>.
+  'notify.inbox': true,
+  'notify.mentions': true,
+  'notify.worker': true,
+  // v2.0 unified inbox (inbox/settings.js reads and clamps these; INBOX_DEFAULTS is the single source of the defaults).
+  ...Object.fromEntries(Object.entries(INBOX_DEFAULTS).map(([k, v]) => [`inbox.${k}`, v])),
 };
 
 export function getConfig(key) {

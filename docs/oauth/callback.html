@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Static OAuth "paste-code" callback for MetaDash (TikTok fallback; usable by any provider that redirects with ?code=&state=).
+     It only DISPLAYS the code and state from its own address so the user can copy them into MetaDash. No network
+     access (connect-src 'none'), no external resources, no referrer. The code is useless without the client secret and
+     the PKCE verifier, which stay on the user's computer. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>MetaDash sign-in</title>
+<style>
+  :root { --bg: #f7f7f8; --fg: #1d1d1f; --muted: #6b6b73; --card: #fff; --line: #e3e3e8; --accent: #4f7cff; --neg: #d6455d; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #151518; --fg: #f1f1f3; --muted: #a0a0aa; --card: #1f1f24; --line: #34343c; --accent: #7a9cff; --neg: #ff7a8e; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 560px; margin: 10vh auto; padding: 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  p { margin: 0 0 12px; color: var(--muted); }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 4px; }
+  .row { display: flex; gap: 8px; }
+  input { flex: 1; min-width: 0; font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); }
+  button { font: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; white-space: nowrap; }
+  .err { color: var(--neg); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <h1 id="title"></h1>
+    <p id="intro"></p>
+    <div id="ok" hidden>
+      <label for="code" id="codeLabel"></label>
+      <div class="row"><input id="code" readonly><button type="button" data-copy="code" id="copyCode"></button></div>
+      <label for="full" id="fullLabel"></label>
+      <div class="row"><input id="full" readonly><button type="button" data-copy="full" id="copyFull"></button></div>
+      <p id="stateLine" style="margin-top:12px"></p>
+    </div>
+    <p id="error" class="err" hidden></p>
+  </div>
+</main>
+<script>
+(function () {
+  var T = {
+    en: {
+      title: 'Almost done', intro: 'Copy the code below and paste it into MetaDash (Settings → Connections), then close this tab.',
+      code: 'Authorization code', full: 'Or copy this whole address', copy: 'Copy', copied: 'Copied',
+      state: 'Sign-in id (state): ', failTitle: 'Sign-in failed', noCode: 'This page did not receive an authorization code. Start the sign-in again from MetaDash.',
+    },
+    tr: {
+      title: 'Neredeyse bitti', intro: 'Aşağıdaki kodu kopyalayıp MetaDash\'e (Ayarlar → Bağlantılar) yapıştırın, ardından bu sekmeyi kapatın.',
+      code: 'Yetkilendirme kodu', full: 'Ya da bu adresin tamamını kopyalayın', copy: 'Kopyala', copied: 'Kopyalandı',
+      state: 'Giriş kimliği (state): ', failTitle: 'Giriş başarısız', noCode: 'Bu sayfa yetkilendirme kodu almadı. Girişi MetaDash\'ten yeniden başlatın.',
+    },
+  };
+  var lang = /^tr\b/i.test(navigator.language || '') ? 'tr' : 'en';
+  var t = T[lang];
+  document.documentElement.lang = lang;
+  var $ = function (id) { return document.getElementById(id); };
+  var q = new URLSearchParams(location.search);
+  var code = q.get('code');
+  var err = q.get('error');
+  if (!code || err) {
+    $('title').textContent = t.failTitle;
+    $('intro').textContent = '';
+    $('error').hidden = false;
+    $('error').textContent = err ? err + (q.get('error_description') ? ': ' + q.get('error_description') : '') : t.noCode;
+    return;
+  }
+  $('title').textContent = t.title;
+  $('intro').textContent = t.intro;
+  $('codeLabel').textContent = t.code;
+  $('fullLabel').textContent = t.full;
+  $('copyCode').textContent = t.copy;
+  $('copyFull').textContent = t.copy;
+  $('code').value = code;
+  $('full').value = location.href.split('#')[0];
+  $('stateLine').textContent = q.get('state') ? t.state + q.get('state') : '';
+  $('ok').hidden = false;
+  Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'), function (b) {
+    b.addEventListener('click', function () {
+      var input = $(b.getAttribute('data-copy'));
+      input.select();
+      var done = function () { b.textContent = t.copied; setTimeout(function () { b.textContent = t.copy; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(input.value).then(done, function () { document.execCommand('copy'); done(); });
+      else { document.execCommand('copy'); done(); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

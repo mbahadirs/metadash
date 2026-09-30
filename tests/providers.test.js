@@ -32,11 +32,13 @@ const invalid = (message) => new MetaError({ code: 100, message });
 
 describe('provider registry', () => {
   it('lists enabled providers in registration order', () => {
-    expect(ALL_PLATFORMS).toEqual(['instagram', 'facebook', 'threads']);
-    expect(listProviders().map((p) => p.platform)).toEqual(['instagram', 'facebook', 'threads']);
+    expect(ALL_PLATFORMS).toEqual(['instagram', 'facebook', 'threads', 'youtube', 'tiktok']);
+    expect(listProviders().map((p) => p.platform)).toEqual(['instagram', 'facebook', 'threads', 'youtube', 'tiktok']);
     expect(getProvider('instagram')).toMatchObject({ platform: 'instagram', auth: 'meta', concurrency: 2, primaryMetric: 'reach', enabled: true });
     expect(getProvider('facebook')).toMatchObject({ platform: 'facebook', auth: 'meta', concurrency: 2, primaryMetric: 'reach', enabled: true });
     expect(getProvider('threads')).toMatchObject({ platform: 'threads', enabled: true });
+    expect(getProvider('youtube')).toMatchObject({ platform: 'youtube', auth: 'google', enabled: true });
+    expect(getProvider('tiktok')).toMatchObject({ platform: 'tiktok', auth: 'tiktok', enabled: true });
     expect(getProvider('nope')).toBeNull();
     expect(isPlatformEnabled('instagram')).toBe(true);
   });
@@ -54,7 +56,7 @@ describe('provider registry', () => {
 
   it('test override can enable a platform and be restored', () => {
     __setProviderForTests('facebook', null);
-    expect(listProviders().map((p) => p.platform)).toEqual(['instagram', 'threads']);
+    expect(listProviders().map((p) => p.platform)).toEqual(['instagram', 'threads', 'youtube', 'tiktok']);
     const fake = { platform: 'threads', enabled: true, auth: 'threads', concurrency: 1 };
     __setProviderForTests('threads', fake);
     expect(getProvider('threads')).toBe(fake);
@@ -188,7 +190,7 @@ describe('platforms:list info', () => {
     upsertAccount({ igId: '1', profileId: id, username: 'a' });
     upsertAccount({ igId: 'fb-2', platform: 'facebook', externalId: '2', profileId: id, username: 'b' });
     const rows = listPlatformInfo();
-    expect(rows.map((r) => r.platform)).toEqual(['instagram', 'facebook', 'threads']);
+    expect(rows.map((r) => r.platform)).toEqual(ALL_PLATFORMS);
     expect(rows[0]).toMatchObject({ label: 'Instagram', enabled: true, auth: 'meta', connected: true, trackedCount: 1, primaryMetric: 'reach' });
     expect(rows[1]).toMatchObject({ enabled: true, connected: true, trackedCount: 1 });
     expect(rows[2]).toMatchObject({ enabled: true, auth: 'threads', connected: false, trackedCount: 0, primaryMetric: 'views' });

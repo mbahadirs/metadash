@@ -98,8 +98,11 @@ describe('derived daily series', () => {
 });
 
 describe('extension hooks', () => {
-  it('periodic modules are stubs today and registerPeriodic runs without overlap', async () => {
-    expect(await m.periodic.loadPeriodicTasks()).toEqual([]);
+  it('loads the feature modules\' periodic tasks and registerPeriodic runs without overlap', async () => {
+    const tasks = await m.periodic.loadPeriodicTasks();
+    expect(tasks.map((t) => t.id)).toEqual(['inbox.poll', 'worker-sync', 'team']);
+    expect(tasks.every((t) => typeof t.run === 'function' && Number(t.intervalMs) > 0)).toBe(true);
+    expect(await m.periodic.loadPeriodicTasks([async () => { throw new Error('broken'); }, async () => ({ periodic: null })])).toEqual([]);
     vi.useFakeTimers();
     let runs = 0;
     let release;
@@ -115,10 +118,14 @@ describe('extension hooks', () => {
     expect(() => m.scheduler.registerPeriodic({ id: 'x' })).toThrow();
   });
 
-  it('report sections and notification rules are empty until the feature chunks land', () => {
-    expect(m.sections.allReportSections()).toEqual([]);
-    expect(m.sections.extraSectionsFor('monthly', 'instagram')).toEqual([]);
-    expect(m.notify.EXTRA_RULES).toEqual([]);
-    expect(m.notify.NOTIFY_TYPES).toEqual(['anomalies', 'budget', 'silent', 'token']);
+  it('registers the feature report sections and notification rules', async () => {
+    const { capabilitiesFor } = await import('../src/main/providers/capabilities.js');
+    expect(m.sections.allReportSections().map((s) => s.key)).toEqual(['community_response', 'youtube_watch']);
+    expect(m.sections.extraSectionsFor('monthly', 'youtube').map((s) => s.key)).toEqual(['community_response', 'youtube_watch'].filter((k) => k !== 'community_response' || capabilitiesFor('youtube').inbox));
+    expect(m.sections.extraSectionsFor('monthly', 'instagram').map((s) => s.key)).toEqual(capabilitiesFor('instagram').inbox ? ['community_response'] : []);
+    expect(m.sections.extraSectionsFor('monthly', 'youtube', { sections: { youtube_watch: false } }).map((s) => s.key)).not.toContain('youtube_watch');
+    expect(m.sections.extraSectionsFor('campaign', 'youtube')).toEqual([]);
+    expect(m.notify.EXTRA_RULES.map((r) => r.type)).toEqual(['inbox', 'mentions', 'worker']);
+    expect(m.notify.NOTIFY_TYPES).toEqual(['anomalies', 'budget', 'silent', 'token', 'inbox', 'mentions', 'worker']);
   });
 });

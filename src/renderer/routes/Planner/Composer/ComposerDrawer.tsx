@@ -17,6 +17,7 @@ import { PreviewPane } from './PreviewPane';
 import { WorkflowBar } from './WorkflowBar';
 import { PostHistory } from './PostHistory';
 import { AiAssistSlot } from './AiAssistSlot';
+import { WorkerExecutorToggle } from './WorkerExecutorToggle';
 import { contentKey, emptyState, fromPost, toCreate, toDraft, toPatch, type ComposerSeed, type ComposerState } from './state';
 
 const AUTOSAVE_MS = 1200;
@@ -258,6 +259,7 @@ export function ComposerDrawer({ postId, seed, onClose, onOpenPost }: {
                 <Field label={t('pl_schedule_section')}>
                   <SchedulePicker scheduledAt={form.scheduledAt} accountIds={form.targets.map((tg) => tg.accountId)} disabled={disabled || status === 'publishing'} onChange={(at) => void setTime(at)} />
                 </Field>
+                {post && <WorkerExecutorToggle post={post} accounts={accounts} />}
                 <Field label={t('pl_internal')}>
                   <div className="grid sm:grid-cols-2 gap-2">
                     <input className="input" value={form.clientName} disabled={disabled} placeholder={t('pl_client_name')} aria-label={t('pl_client_name')} onChange={(e) => patch({ clientName: e.target.value })} />

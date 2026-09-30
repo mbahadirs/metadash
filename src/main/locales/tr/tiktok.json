@@ -1,1 +1,20 @@
-{}
+{
+  "tt_client_key_invalid": "TikTok client key hatalı görünüyor. TikTok for Developers'taki uygulamanızdan kopyalayın (harf ve rakam).",
+  "tt_client_secret_short": "TikTok client secret çok kısa görünüyor. TikTok for Developers'tan yeniden kopyalayın.",
+  "tt_client_missing": "Önce TikTok client key ve client secret bilgilerini kaydedin.",
+  "tt_client_invalid": "TikTok client key veya secret'ı reddetti. İkisini de TikTok for Developers'ta kontrol edin. ({detail})",
+  "tt_redirect_https": "Geri dönüş sayfası adresi https:// ile başlamalı ve sorgu ya da # içermemeli.",
+  "tt_no_code": "Yetkilendirme kodu bulunamadı. Kodu ya da geri dönüş sayfasının tam adresini yapıştırın.",
+  "tt_state_mismatch": "Bu kod başka bir giriş denemesine ait. Girişi yeniden başlatın.",
+  "tt_state_expired": "Bu giriş denemesinin süresi doldu. “TikTok girişini aç”a yeniden tıklayıp yeni kodu yapıştırın.",
+  "tt_code_invalid": "TikTok kodu kabul etmedi. Kodlar tek kullanımlıktır ve kısa sürede geçersiz olur; yeniden giriş yapın. ({detail})",
+  "tt_no_open_id": "TikTok hesap kimliği döndürmedi. Yeniden bağlanmayı deneyin.",
+  "tt_connect_busy": "Tarayıcıda bekleyen bir TikTok girişi var. Önce onu tamamlayın ya da iptal edin.",
+  "tt_oauth_cancelled": "TikTok girişi iptal edildi.",
+  "tt_oauth_timeout": "TikTok girişi zaman aşımına uğradı. Yeniden deneyin.",
+  "tt_oauth_denied": "TikTok girişi reddedildi.",
+  "tt_oauth_failed": "TikTok girişi başarısız: {detail}",
+  "tt_not_connected": "Bu TikTok hesabı bağlı değil.",
+  "tt_refresh_expired": "TikTok oturumunun süresi doldu. Hesabı Ayarlar → Bağlantılar'dan yeniden bağlayın.",
+  "tt_refresh_expiring": "{u} TikTok oturumunun süresi {n} gün içinde doluyor. Ayarlar → Bağlantılar'dan yeniden bağlayın."
+}

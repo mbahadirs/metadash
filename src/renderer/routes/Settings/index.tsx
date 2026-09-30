@@ -22,6 +22,8 @@ import { ConnectionsSection } from './ConnectionsSection';
 import { WorkerSection } from './WorkerSection';
 import { TeamSection } from './TeamSection';
 import { CliSection } from './CliSection';
+import { InboxSection } from './InboxSection';
+import { INBOX_READY } from '@/routes/Inbox/feature';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import type { DisabledMetric } from '@/lib/types';
 
@@ -75,6 +77,8 @@ export function SettingsPage() {
       </Section>
 
       <NotificationsSection />
+
+      {INBOX_READY && <div id="inbox" className="scroll-mt-4"><InboxSection /></div>}
 
       <div id="publishing" className="scroll-mt-4 space-y-6"><PublishingSection /><BackgroundSection /><WorkerSection /></div>
 

@@ -13,5 +13,11 @@
   "err_invalid_param_hint": "Desteklenmeyen metrikler Ayarlar'da listelenir.",
   "err_generic_hint": "Sorun sürerse token'ı yenileyin.",
   "err_unexpected": "Beklenmeyen bir hata oluştu.",
-  "err_chart_not_found": "Grafik bulunamadı."
+  "err_chart_not_found": "Grafik bulunamadı.",
+  "err_youtube_token": "YouTube bağlantınızın süresi doldu veya erişim geri alındı. Kanalı Ayarlar > Bağlantılar'dan yeniden bağlayın.",
+  "err_youtube_token_hint": "Ayarlar > Bağlantılar > YouTube'u açıp Google ile yeniden oturum açın.",
+  "err_tiktok_token": "TikTok bağlantınızın süresi doldu veya erişim geri alındı. Hesabı Ayarlar > Bağlantılar'dan yeniden bağlayın.",
+  "err_tiktok_token_hint": "Ayarlar > Bağlantılar > TikTok'u açıp yeniden oturum açın.",
+  "err_platform_rate_limit": "{platform} geçici bir istek sınırına veya kotaya ulaştı. Güncellemeler otomatik olarak yavaşlatıldı.",
+  "err_platform_rejected": "{platform} isteği reddetti: {detail}"
 }

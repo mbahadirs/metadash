@@ -85,6 +85,8 @@ export const WEEKDAYS: Readonly<Record<Lang, string[]>> = Object.fromEntries(LOC
 export function mediaTypeLabel(m: { mediaProductType: string; mediaType: string }, lang: Lang): string {
   if (m.mediaProductType === 'REELS') return 'Reels';
   if (m.mediaProductType === 'STORY') return 'Story';
+  if (m.mediaProductType === 'YT_SHORT') return t('type_short', lang);
+  if (m.mediaProductType === 'YT_LIVE') return t('type_live', lang);
   if (m.mediaType === 'LINK') return t('type_link', lang);
   if (m.mediaType === 'TEXT_POST' || m.mediaType === 'TEXT' || m.mediaType === 'STATUS') return t('type_text', lang);
   if (m.mediaType === 'CAROUSEL_ALBUM') return 'Carousel';

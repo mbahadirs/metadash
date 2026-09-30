@@ -1,6 +1,6 @@
 import { listAccounts, getAccount, updateAccount } from '../db/queries/accounts.js';
 import { listTags, createTag, deleteTag, setAccountTags } from '../db/queries/tags.js';
-import { listNotes, addNote, deleteNote } from '../db/queries/media.js';
+import { listNotesFor, addNoteV2, deleteNoteV2 } from '../team/notes.js';
 import { msg } from '../i18n.js';
 import { getClientLogo, setClientLogo, clientLogoFlags } from '../db/queries/accountLogos.js';
 
@@ -20,10 +20,11 @@ export function registerAccountHandlers(handle) {
     return createTag({ name: tag.name.trim(), color: tag.color });
   });
   handle('tags:delete', (id) => { deleteTag(id); return true; });
-  handle('notes:list', ({ entityType, entityId }) => listNotes(entityType, entityId));
-  handle('notes:add', ({ entityType, entityId, body }) => {
+  // v2.0 F1: notes carry author, @mentions and visibility; the client view only lists 'client' notes (team/notes.js).
+  handle('notes:list', ({ entityType, entityId } = {}) => listNotesFor({ entityType, entityId }));
+  handle('notes:add', ({ entityType, entityId, body, mentions, visibility } = {}) => {
     if (!body?.trim()) throw new Error(msg('note_empty'));
-    return addNote(entityType, entityId, body.trim());
+    return addNoteV2({ entityType, entityId, body, mentions, visibility });
   });
-  handle('notes:delete', (id) => { deleteNote(id); return true; });
+  handle('notes:delete', (id) => deleteNoteV2(id));
 }

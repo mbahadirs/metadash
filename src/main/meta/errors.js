@@ -11,7 +11,7 @@ export class MetaError extends Error {
     this.type = type ?? null;
     this.endpoint = endpoint ?? null;
     this.status = status ?? null;
-    this.source = source ?? null; // client name that raised it: 'meta' | 'threads'
+    this.source = source ?? null; // client name that raised it: 'meta' | 'threads' | 'google' (YouTube) | 'tiktok'
     this.fbtraceId = fbtraceId ?? null; // Graph `fbtrace_id` (quote it to Meta support; stored on failed publish targets)
     this.userTitle = userTitle ?? null; // Graph `error_user_title` / `error_user_msg` (publishing errors often carry them)
     this.userMessage = userMessage ?? null;
@@ -48,6 +48,9 @@ const PERMISSION_HINTS = {
 };
 
 /** Translates any error into the user-facing envelope { code, message, hint }. Strings: locales/<lang>/errors.json. */
+/** Error sources of non-Meta providers → platform name used in their messages. */
+const NON_META_SOURCES = Object.freeze({ google: 'YouTube', tiktok: 'TikTok' });
+
 export function toUserError(err, lang = 'en') {
   const m = (key, vars) => translate(key, vars, lang);
   if (err instanceof NetworkError || err?.code === 'NETWORK' || err?.name === 'FetchError' || err?.cause?.code === 'ENOTFOUND') {
@@ -55,7 +58,15 @@ export function toUserError(err, lang = 'en') {
   }
   if (err instanceof MetaError) {
     if (err.isTokenError && err.source === 'threads') return { code: err.code, message: m('err_threads_token'), hint: m('err_threads_token_hint') };
+    if (err.isTokenError && err.source === 'google') return { code: err.code, message: m('err_youtube_token'), hint: m('err_youtube_token_hint') };
+    if (err.isTokenError && err.source === 'tiktok') return { code: err.code, message: m('err_tiktok_token'), hint: m('err_tiktok_token_hint') };
     if (err.isTokenError) return { code: err.code, message: m('err_meta_token'), hint: m('err_meta_token_hint') };
+    const other = NON_META_SOURCES[err.source];
+    if (other) {
+      // YouTube / TikTok: no Graph API permission names or Meta wording; keep the platform's own message.
+      if (err.isRetryable) return { code: err.code, message: m('err_platform_rate_limit', { platform: other }), hint: m('err_rate_limit_hint') };
+      return { code: err.code, message: m('err_platform_rejected', { platform: other, detail: err.message }), hint: m('err_generic_hint') };
+    }
     if (err.isRetryable) return { code: err.code, message: m('err_rate_limit'), hint: m('err_rate_limit_hint') };
     if (err.isPermissionError) {
       return { code: err.code, message: m('err_permission', { perm: guessPermission(err.endpoint) }), hint: m('err_permission_hint') };

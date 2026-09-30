@@ -449,7 +449,7 @@
   "reels_views_tip": "Reels: play count",
   "reach_vs_avg_hint": "Reach and difference vs. account average",
   "reach_share_hint": "Share of total reach",
-  "health_formula": "growth 30% + engagement 30% + consistency 20% + response rate 20%; by portfolio percentile",
+  "health_formula": "growth 30% + engagement 30% + consistency 20% + response 20% (half answered rate, half answered within the reply target, 24 h by default); percentile among accounts on the same platform",
   "lifecycle_hint": "Post age (hours) → share of final reach. Derived from snapshots.",
   "story_hint": "Story data is collected within 24 hours; refreshed every 4 hours while the app is open.",
   "story_completion_formula": "1 − exits / views",
@@ -654,5 +654,6 @@
   "reconnect_threads": "Reconnect Threads",
   "lang_partial": "partial",
   "lang_partial_pct": "partial · {pct}%",
-  "lang_partial_tip": "Partly translated: untranslated text is shown in English."
+  "lang_partial_tip": "Partly translated: untranslated text is shown in English.",
+  "open_on_platform": "Open on {platform}"
 }

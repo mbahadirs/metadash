@@ -11,6 +11,7 @@ import { reportSheets } from '../src/main/export/xlsxReport.js';
 import { makeL } from '../src/main/export/reportI18n.js';
 import { CSV_QUERIES, runReadOnly } from '../src/main/export/csv.js';
 import { fmtDate } from '../src/main/analytics/util.js';
+import { ALL_PLATFORMS } from '../src/main/providers/index.js';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'metadash-reports-'));
 const to = fmtDate(new Date());
@@ -98,7 +99,7 @@ describe('XLSX reports per platform', () => {
     const p = reportSheets('portfolio', { from, to });
     const league = p.find((s) => s.columns.some((c) => c.key === 'health'));
     expect(league.columns.map((c) => c.key)).toContain('platform');
-    expect(new Set(league.rows.map((r) => r.platform))).toEqual(new Set(['Instagram', 'Facebook', 'Threads']));
+    expect(new Set(league.rows.map((r) => r.platform))).toEqual(new Set(['Instagram', 'Facebook', 'Threads', 'YouTube', 'TikTok']));
     const posts = p.find((s) => s.columns.some((c) => c.key === 'caption'));
     expect(posts.columns.map((c) => c.key)).toEqual(expect.arrayContaining(['platform', 'reposts', 'quotes', 'clicks']));
     const multi = reportSheets('monthly', { igIds: [IG, TH], from, to });
@@ -120,7 +121,7 @@ describe('report i18n and CSV', () => {
   it('CSV exports include the platform', () => {
     const acc = runReadOnly(CSV_QUERIES.accounts);
     expect(acc.columns).toContain('platform');
-    expect(new Set(acc.rows.map((r) => r.platform))).toEqual(new Set(['instagram', 'facebook', 'threads']));
+    expect(new Set(acc.rows.map((r) => r.platform))).toEqual(new Set(ALL_PLATFORMS));
     const media = runReadOnly(CSV_QUERIES.media, 5);
     expect(media.columns).toEqual(expect.arrayContaining(['platform', 'reposts', 'quotes', 'clicks']));
   });

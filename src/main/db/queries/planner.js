@@ -1,5 +1,6 @@
 import { q } from '../index.js';
 import { msg } from '../../i18n.js';
+import { getSetting } from './settings.js';
 import {
   checkTransition, applyContentEdit, contentHash, TERMINAL_TARGET_STATES, IN_FLIGHT_TARGET_STATES,
 } from '../../planner/status.js';
@@ -42,7 +43,24 @@ export function mapTarget(r) {
     mode: r.mode, state: r.state, attempts: r.attempts, nextAttemptAt: r.next_attempt_at, lockedAt: r.locked_at, lockOwner: r.lock_owner,
     containerId: r.container_id, remoteId: r.remote_id, mediaKey: r.media_key, permalink: r.permalink, firstCommentId: r.first_comment_id,
     lastErrorCode: r.last_error_code, lastError: r.last_error, fbtraceId: r.fbtrace_id, publishedAt: r.published_at,
+    // v2.0 self-hosted worker (migration 014)
+    executor: r.executor ?? 'local', revision: r.revision ?? 0, workerRevision: r.worker_revision ?? null, workerStatus: r.worker_status ?? null,
+    workerError: parseJson(r.worker_error, null), workerSyncedAt: r.worker_synced_at ?? null,
   };
+}
+
+/** Platforms the self-hosted worker can publish (v2.0: Meta only). */
+export const WORKER_PLATFORMS = Object.freeze(['instagram', 'facebook', 'threads']);
+
+/** Executor for a new target: 'worker' when the worker is enabled and set as default (app-mode Meta targets only). */
+export function defaultExecutorFor(t) {
+  if (!WORKER_PLATFORMS.includes(t.platform) || (t.mode ?? 'app') === 'native') return 'local';
+  return getSetting('worker.enabled', false) === true && getSetting('worker.defaultExecutor', 'local') === 'worker' ? 'worker' : 'local';
+}
+
+/** Content/time change: every target's payload revision goes up (the worker sync pushes targets whose revision > worker_revision). */
+function bumpRevisions(postId) {
+  q.run('UPDATE planner_targets SET revision = revision + 1 WHERE post_id = ?', postId);
 }
 
 const FORMAT_OF_MIME = { 'image/jpeg': 'jpeg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'video/mp4': 'mp4', 'video/quicktime': 'mov' };
@@ -145,8 +163,8 @@ export function requirePost(id, opts) {
 }
 
 function insertTargets(postId, targets) {
-  const stmt = 'INSERT INTO planner_targets (post_id, account_id, platform, format, caption_override, first_comment_override, options, mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-  for (const t of targets) q.run(stmt, postId, t.accountId, t.platform, t.format, t.captionOverride ?? null, t.firstCommentOverride ?? null, toJson(t.options ?? null), t.mode ?? 'app');
+  const stmt = 'INSERT INTO planner_targets (post_id, account_id, platform, format, caption_override, first_comment_override, options, mode, executor, revision) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)';
+  for (const t of targets) q.run(stmt, postId, t.accountId, t.platform, t.format, t.captionOverride ?? null, t.firstCommentOverride ?? null, toJson(t.options ?? null), t.mode ?? 'app', defaultExecutorFor(t));
 }
 
 function replaceAssets(postId, items) {
@@ -235,6 +253,7 @@ export function updatePost(id, patch, { expectedVersion, now = Date.now(), actor
       const edit = applyContentEdit({ status: cur.status, requireApproval });
       invalidated = edit.invalidated;
       q.run('UPDATE planner_posts SET version = version + 1, status = ? WHERE id = ?', edit.status, id);
+      bumpRevisions(id);
       for (const t of next.targets) {
         if (t.mode === 'native' && t.state === 'handed_off') remoteCancelTargetIds = [...remoteCancelTargetIds, t.id];
         else if (t.mode === 'app' && invalidated && !LOCKED_TARGET_STATES.has(t.state)) q.run("UPDATE planner_targets SET state = 'idle', container_id = NULL, next_attempt_at = NULL WHERE id = ?", t.id);
@@ -254,6 +273,7 @@ export function reschedulePost(id, scheduledAt, { now = Date.now(), actor = 'use
     const cur = requirePost(id);
     if (['publishing', 'published'].includes(cur.status)) throw plannerError('planner_post_locked', 'POST_LOCKED');
     q.run('UPDATE planner_posts SET scheduled_at = ?, timezone = COALESCE(?, timezone), updated_at = ? WHERE id = ?', scheduledAt ?? null, timezone ?? null, now, id);
+    if ((scheduledAt ?? null) !== cur.scheduledAt) bumpRevisions(id);
     addAudit({ postId: id, actor, action: cur.scheduledAt == null ? 'scheduled' : 'rescheduled', detail: { from: cur.scheduledAt, to: scheduledAt ?? null }, at: now });
     return requirePost(id);
   })();
@@ -377,6 +397,8 @@ const TARGET_COLUMNS = {
   state: 'state', attempts: 'attempts', nextAttemptAt: 'next_attempt_at', containerId: 'container_id', remoteId: 'remote_id', mediaKey: 'media_key',
   permalink: 'permalink', firstCommentId: 'first_comment_id', lastErrorCode: 'last_error_code', lastError: 'last_error', fbtraceId: 'fbtrace_id',
   publishedAt: 'published_at', mode: 'mode', lockedAt: 'locked_at', lockOwner: 'lock_owner',
+  // v2.0 worker columns (workerError: JSON string)
+  executor: 'executor', revision: 'revision', workerRevision: 'worker_revision', workerStatus: 'worker_status', workerError: 'worker_error', workerSyncedAt: 'worker_synced_at',
 };
 
 /** Updates whitelisted worker columns (camelCase keys). */
@@ -386,10 +408,14 @@ export function updateTarget(id, patch) {
   return getTarget(id);
 }
 
-/** Targets of live posts, optionally filtered by state and due time (next_attempt_at <= dueBefore). */
-export function listTargets({ postId, states, dueBefore, accountId } = {}) {
+/**
+ * Targets of live posts, optionally filtered by state, due time (next_attempt_at <= dueBefore) and executor
+ * ('local' = the tray publisher's own targets; 'worker' = handed to the self-hosted worker).
+ */
+export function listTargets({ postId, states, dueBefore, accountId, executor } = {}) {
   const where = ['p.deleted_at IS NULL'];
   const params = [];
+  if (executor != null) { where.push('t.executor = ?'); params.push(executor); }
   if (postId != null) { where.push('t.post_id = ?'); params.push(postId); }
   if (accountId != null) { where.push('t.account_id = ?'); params.push(String(accountId)); }
   if (states?.length) { where.push(`t.state IN (${placeholders(states)})`); params.push(...states); }

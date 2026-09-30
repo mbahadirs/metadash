@@ -20,8 +20,8 @@ export const PLATFORM_LABELS: Record<Platform, string> = { instagram: 'Instagram
 /** Fallback capabilities when platforms:list has not loaded yet. Mirrors main/providers/<p>/meta.js (tests check it). */
 export const DEFAULT_CAPABILITIES: Record<Platform, PlatformCapabilities> = {
   instagram: { reach: true, saveRate: true, stories: true, demographics: true, competitors: true, comments: true, ads: true, inbox: true, inboxReply: true, watchTime: false, dailySeries: 'native', experimental: false },
-  facebook: { reach: true, saveRate: false, stories: false, demographics: false, competitors: false, comments: false, ads: true, inbox: false, inboxReply: false, watchTime: false, dailySeries: 'native', experimental: false },
-  threads: { reach: false, saveRate: false, stories: false, demographics: true, competitors: false, comments: false, ads: false, inbox: false, inboxReply: false, watchTime: false, dailySeries: 'native', experimental: false },
+  facebook: { reach: true, saveRate: false, stories: false, demographics: false, competitors: false, comments: false, ads: true, inbox: true, inboxReply: true, watchTime: false, dailySeries: 'native', experimental: false },
+  threads: { reach: false, saveRate: false, stories: false, demographics: true, competitors: false, comments: false, ads: false, inbox: true, inboxReply: 'scope', watchTime: false, dailySeries: 'native', experimental: false },
   ...extra((u) => u.defaultCapabilities),
 };
 

@@ -21,7 +21,7 @@
   "ib_cancel": "Cancel",
   "ib_confirm_title": "Send this reply?",
   "ib_confirm_body": "This reply will be posted publicly from @{account} to @{user}'s comment:",
-  "ib_confirm_demo": "Demo mode: sending is simulated, nothing reaches Instagram.",
+  "ib_confirm_demo": "Demo mode: sending is simulated, nothing is posted.",
   "ib_confirm_send": "Yes, send",
   "ib_sent": "Reply sent",
   "ib_sent_demo": "Reply sent (demo, simulated)",
@@ -96,5 +96,10 @@
   "exp_back": "All experiments",
   "exp_posts": "{n} posts",
   "exp_scheduled": "Scheduled: {d}",
-  "exp_add": "Add"
+  "exp_add": "Add",
+  "ib_chars_of": "{n} / {max} characters",
+  "ib_confirm_mentions": "This reply mentions {handles}; they may be notified.",
+  "ib_confirm_platform": "It will be posted on {platform}.",
+  "ib_intro_v2": "Comments from every connected platform. AI suggests replies in your brand voice; you edit, confirm and send every reply.",
+  "ib_open_inbox": "Open the full inbox →"
 }

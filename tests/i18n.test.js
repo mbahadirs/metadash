@@ -7,7 +7,7 @@ import { setConfig } from '../src/main/config/store.js';
 import { msg, currentLang } from '../src/main/i18n.js';
 import { makeL, weekdays } from '../src/main/export/reportI18n.js';
 import { translate, interpolate, fallbackChain, resolveLang, intlLocale, reportLocale, LOCALES, LANGUAGE, namespaceFor, loadNamespace } from '../src/main/locales/catalog.js';
-import { toUserError, NetworkError } from '../src/main/meta/errors.js';
+import { toUserError, NetworkError, MetaError } from '../src/main/meta/errors.js';
 import { PUBLISHING_MESSAGES } from '../src/main/i18n/publishing.js';
 import * as rCore from '../src/renderer/lib/i18nCore.ts';
 import { checkSide, loadSide, localeCodes } from '../scripts/i18n-check.mjs';
@@ -97,6 +97,18 @@ describe('main catalog', () => {
     expect(toUserError(new NetworkError('x'), 'tr').message).toMatch(/İnternet/);
     expect(toUserError(new NetworkError('x'), 'en').hint).toBe('Press Update once the connection is back.');
     expect(toUserError(new NetworkError('x'), 'de').hint).toBe('Press Update once the connection is back.');
+  });
+  it('words token, quota and API errors for the platform that raised them', () => {
+    const err = (source, code, message = 'boom') => new MetaError({ code, message, source });
+    expect(toUserError(err('google', 190), 'en').message).toMatch(/YouTube/);
+    expect(toUserError(err('google', 190), 'tr').message).toMatch(/YouTube bağlantınız/);
+    expect(toUserError(err('tiktok', 190), 'en').message).toMatch(/TikTok/);
+    expect(toUserError(err('tiktok', 190), 'tr').hint).toMatch(/TikTok/);
+    expect(toUserError(err('meta', 190), 'en').message).toMatch(/Meta/);
+    expect(toUserError(err('google', 4), 'en').message).toMatch(/^YouTube .*quota/);
+    const rejected = toUserError(err('tiktok', 200, 'scope_not_authorized'), 'en');
+    expect(rejected.message).toBe('TikTok rejected the request: scope_not_authorized');
+    expect(rejected.message).not.toMatch(/instagram_/);
   });
   it('keeps the pre-2.0 tuple view for compatibility', () => {
     expect(PUBLISHING_MESSAGES.pub_missed).toEqual([msg('pub_missed', null, 'en'), msg('pub_missed', null, 'tr')]);

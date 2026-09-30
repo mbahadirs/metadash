@@ -108,7 +108,7 @@ describe('multi-platform analytics', async () => {
   const { materializeLatest } = await import('../src/main/analytics/engagement.js');
   const { fmtDate } = await import('../src/main/analytics/util.js');
   const { portfolio } = await import('../src/main/analytics/portfolio.js');
-  const { healthScores, HEALTH_WEIGHTS_NO_RESPONSE } = await import('../src/main/analytics/health.js');
+  const { healthScores, HEALTH_WEIGHTS, HEALTH_WEIGHTS_NO_RESPONSE } = await import('../src/main/analytics/health.js');
   const { accountAnalytics } = await import('../src/main/analytics/account.js');
   const { compare } = await import('../src/main/analytics/compare.js');
   const { anomalies } = await import('../src/main/analytics/anomaly.js');
@@ -198,13 +198,15 @@ describe('multi-platform analytics', async () => {
     const fbA = scores.find((s) => s.igId === 'fb-2001');
     expect(fbA.platform).toBe('facebook');
     expect(fbA.components.growth.pct).toBe(75); // best of 2 Facebook pages, not of all 6 accounts
-    expect(fbA.components.response).toBeNull();
-    const w = HEALTH_WEIGHTS_NO_RESPONSE;
-    expect(w).toEqual({ growth: 0.375, engagement: 0.375, consistency: 0.25 });
+    // v2.0 (chunk D): Facebook and Threads have an inbox, so they get the response component; platforms without one
+    // (capabilities.inbox false, e.g. TikTok) keep the re-weighting.
+    expect(fbA.components.response).not.toBeNull();
+    expect(HEALTH_WEIGHTS_NO_RESPONSE).toEqual({ growth: 0.375, engagement: 0.375, consistency: 0.25 });
+    const w = HEALTH_WEIGHTS;
     const c = fbA.components;
-    expect(Math.abs(fbA.score - (w.growth * c.growth.pct + w.engagement * c.engagement.pct + w.consistency * c.consistency.pct))).toBeLessThanOrEqual(1);
+    expect(Math.abs(fbA.score - (w.growth * c.growth.pct + w.engagement * c.engagement.pct + w.consistency * c.consistency.pct + w.response * c.response.pct))).toBeLessThanOrEqual(1);
     expect(scores.find((s) => s.igId === '1001').components.response).not.toBeNull();
-    expect(scores.find((s) => s.igId === 'th-3001').components.response).toBeNull();
+    expect(scores.find((s) => s.igId === 'th-3001').components.response).not.toBeNull();
   });
 
   it('accountAnalytics returns platform, capabilities and applicable KPIs', () => {

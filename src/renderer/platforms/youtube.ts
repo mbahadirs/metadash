@@ -1,8 +1,8 @@
 import type { PlatformUi } from './types';
 
 /**
- * YouTube renderer vocabulary — owned by chunk C1 (B ships the contract values). Labels needing new strings go to
- * locales/<lang>/youtube.json.
+ * YouTube renderer vocabulary (chunk C1). defaultCapabilities mirror main providers/youtube/meta.js; KPI keys follow
+ * meta.kpis.keys (watchTime = minutes → shown in hours, avgViewDuration = seconds → m:ss). Strings: locales/<lang>/youtube.json.
  */
 export const youtubeUi: PlatformUi = {
   platform: 'youtube',
@@ -17,8 +17,17 @@ export const youtubeUi: PlatformUi = {
   typeKeys: ['video', 'short', 'live'],
   profileUrl: (acc) => `https://www.youtube.com/channel/${encodeURIComponent(acc.externalId ?? acc.igId.replace(/^yt-/, ''))}`,
   kpiSpecs: [
-    { key: 'views', label: 'views' }, { key: 'likes', label: 'likes' }, { key: 'comments', label: 'comments' }, { key: 'shares', label: 'shares' },
-    { key: 'newFollowers', aliases: ['follower_count'], label: 'new_followers', kind: 'signed' },
+    { key: 'views', label: 'views' },
+    { key: 'watchTime', label: 'yt_watch_time', kind: 'hours', needs: 'watchTime' },
+    { key: 'avgViewDuration', label: 'yt_avg_view_duration', kind: 'duration', needs: 'watchTime' },
+    { key: 'newFollowers', aliases: ['follower_count'], label: 'yt_net_subscribers', kind: 'signed' },
+    { key: 'likes', label: 'likes' }, { key: 'comments', label: 'comments' }, { key: 'shares', label: 'shares' },
   ],
-  chart: (t) => ({ title: t('views'), series: [{ key: 'views', name: t('views'), color: '#4F7CFF', type: 'area' }] }),
+  chart: (t) => ({
+    title: `${t('views')} · ${t('yt_watch_time_min')}`,
+    series: [
+      { key: 'views', name: t('views'), color: '#4F7CFF', type: 'area' },
+      { key: 'watch_time_min', name: t('yt_watch_time_min'), color: '#3FBF8F', axis: 'right' },
+    ],
+  }),
 };

@@ -14,6 +14,7 @@ import { AiCommentaryButton } from './AiCommentaryButton';
 import { usePlatformCaps } from '@/hooks/usePlatforms';
 import { platformOf } from '@/lib/platforms';
 import type { PlatformCapabilities } from '@/lib/types';
+import { useStaffSession } from '@/hooks/useSession';
 
 /** Report sections that depend on a platform capability (htmlReport drops them per account; the UI greys them out). */
 const SECTION_CAPS: Record<string, keyof PlatformCapabilities> = { stories: 'stories', demographics: 'demographics', competitors: 'competitors', ads: 'ads', blended: 'ads', campaigns: 'ads', breakdown: 'ads', boosted: 'ads' };
@@ -64,11 +65,14 @@ export function ReportsPage() {
   const [previewBusy, setPreviewBusy] = useState(false);
   const previewTimer = useRef<number | null>(null);
   const digest = useDigest(period.to);
+  const staff = useStaffSession(); // export:history is outside the client-view allowlist
 
   useEffect(() => {
     call<Record<string, string[]>>(api.export.sections()).then(setSectionDefs).catch(() => {});
-    call<HistoryEntry[]>(api.export.history()).then(setHistory).catch(() => {});
   }, []);
+  useEffect(() => {
+    if (staff) call<HistoryEntry[]>(api.export.history()).then(setHistory).catch(() => {});
+  }, [staff]);
   useEffect(() => {
     const saved = (settings.data as { 'ui.reportPresets'?: Preset[] } | undefined)?.['ui.reportPresets'];
     if (saved) setPresets(saved);
@@ -113,7 +117,7 @@ export function ReportsPage() {
     try {
       const res = await call<{ filePath?: string; canceled?: boolean }>(api.export.xlsxReport({ template, params: buildParams() }));
       if (!res.canceled && res.filePath) setResult({ files: [res.filePath] });
-      setHistory(await call<HistoryEntry[]>(api.export.history()));
+      if (staff) setHistory(await call<HistoryEntry[]>(api.export.history()));
     } catch (e) { setResult({ error: (e as Error).message }); } finally { setBusy(null); }
   };
   const run = async (kinds: ('html' | 'pdf')[]) => {
@@ -127,7 +131,7 @@ export function ReportsPage() {
         if (res.filePath) files.push(res.filePath);
       }
       if (files.length) setResult({ files });
-      setHistory(await call<HistoryEntry[]>(api.export.history()));
+      if (staff) setHistory(await call<HistoryEntry[]>(api.export.history()));
     } catch (e) {
       setResult({ error: (e as Error).message });
     } finally {

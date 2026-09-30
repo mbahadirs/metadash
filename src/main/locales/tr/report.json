@@ -83,7 +83,7 @@
   "female": "Kadın",
   "male": "Erkek",
   "health_score": "Hesap sağlık skoru",
-  "health_note": "Büyüme %30 + etkileşim %30 + düzenlilik %20 + yanıt oranı %20; portföy içindeki yüzdelik dilime göre.",
+  "health_note": "Büyüme %30 + etkileşim %30 + düzenlilik %20 + yanıt %20 (yarısı yanıtlanma oranı, yarısı yanıt hedefi içinde yanıtlanan oran, varsayılan 24 sa); aynı platformdaki hesaplar içinde yüzdelik dilime göre.",
   "growth": "Büyüme",
   "engagement": "Etkileşim",
   "consistency": "Düzenlilik",

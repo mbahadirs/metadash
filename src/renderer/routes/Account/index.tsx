@@ -27,11 +27,12 @@ import type { TypeKey } from '@/lib/types';
 import { Icon } from '@/components/Icons';
 import { useRunSync } from '@/hooks/useSyncEvents';
 import { usePlatformCaps } from '@/hooks/usePlatforms';
-import { TYPE_KEYS_BY_PLATFORM, isPlatform, platformOf, profileUrl, typeKeyOf, type AccountAnalyticsV13 } from '@/lib/platforms';
+import { PLATFORM_LABELS, TYPE_KEYS_BY_PLATFORM, isPlatform, platformOf, profileUrl, typeKeyOf, type AccountAnalyticsV13 } from '@/lib/platforms';
 import { accountChart, accountKpiDefs } from '@/lib/accountKpis';
 import { PlatformBadge } from '@/components/PlatformBadge';
 import type { Platform, PlatformCapabilities } from '@/lib/types';
 import { ACCOUNT_INBOX_TAB, AccountInboxTab } from './InboxTab';
+import { NotesThread } from '@/components/NotesThread';
 
 type Tab = 'overview' | 'posts' | 'stories' | 'demographics' | 'competitors' | 'ads' | 'inbox';
 
@@ -62,7 +63,7 @@ export function AccountPage() {
   const tab: Tab = tabs.some((x) => x.id === tabState) ? tabState : 'overview';
   const kpiDefs = accountKpiDefs(a, platform, caps, t);
   const chart = accountChart(platform, t);
-  const openLabel = platform === 'facebook' ? t('open_in_facebook') : platform === 'threads' ? t('open_in_threads') : t('open_in_instagram');
+  const openLabel = platform === 'facebook' ? t('open_in_facebook') : platform === 'threads' ? t('open_in_threads') : platform === 'instagram' ? t('open_in_instagram') : t('open_on_platform', { platform: PLATFORM_LABELS[platform] });
   const health = a.health ? { ...a.health, keys: (['growth', 'engagement', 'consistency', 'response'] as const).filter((k) => a.health!.components[k] && (k !== 'response' || caps.comments)) } : null;
   const prevMap = new Map(a.prevSeries.map((d, i) => [i, d]));
   const prevLookup = (label: string, key: string) => {
@@ -138,6 +139,7 @@ export function AccountPage() {
               </Section>
             ); })()}</div>
           )}
+          <div className="col-span-12"><Section title={t('notes')}><NotesThread entityType="account" entityId={acc.igId} /></Section></div>
         </div>
       )}
       {tab === 'posts' && <PostsPanel posts={a.posts} igId={acc.igId} platform={platform} caps={caps} />}

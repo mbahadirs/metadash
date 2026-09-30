@@ -83,7 +83,7 @@
   "female": "Female",
   "male": "Male",
   "health_score": "Account health score",
-  "health_note": "Growth 30% + engagement 30% + consistency 20% + response rate 20%; percentile within the portfolio.",
+  "health_note": "Growth 30% + engagement 30% + consistency 20% + response 20% (half answered rate, half answered within the reply target, 24 h by default); percentile among accounts on the same platform.",
   "growth": "Growth",
   "engagement": "Engagement",
   "consistency": "Consistency",

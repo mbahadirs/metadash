@@ -1,6 +1,7 @@
 /**
- * YouTube platform metadata (pure). Owned by chunk C1 from here on; the values below are the v2.0 plan §1 contract.
- * `kpis` feeds analytics/platform.js (KPI tiles, chart series, daily metrics) — see providers/types.js ProviderKpis.
+ * YouTube platform metadata (pure). `kpis` feeds analytics/platform.js (KPI tiles, chart series, daily metrics) — see
+ * providers/types.js ProviderKpis. avgViewDuration and newFollowers (net subscribers) come from provider.computeKpi
+ * (kpis.js); follower_count = subscribersGained, unfollows = subscribersLost (YouTube Analytics).
  */
 export default Object.freeze({
   platform: 'youtube',
@@ -17,7 +18,7 @@ export default Object.freeze({
   kpis: Object.freeze({
     keys: Object.freeze(['views', 'watchTime', 'avgViewDuration', 'newFollowers', 'likes', 'comments', 'shares', 'posts']),
     chart: Object.freeze(['views', 'watch_time_min']),
-    daily: Object.freeze(['views', 'watch_time_min', 'avg_view_duration_s', 'likes', 'comments', 'shares', 'unfollows']),
+    daily: Object.freeze(['views', 'watch_time_min', 'avg_view_duration_s', 'likes', 'comments', 'shares', 'follower_count', 'unfollows']),
     dailyMetric: Object.freeze({ views: 'views', watchTime: 'watch_time_min', likes: 'likes', comments: 'comments', shares: 'shares' }),
   }),
   demographicsUnit: Object.freeze({ gender_age: 'percent', country: 'count' }),

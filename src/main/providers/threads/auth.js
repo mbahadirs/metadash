@@ -1,5 +1,6 @@
 import { MetaError, NetworkError } from '../../meta/errors.js';
 import { threadsClient, THREADS_HOST, THREADS_AUTHORIZE_URL, THREADS_SCOPES } from './client.js';
+import { THREADS_PUBLISH_SCOPES } from './scopes.js';
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
@@ -15,7 +16,7 @@ export const REFRESH_WITHIN_MS = 20 * DAY_MS;
  * v1.4 publishing scopes: threads_content_publish (posts) + threads_manage_replies (first comment as a reply). Opt-in
  * (`publish: true`) because an app whose Threads use case lacks these permissions gets an error on the authorize page.
  */
-export const THREADS_PUBLISH_SCOPES = Object.freeze(['threads_content_publish', 'threads_manage_replies']);
+export { THREADS_PUBLISH_SCOPES }; // + v2.0 inbox scopes, see ./scopes.js
 
 /** Authorization window URL (user logs in on threads.com and is redirected to `redirectUri?code=…`). */
 export function buildAuthUrl({ appId, redirectUri, state, publish = false }) {

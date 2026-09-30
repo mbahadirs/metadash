@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useMediaDetail, useNotes, useApiMutation } from '@/hooks/queries';
+import { useMediaDetail } from '@/hooks/queries';
 import { useAppStore } from '@/store/app';
 import { useT } from '@/lib/i18n';
 import { api } from '@/lib/api';
@@ -16,6 +16,7 @@ import { AdMetricGrid } from './AdMetricCells';
 import { usePlatformCaps } from '@/hooks/usePlatforms';
 import { PLATFORM_LABELS, platformOf } from '@/lib/platforms';
 import { RepurposeButton } from './RepurposeDialog';
+import { NotesThread } from './NotesThread';
 
 /** Right-hand slide-over with the full post analysis. Esc closes. */
 export function PostDrawer({ mediaId, onClose }: { mediaId: string | null; onClose: () => void }) {
@@ -70,7 +71,7 @@ function PostDrawerBody({ mediaId, onClose }: { mediaId: string; onClose: () => 
   // Hide tiles the platform cannot report instead of showing zeros.
   const tiles = allTiles.filter((x) => (x.key !== 'reach' || caps.reach) && ((x.key !== 'saved' && x.key !== 'saveRate') || caps.saveRate));
   const extras = ([['reposts', t('reposts')], ['quotes', t('quotes')], ['clicks', t('clicks')]] as const).filter(([k]) => m[k] != null);
-  const openLabel = platform === 'facebook' ? t('open_in_facebook') : platform === 'threads' ? t('open_in_threads') : t('open_in_instagram');
+  const openLabel = platform === 'facebook' ? t('open_in_facebook') : platform === 'threads' ? t('open_in_threads') : platform === 'instagram' ? t('open_in_instagram') : t('open_on_platform', { platform: PLATFORM_LABELS[platform] });
 
   return (
     <>
@@ -185,7 +186,7 @@ function PostDrawerBody({ mediaId, onClose }: { mediaId: string; onClose: () => 
             )}
           </section>
 
-          <section><SectionTitle>{t('notes')}</SectionTitle><Notes entityType="media" entityId={m.mediaId} /></section>
+          <section><SectionTitle>{t('notes')}</SectionTitle><NotesThread entityType="media" entityId={m.mediaId} /></section>
         </div>
       </div>
     </>
@@ -200,25 +201,4 @@ function Fact({ label, value, sub }: { label: string; value: string; sub?: strin
 }
 function Mini({ label, value }: { label: string; value: string }) {
   return <div><div className="text-xs text-ink-2">{label}</div><div className="font-semibold">{value}</div></div>;
-}
-
-export function Notes({ entityType, entityId }: { entityType: string; entityId: string }) {
-  const t = useT();
-  const notes = useNotes(entityType, entityId);
-  const [body, setBody] = useState('');
-  const add = useApiMutation<{ entityType: string; entityId: string; body: string }>((p) => api.notes.add(p), ['notes']);
-  const del = useApiMutation<number>((id) => api.notes.delete(id), ['notes']);
-  return (
-    <div>
-      <div className="space-y-1 mb-2">
-        {(notes.data ?? []).map((n) => (
-          <div key={n.id} className="flex items-start justify-between gap-2 text-sm bg-surface-2 rounded px-3 py-1.5"><span className="whitespace-pre-wrap">{n.body}<span className="text-ink-2 text-xs ml-2">{fmtDateTime(n.created_at)}</span></span><button className="btn btn-ghost btn-sm text-ink-2" onClick={() => del.mutate(n.id)} aria-label={t('delete')}>✕</button></div>
-        ))}
-      </div>
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (body.trim()) { add.mutate({ entityType, entityId, body }); setBody(''); } }}>
-        <input className="input" placeholder={t('add_note')} value={body} onChange={(e) => setBody(e.target.value)} />
-        <button className="btn" type="submit" disabled={!body.trim()}>{t('add')}</button>
-      </form>
-    </div>
-  );
 }

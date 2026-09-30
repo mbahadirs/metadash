@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, call } from '@/lib/api';
 import { useAppStore } from '@/store/app';
 import { usePlatformScope } from './usePlatforms';
-import type { Platform, BudgetTree, BudgetPacing, PostCompare, MediaDetail, ContentAnalysis, TypeKey, Account, Tag, Portfolio, AccountAnalytics, BestTime, Lifecycle, CompareResult, Media, AdAccount, AdInsights, Blended, Competitor, CompetitorRow, SetupState, TokenHealth, Digest, HealthScore, Note, SyncRun, SyncStatus } from '@/lib/types';
+import type { Platform, BudgetTree, BudgetPacing, PostCompare, MediaDetail, ContentAnalysis, TypeKey, Account, Tag, Portfolio, AccountAnalytics, BestTime, Lifecycle, CompareResult, Media, AdAccount, AdInsights, Blended, Competitor, CompetitorRow, SetupState, TokenHealth, Digest, HealthScore, SyncRun, SyncStatus } from '@/lib/types';
+import { useStaffSession } from './useSession';
 
 export function usePeriod() {
   return useAppStore((s) => s.period);
@@ -98,7 +99,8 @@ export const useBoostCandidates = (actId: string | null) => useQuery<{ account: 
 
 export function useBlended(igId: string | undefined) {
   const { from, to } = usePeriod();
-  return useQuery<Blended>({ queryKey: ['blended', igId, from, to], queryFn: () => call(api.ads.blended({ igId, from, to })), enabled: !!igId });
+  const staff = useStaffSession(); // ads:* is outside the client-view allowlist (paid data stays hidden there)
+  return useQuery<Blended>({ queryKey: ['blended', igId, from, to], queryFn: () => call(api.ads.blended({ igId, from, to })), enabled: !!igId && staff });
 }
 
 export const useCompetitors = (igId?: string) => useQuery<Competitor[]>({ queryKey: ['competitors', igId ?? 'all'], queryFn: () => call(api.competitors.list(igId ?? null)) });
@@ -112,7 +114,6 @@ export const useSetupState = () => useQuery<SetupState>({ queryKey: ['setupState
 export const useTokenHealth = () => useQuery<TokenHealth>({ queryKey: ['tokenHealth'], queryFn: () => call(api.setup.getTokenHealth()), staleTime: 60_000 });
 export const useSyncHistory = () => useQuery<SyncRun[]>({ queryKey: ['syncHistory'], queryFn: () => call(api.sync.history({ limit: 30 })) });
 export const useSyncStatus = () => useQuery<SyncStatus>({ queryKey: ['syncStatus'], queryFn: () => call(api.sync.status()), refetchInterval: 5000 });
-export const useNotes = (entityType: string, entityId: string) => useQuery<Note[]>({ queryKey: ['notes', entityType, entityId], queryFn: () => call(api.notes.list({ entityType, entityId })) });
 export const useSettings = () => useQuery<Record<string, unknown>>({ queryKey: ['settings'], queryFn: () => call(api.settings.all()) });
 
 export function useInvalidate() {

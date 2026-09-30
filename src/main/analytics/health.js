@@ -1,11 +1,19 @@
 import { listAccounts, followersAt, latestFollowers } from '../db/queries/accounts.js';
-import { aggregateMedia, weeklyPostCounts, commentStats } from '../db/queries/media.js';
+import { aggregateMedia, weeklyPostCounts } from '../db/queries/media.js';
+import { commentStatsV2 } from '../db/queries/inbox.js';
+import { inboxSettings } from '../inbox/settings.js';
 import { rangeMs, stddev, percentileRank, round, fmtDate, toDate } from './util.js';
 import { capabilitiesFor, platformOf } from './platform.js';
 import { subDays } from 'date-fns';
 
+/**
+ * Weights of the 0–100 health score. `response` (v2.0) = 50 % answered rate + 50 % answered-within-SLA rate
+ * (inbox.slaHours, default 24 h; see inbox/sla.js), from top-level comments by other people.
+ */
 export const HEALTH_WEIGHTS = { growth: 0.3, engagement: 0.3, consistency: 0.2, response: 0.2 };
-/** Platforms without comment data (no response rate): the response weight is spread over the other components. */
+/** Share of the answered rate vs. the within-SLA rate inside the response component. */
+export const RESPONSE_SPLIT = { answered: 0.5, withinSla: 0.5 };
+/** Platforms without an inbox (capabilities.inbox false, no response rate): the response weight is spread over the rest. */
 export const HEALTH_WEIGHTS_NO_RESPONSE = { growth: 0.375, engagement: 0.375, consistency: 0.25 };
 
 /** Raw component values for one account within a window. `withResponse=false` skips the comment query (response null). */
@@ -21,22 +29,28 @@ export function healthComponents(igId, from, to, { withResponse = true } = {}) {
   const padded = [...weekly, ...Array(Math.max(0, 5 - weekly.length)).fill(0)];
   const consistency = stddev(padded);
   let response = null;
-  if (withResponse) {
-    const cs = commentStats(igId, fromMs, toMs);
-    response = cs?.incoming ? ((cs.answered ?? 0) / cs.incoming) * 100 : 0;
-  }
+  if (withResponse) response = responseRate(commentStatsV2(igId, fromMs, toMs, { slaHours: inboxSettings().slaHours }));
   return { growthPct, engagement, consistency, response, posts: agg?.posts ?? 0 };
+}
+
+/** Response component 0–100 from commentStatsV2: 50 % answered/incoming + 50 % withinSla/eligible (0 without comments). */
+export function responseRate(cs) {
+  if (!cs?.incoming) return 0;
+  const answered = ((cs.answered ?? 0) / cs.incoming) * 100;
+  const within = cs.eligible ? ((cs.withinSla ?? 0) / cs.eligible) * 100 : answered;
+  return RESPONSE_SPLIT.answered * answered + RESPONSE_SPLIT.withinSla * within;
 }
 
 /**
  * 0-100 health scores, percentile-normalised within each platform (Instagram accounts are only ranked against
- * Instagram accounts, etc.). Platforms without comments get no response component and re-weighted scores.
+ * Instagram accounts, etc.). Platforms without an inbox get no response component and re-weighted scores.
  */
 export function healthScores({ from, to, igIds, platforms } = {}) {
   const accounts = listAccounts({ platforms }).filter((a) => !igIds?.length || igIds.includes(a.igId));
   const comps = accounts.map((a) => {
     const platform = platformOf(a);
-    const withResponse = capabilitiesFor(platform).comments;
+    const caps = capabilitiesFor(platform);
+    const withResponse = !!(caps.inbox ?? caps.comments);
     return { igId: a.igId, username: a.username, platform, withResponse, ...healthComponents(a.igId, from, to, { withResponse }) };
   });
   const groups = new Map();

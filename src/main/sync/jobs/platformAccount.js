@@ -57,7 +57,7 @@ export async function syncPlatformAccount(ctx, provider, account) {
     upsertMedia({
       mediaId: p.mediaId, externalId: p.externalId ?? p.mediaId, igId: key, mediaType: p.mediaType, mediaProductType: p.mediaProductType,
       caption: p.caption, permalink: p.permalink, thumbnailPath: p.thumbnailUrl, postedAt: posted.getTime(),
-      postedHour: posted.getHours(), postedWeekday: posted.getDay(), ...analyzeCaption(p.caption),
+      postedHour: posted.getHours(), postedWeekday: posted.getDay(), ...analyzeCaption(p.caption), durationS: p.durationS,
     });
     if (p.inline) inline.set(p.mediaId, p.inline);
   }

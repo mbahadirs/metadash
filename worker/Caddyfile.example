@@ -1,0 +1,14 @@
+# Automatic HTTPS in front of the MetaDash worker (docker compose --profile https up -d).
+# MD_DOMAIN must point at this host (A/AAAA record) and ports 80/443 must be reachable for the certificate.
+# Do not rewrite paths or query strings: requests are HMAC-signed over the exact path.
+{$MD_DOMAIN} {
+	encode gzip
+	request_body {
+		max_size 110MB
+	}
+	reverse_proxy worker:8787
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+}

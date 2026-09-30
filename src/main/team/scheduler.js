@@ -1,6 +1,8 @@
+import { teamTick, POLL_INTERVAL_MS } from './index.js';
+
 /**
- * Team publish/pull timers — STUB (v2.0 chunk B). Chunk F1 owns src/main/team/**.
- *   periodic: null | { id: 'team', intervalMs: 60_000, run }   publisher: publish after sync / every team.publishIntervalMin;
- *                                                              subscriber: poll the shared folder (fs.watch is unreliable).
+ * Team timer, registered by sync/scheduler.js (GUI / tray only, never the CLI). Every minute: a subscriber polls the
+ * shared folder (fs.watch is unreliable on cloud folders); the publisher publishes once team.publishIntervalMin has
+ * passed (it also publishes after each successful sync, see team/index.js) and otherwise merges members' events.
  */
-export const periodic = null;
+export const periodic = Object.freeze({ id: 'team', intervalMs: POLL_INTERVAL_MS, runOnStart: true, run: () => teamTick() });

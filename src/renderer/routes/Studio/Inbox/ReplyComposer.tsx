@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useT, type Key } from '@/lib/i18n';
 import { useAppStore } from '@/store/app';
@@ -7,16 +7,32 @@ import { Modal, Spinner } from '@/components/ui';
 import { studio, useSendPreview, useStudioRequest, fmtUsd, STUDIO_KEY } from '@/hooks/useStudio';
 import type { ReplySuggestResult, StudioCapabilities } from '@/lib/types';
 import { CostLine } from '../parts';
-import type { InboxRow } from './types';
+import { thirdPartyMentions } from '@/routes/Inbox/format';
 
 const REPLY_MAX = 2200;
+
+/** The comment fields the composer needs (Studio InboxRow and the unified InboxRow both fit). */
+export interface ComposerItem { commentId: string; username: string; accountUsername?: string | null; aiDisabled?: boolean }
+
+/**
+ * Optional overrides for the unified inbox (v2.0): the platform's reply limit, the send / mark-done calls
+ * (inbox:reply with confirmed: true, inbox:setStatus) and a ref to focus the editor (keyboard shortcut r).
+ */
+export interface ComposerOptions {
+  maxLength?: number;
+  send?: (text: string) => Promise<{ demo?: boolean }>;
+  dismiss?: () => Promise<unknown>;
+  textareaRef?: Ref<HTMLTextAreaElement>;
+  platformLabel?: string;
+  suggest?: (p: { requestId: string; commentId: string; lang: string }) => Promise<ReplySuggestResult>;
+}
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /**
  * Reply editor for one comment: optional AI suggestions (3 + category), free editing, and an explicit confirmation
  * dialog before every send (studio:replies:send with confirmed: true). "Mark done" closes the comment without replying.
  */
-export function ReplyComposer({ item, caps, onDone }: { item: InboxRow; caps: StudioCapabilities | undefined; onDone: (msg: string) => void }) {
+export function ReplyComposer({ item, caps, onDone, options = {} }: { item: ComposerItem; caps: StudioCapabilities | undefined; onDone: (msg: string) => void; options?: ComposerOptions }) {
   const t = useT();
   const lang = useAppStore((s) => s.lang);
   const demo = useAppStore((s) => s.demo);
@@ -29,13 +45,14 @@ export function ReplyComposer({ item, caps, onDone }: { item: InboxRow; caps: St
   const [sending, setSending] = useState(false);
   const [showSent, setShowSent] = useState(false);
   const aiBlocked = item.aiDisabled === true || caps?.enabled === false;
+  const max = options.maxLength ?? REPLY_MAX;
 
-  const refreshInbox = () => qc.invalidateQueries({ queryKey: [STUDIO_KEY, 'inbox'] });
+  const refreshInbox = () => Promise.all([qc.invalidateQueries({ queryKey: [STUDIO_KEY, 'inbox'] }), qc.invalidateQueries({ queryKey: ['inbox'] })]);
 
   const suggest = async () => {
     setError(null);
     try {
-      const res = await req.run((requestId) => studio.replies.suggest({ requestId, commentId: item.commentId, lang }));
+      const res = await req.run((requestId) => (options.suggest ?? studio.replies.suggest)({ requestId, commentId: item.commentId, lang }));
       setResult(res);
       if (!text.trim() && res.suggestions[0]) setText(res.suggestions[0]);
     } catch (e) {
@@ -47,8 +64,11 @@ export function ReplyComposer({ item, caps, onDone }: { item: InboxRow; caps: St
     setSending(true);
     setError(null);
     try {
-      const res = await studio.call<{ replyId: string; demo?: boolean }>('replies:send', { commentId: item.commentId, text: text.trim(), confirmed: true });
+      const res = options.send
+        ? await options.send(text.trim())
+        : await studio.call<{ replyId: string; demo?: boolean }>('replies:send', { commentId: item.commentId, text: text.trim(), confirmed: true });
       setConfirming(false);
+      setText('');
       onDone(res.demo ? t('ib_sent_demo') : t('ib_sent'));
       refreshInbox();
     } catch (e) {
@@ -62,7 +82,7 @@ export function ReplyComposer({ item, caps, onDone }: { item: InboxRow; caps: St
   const dismiss = async () => {
     setError(null);
     try {
-      await studio.replies.dismiss(item.commentId);
+      await (options.dismiss ? options.dismiss() : studio.replies.dismiss(item.commentId));
       refreshInbox();
     } catch (e) {
       setError(errText(e));
@@ -70,6 +90,7 @@ export function ReplyComposer({ item, caps, onDone }: { item: InboxRow; caps: St
   };
 
   const trimmed = text.trim();
+  const mentions = thirdPartyMentions(trimmed, item.username, item.accountUsername ?? '');
   return (
     <div className="space-y-2">
       {!aiBlocked && (
@@ -99,19 +120,20 @@ export function ReplyComposer({ item, caps, onDone }: { item: InboxRow; caps: St
         </div>
       )}
       <textarea
+        ref={options.textareaRef}
         className="input text-sm"
         rows={3}
-        maxLength={REPLY_MAX}
+        maxLength={max}
         placeholder={t('ib_reply_placeholder')}
         value={text}
         onChange={(e) => setText(e.target.value)}
         aria-label={t('ib_reply_placeholder')}
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs text-ink-2 num">{t('ib_chars', { n: fmtNum(trimmed.length) })}</span>
+        <span className={`text-xs num ${trimmed.length > max * 0.9 ? 'text-warn' : 'text-ink-2'}`}>{t('ib_chars_of', { n: fmtNum(trimmed.length), max: fmtNum(max) })}</span>
         <div className="flex items-center gap-2">
           <button className="btn btn-ghost btn-sm" onClick={dismiss}>{t('ib_mark_done')}</button>
-          <button className="btn btn-primary btn-sm" disabled={!trimmed || trimmed.length > REPLY_MAX} onClick={() => setConfirming(true)}>{t('ib_send')}</button>
+          <button className="btn btn-primary btn-sm" disabled={!trimmed || trimmed.length > max} onClick={() => setConfirming(true)}>{t('ib_send')}</button>
         </div>
       </div>
       {error && <div className="text-xs text-neg select-text">{error}</div>}
@@ -119,6 +141,8 @@ export function ReplyComposer({ item, caps, onDone }: { item: InboxRow; caps: St
         <div className="space-y-3 text-sm">
           <div className="text-ink-2">{t('ib_confirm_body', { account: item.accountUsername ?? '', user: item.username })}</div>
           <div className="rounded border border-line p-3 whitespace-pre-wrap select-text">{trimmed}</div>
+          {mentions.length > 0 && <div className="text-xs text-warn">{t('ib_confirm_mentions', { handles: mentions.map((h) => `@${h}`).join(', ') })}</div>}
+          {options.platformLabel && <div className="text-xs text-ink-2">{t('ib_confirm_platform', { platform: options.platformLabel })}</div>}
           {demo && <div className="text-xs text-warn">{t('ib_confirm_demo')}</div>}
           <div className="flex justify-end gap-2">
             <button className="btn" disabled={sending} onClick={() => setConfirming(false)}>{t('ib_cancel')}</button>

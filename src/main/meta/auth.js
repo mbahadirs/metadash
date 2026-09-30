@@ -17,7 +17,8 @@ export const PUBLISH_SCOPES = Object.freeze({
   facebook: Object.freeze(['pages_manage_posts']),
 });
 export const FIRST_COMMENT_SCOPES = Object.freeze({ instagram: 'instagram_manage_comments', facebook: 'pages_manage_engagement' });
-export const OPTIONAL_SCOPES = ['business_management', 'instagram_manage_comments', 'read_insights', 'instagram_content_publish', 'pages_manage_posts', 'pages_manage_engagement'];
+/** v2.0 unified inbox: pages_read_user_content (read user comments on Page posts) + pages_manage_engagement (reply/hide). */
+export const OPTIONAL_SCOPES = ['business_management', 'instagram_manage_comments', 'read_insights', 'instagram_content_publish', 'pages_manage_posts', 'pages_manage_engagement', 'pages_read_user_content'];
 
 /** Scopes each platform needs on the Meta token (Facebook Pages: list, read posts, read insights). */
 export const PLATFORM_SCOPES = Object.freeze({

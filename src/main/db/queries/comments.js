@@ -1,5 +1,7 @@
 import { q } from '../index.js';
 import { upsertComment } from './media.js';
+import { ensureState, refreshFirstResponse, setStatus } from './inbox.js';
+import { isQuestion } from '../../inbox/question.js';
 
 /**
  * Comment queries for sync (storeComments, extracted unchanged from sync/jobs/platformAccount.js) and the v1.5 Studio
@@ -13,23 +15,30 @@ const INBOX_LIMIT_MAX = 200;
 
 /** Stores the IG comment shape {id, text, timestamp, like_count, username, replies:{data:[…]}} (sync + inbox refresh). */
 export function storeComments(mediaId, comments, ownerUsername) {
+  const answered = [];
   for (const c of comments) {
     const createdAt = new Date(c.timestamp).getTime();
-    upsertComment({ commentId: c.id, mediaId, username: c.username, text: c.text, likeCount: c.like_count, createdAt, isFromOwner: c.username === ownerUsername, parentId: null });
+    const own = c.username === ownerUsername;
+    upsertComment({ commentId: c.id, mediaId, username: c.username, text: c.text, likeCount: c.like_count, createdAt, isFromOwner: own, parentId: null });
+    if (!own) ensureState(c.id, { isQuestion: isQuestion(c.text) });
     for (const r of c.replies?.data ?? []) {
       const rAt = new Date(r.timestamp).getTime();
       const fromOwner = r.username === ownerUsername;
       upsertComment({ commentId: r.id, mediaId, username: r.username, text: r.text ?? '', likeCount: 0, createdAt: rAt, isFromOwner: fromOwner, parentId: c.id, replyLatencyMinutes: fromOwner ? Math.round((rAt - createdAt) / 60_000) : null });
+      if (fromOwner) answered.push(c.id);
     }
   }
+  refreshFirstResponse(answered);
 }
 
 const OWNER_REPLY_EXISTS = 'EXISTS (SELECT 1 FROM comments r WHERE r.parent_id = c.comment_id AND r.is_from_owner = 1)';
 const CLOSED_REPLY_EXISTS = "EXISTS (SELECT 1 FROM comment_replies cr WHERE cr.comment_id = c.comment_id AND cr.status IN ('sent', 'dismissed'))";
+const CLOSED_STATE_EXISTS = "EXISTS (SELECT 1 FROM inbox_state st WHERE st.comment_id = c.comment_id AND st.status IN ('done', 'ignored'))";
 
 function mapInbox(r) {
   return {
     commentId: r.comment_id,
+    externalId: r.external_id ?? r.comment_id,
     mediaId: r.media_id,
     accountId: r.ig_id,
     platform: r.platform ?? 'instagram',
@@ -58,7 +67,7 @@ export function inboxComments({ accountIds, onlyUnanswered = true, limit = 50, b
   const params = [now - days * DAY];
   if (accountIds?.length) { where.push(`m.ig_id IN (${accountIds.map(() => '?').join(',')})`); params.push(...accountIds.map(String)); }
   if (Number.isFinite(before)) { where.push('c.created_at < ?'); params.push(before); }
-  if (onlyUnanswered) where.push(`NOT ${OWNER_REPLY_EXISTS}`, `NOT ${CLOSED_REPLY_EXISTS}`);
+  if (onlyUnanswered) where.push(`NOT ${OWNER_REPLY_EXISTS}`, `NOT ${CLOSED_REPLY_EXISTS}`, `NOT ${CLOSED_STATE_EXISTS}`);
   const lim = Math.min(Math.max(1, Math.trunc(Number(limit) || 50)), INBOX_LIMIT_MAX);
   const rows = q.all(
     `SELECT c.*, m.ig_id, m.caption, m.permalink, m.thumbnail_path, m.media_type, m.media_product_type,
@@ -80,7 +89,7 @@ export function inboxComments({ accountIds, onlyUnanswered = true, limit = 50, b
 /** One comment with its post and account (for suggest/send), or null. */
 export function getCommentContext(commentId) {
   const r = q.get(
-    `SELECT c.*, m.ig_id, m.caption, m.permalink, m.thumbnail_path, m.media_type, m.media_product_type, m.external_id,
+    `SELECT c.*, m.ig_id, m.caption, m.permalink, m.thumbnail_path, m.media_type, m.media_product_type, m.external_id AS media_external_id,
        a.platform, a.username AS account_username, a.external_id AS account_external_id, COALESCE(bv.ai_disabled, 0) AS ai_disabled,
        CASE WHEN ${OWNER_REPLY_EXISTS} THEN 1 ELSE 0 END AS answered
      FROM comments c
@@ -100,6 +109,7 @@ export function insertOwnerReply({ commentId, replyId, mediaId, text, username, 
     commentId: replyId, mediaId, username, text, likeCount: 0, createdAt: at, isFromOwner: true, parentId: commentId,
     replyLatencyMinutes: Number.isFinite(parentCreatedAt) ? Math.max(0, Math.round((at - parentCreatedAt) / 60_000)) : null,
   });
+  refreshFirstResponse([commentId], { source: 'app' });
 }
 
 // ---------------------------------------------------------------- comment_replies
@@ -143,6 +153,7 @@ export function recordReplyOutcome(commentId, { status, text, replyId = null, er
 /** "Mark done" without replying: the comment leaves the unanswered inbox. */
 export function dismissComment(commentId, { now = Date.now() } = {}) {
   q.run("INSERT INTO comment_replies (comment_id, suggestion, status, created_at) VALUES (?, '', 'dismissed', ?)", String(commentId), now);
+  setStatus([commentId], 'done', { at: now }); // v2.0: the unified inbox reads inbox_state
 }
 
 /** Recent media of an account for the on-demand inbox refresh (newest first). */

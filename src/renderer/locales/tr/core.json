@@ -449,7 +449,7 @@
   "reels_views_tip": "Reels: oynatma sayısı",
   "reach_vs_avg_hint": "Erişim ve hesap ortalamasına göre fark",
   "reach_share_hint": "Toplam erişimdeki pay",
-  "health_formula": "büyüme %30 + etkileşim %30 + düzenlilik %20 + yanıt oranı %20; portföy yüzdeliğine göre",
+  "health_formula": "büyüme %30 + etkileşim %30 + düzenlilik %20 + yanıt %20 (yarısı yanıtlanma oranı, yarısı yanıt hedefi içinde yanıtlanan oran, varsayılan 24 sa); aynı platformdaki hesaplar içinde yüzdeliğe göre",
   "lifecycle_hint": "Gönderi yaşı (saat) → nihai erişimin yüzdesi. Anlık görüntülerden türetilir.",
   "story_hint": "Story verisi 24 saat içinde toplanır; uygulama açıkken 4 saatte bir güncellenir.",
   "story_completion_formula": "1 − çıkış / görüntülenme",
@@ -654,5 +654,6 @@
   "reconnect_threads": "Threads'i yeniden bağla",
   "lang_partial": "kısmi",
   "lang_partial_pct": "kısmi · %{pct}",
-  "lang_partial_tip": "Kısmen çevrildi: çevrilmemiş metinler İngilizce gösterilir."
+  "lang_partial_tip": "Kısmen çevrildi: çevrilmemiş metinler İngilizce gösterilir.",
+  "open_on_platform": "{platform} üzerinde aç"
 }

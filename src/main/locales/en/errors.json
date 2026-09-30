@@ -13,5 +13,11 @@
   "err_invalid_param_hint": "Unsupported metrics are listed in Settings.",
   "err_generic_hint": "If this persists, renew the token.",
   "err_unexpected": "An unexpected error occurred.",
-  "err_chart_not_found": "Chart not found."
+  "err_chart_not_found": "Chart not found.",
+  "err_youtube_token": "Your YouTube connection has expired or was revoked. Reconnect the channel in Settings > Connections.",
+  "err_youtube_token_hint": "Open Settings > Connections > YouTube and sign in with Google again.",
+  "err_tiktok_token": "Your TikTok connection has expired or was revoked. Reconnect the account in Settings > Connections.",
+  "err_tiktok_token_hint": "Open Settings > Connections > TikTok and sign in again.",
+  "err_platform_rate_limit": "{platform} reached a temporary rate limit or quota. Updates were slowed automatically.",
+  "err_platform_rejected": "{platform} rejected the request: {detail}"
 }

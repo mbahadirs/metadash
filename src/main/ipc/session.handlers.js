@@ -1,9 +1,8 @@
-import { notImplemented } from './notImplemented.js';
-import { getSession } from '../team/session.js';
+import { getSession, setRole, enterClientView, exitClientView } from '../team/session.js';
 
 /**
- * Session / roles channels — STUB (v2.0 chunk B). Chunk F1 owns this file. session:get already answers with the
- * current session (team/session.js; the stub is always admin on the own install) so the renderer can rely on it.
+ * Session / roles channels. session:get answers with the current session (team/session.js). Roles are UI and
+ * workflow guardrails, not a security boundary (docs/team.md).
  */
 export const SESSION_CHANNELS = Object.freeze([
   'session:get',
@@ -14,5 +13,7 @@ export const SESSION_CHANNELS = Object.freeze([
 
 export function registerSessionHandlers(handle) {
   handle('session:get', () => getSession());
-  for (const channel of SESSION_CHANNELS.filter((c) => c !== 'session:get')) handle(channel, () => { throw notImplemented(); });
+  handle('session:setRole', (p = {}) => setRole(p?.role));
+  handle('session:enterClientView', (p = {}) => enterClientView({ clientNames: p?.clientNames, pin: p?.pin }));
+  handle('session:exitClientView', (p = {}) => exitClientView({ pin: p?.pin }));
 }

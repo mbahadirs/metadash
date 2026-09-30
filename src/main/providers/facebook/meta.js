@@ -9,6 +9,6 @@ export default Object.freeze({
   primaryMetric: 'reach',
   capabilities: Object.freeze({
     reach: true, saveRate: false, stories: false, demographics: false, competitors: false, comments: false, ads: true,
-    inbox: false, inboxReply: false, watchTime: false, dailySeries: 'native', experimental: false,
+    inbox: true, inboxReply: true, watchTime: false, dailySeries: 'native', experimental: false,
   }),
 });
