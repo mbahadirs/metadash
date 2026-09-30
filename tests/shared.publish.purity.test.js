@@ -25,7 +25,7 @@ describe('src/shared/publish purity (shared by the desktop and the self-hosted w
   const all = files(SHARED);
 
   it('has the extracted publishers', () => {
-    const names = all.map((f) => path.relative(SHARED, f)).sort();
+    const names = all.map((f) => path.relative(SHARED, f).split(path.sep).join('/')).sort();
     expect(names).toEqual(expect.arrayContaining(['publish/instagram.js', 'publish/facebook.js', 'publish/threads.js', 'publish/index.js', 'publish/errors.js']));
   });
 

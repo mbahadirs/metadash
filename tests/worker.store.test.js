@@ -35,7 +35,8 @@ describe('worker JSON store', () => {
     expect(again.seq()).toBe(1);
   });
 
-  it('does not change memory state when the write fails', () => {
+  // Windows ignores POSIX directory permissions, so a read-only directory cannot force the write to fail there.
+  it.skipIf(process.platform === 'win32')('does not change memory state when the write fails', () => {
     const s = createStore({ dir });
     s.putItem({ id: 'a', status: 'queued' });
     fs.chmodSync(dir, 0o500);
