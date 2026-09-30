@@ -1,0 +1,7 @@
+# Keep LF everywhere so shebang scripts, snapshots and tests behave the same on Windows checkouts.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.icns binary
+*.jpg binary
+*.webp binary

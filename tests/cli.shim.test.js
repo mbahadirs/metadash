@@ -15,7 +15,7 @@ const linux = (extra = {}) => shimEnv({ platform: 'linux', home, pathEnv: '/usr/
 
 describe('shim content and locations', () => {
   it('uses the per-OS default folders', () => {
-    expect(shimDirs(linux())).toEqual([path.join(home, '.local', 'bin')]);
+    expect(shimDirs(linux())).toEqual([path.posix.join(home, '.local', 'bin')]); // the simulated Linux env joins with POSIX separators
     expect(shimDirs(shimEnv({ platform: 'darwin', home: '/Users/me' }))).toEqual(['/usr/local/bin', '/Users/me/.local/bin']);
     expect(shimDirs(shimEnv({ platform: 'win32', home: 'C:\\Users\\me', localAppData: 'C:\\Users\\me\\AppData\\Local' }))).toEqual(['C:\\Users\\me\\AppData\\Local\\MetaDash\\bin']);
   });
@@ -33,7 +33,8 @@ describe('shim content and locations', () => {
   });
 });
 
-describe('install / status / uninstall', () => {
+// These tests simulate POSIX installs on the host file system; Windows temp paths (C:\…) can't stand in for them.
+describe.skipIf(process.platform === 'win32')('install / status / uninstall', () => {
   it('installs into ~/.local/bin, reports PATH reachability and removes only its own file', () => {
     expect(cliStatus(linux())).toMatchObject({ installed: false, shimPath: null, command: '/opt/MetaDash/metadash --cli', platform: 'linux' });
     const st = installShim(linux());
