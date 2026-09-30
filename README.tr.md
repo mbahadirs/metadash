@@ -2,100 +2,175 @@
 
 # MetaDash
 
-[English](README.md)
+[🇬🇧 English](README.md)
 
-Çok sayıda hesabı birlikte yöneten ekipler için Instagram hesapları ve Meta reklamları üzerine, verisini yerelde tutan masaüstü analitik uygulaması.
+**Instagram, Facebook Sayfaları, Threads, YouTube, TikTok (deneysel) ve Meta reklamları için analitik, içerik planlama ve yapay zekâ stüdyosu. Masaüstünüzde çalışır ve verinizi orada tutar. Ücretsiz ve açık kaynaklıdır.**
 
-MetaDash, yönettiğiniz tüm hesapların organik Instagram verisini (Graph API) ve Meta reklam verisini çeker, yerel bir SQLite veritabanında saklar ve bunları portföy özetlerine, hesap bazlı analizlere, karşılaştırmalara, rakip takibine, bütçe temposuna, müşteriye hazır raporlara (HTML, PDF, Excel) ve uygulama içi sunumlara dönüştürür. Sunucu yoktur, kayıt olmanız gerekmez: uygulama kendi Meta uygulamanız ve erişim token'ınızla doğrudan Meta Graph API'ye bağlanır.
+MetaDash, çok sayıda hesap yöneten ajanslar ve ekipler için geliştirildi. Verileri resmî platform API'lerinden kendi geliştirici uygulamalarınız ve token'larınızla çeker, her şeyi yerel bir SQLite veritabanında saklar ve bunları portföy özetlerine, hesap bazlı analizlere, müşteri raporlarına, yayımlama özellikli bir içerik takvimine, birleşik bir yorum gelen kutusuna ve isteğe bağlı yapay zekâ araçlarına dönüştürür. MetaDash sunucusu yoktur, kayıt olmanız gerekmez ve telemetri yoktur.
 
-- **Platformlar:** macOS (Apple Silicon ve Intel), Windows, Linux
+- **Çalıştığı sistemler:** macOS (Apple Silicon ve Intel), Windows, Linux
+- **Diller:** İngilizce ve Türkçe (eksiksiz); Almanca ve İspanyolca (kısmi, eksik metinler İngilizce gösterilir)
 - **Teknoloji:** Electron 33, React 18, Vite, TypeScript, Tailwind CSS, better-sqlite3
 - **Lisans:** [MIT](LICENSE)
 
 ## İçindekiler
 
+- [Öne çıkanlar](#öne-çıkanlar)
+- [Desteklenen platformlar](#desteklenen-platformlar)
 - [Ekran görüntüleri](#ekran-görüntüleri)
 - [Özellikler](#özellikler)
 - [Uygulamayı indirme ve kurma](#uygulamayı-indirme-ve-kurma)
 - [Hızlı başlangıç](#hızlı-başlangıç)
-- [Dil](#dil)
 - [Veri ve gizlilik](#veri-ve-gizlilik)
+- [Belgeler](#belgeler)
 - [Geliştirme](#geliştirme)
 - [Proje yapısı](#proje-yapısı)
 - [Mimari](#mimari)
 - [Katkıda bulunma](#katkıda-bulunma)
 - [Lisans](#lisans)
 
+## Öne çıkanlar
+
+- **Tek portföy, beş platform.** Instagram, Facebook Sayfaları, Threads, YouTube ve TikTok yan yana; ayrıca bütçe temposu takibiyle Meta reklam hesapları. Bir platformda olmayan metrikler sıfır değil "—" olarak gösterilir.
+- **Planlayın ve yayımlayın.** Sürükle-bırak takvim, her platformun sınırlarını kontrol eden çok hesaplı düzenleyici, çevrimdışı müşteri onay paketleriyle onay akışı ve Instagram, Facebook Sayfaları ve Threads'e zamanlanmış yayımlama.
+- **Müşteriye hazır çıktılar.** Kendi markanızı taşıyan HTML, PDF ve Excel raporları, tam ekran sunum modu ve her tablo ile grafikten dışa aktarım.
+- **İstediğinizde yapay zekâ.** Claude, OpenAI veya Gemini için kendi anahtarınızı kullanın ya da yerel bir Ollama modeli seçin. Verinize soru sorabilir, rapor yorumu taslağı hazırlatabilir; marka sesi, açıklamalar, hashtag'ler, içerik fikirleri, içerik dönüştürme, yanıt önerileri ve açıklama deneyleri için Yapay Zekâ Stüdyosu'nu kullanabilirsiniz. Yapay zekâ varsayılan olarak kapalıdır ve MetaDash herhangi bir şey gönderilmeden önce neyin gönderileceğini gösterir.
+- **Tek gelen kutusu.** Instagram, Facebook Sayfaları, Threads ve YouTube yorumları tek listede; atama, yanıt süresi metrikleri ve onaylı yanıtlarla.
+- **Sunucusuz ekip çalışması.** Salt okunur bir çalışma alanını eşitlenen bir klasör (Dropbox, iCloud Drive, OneDrive, NAS) üzerinden paylaşın. Roller, PIN korumalı müşteri görünümü ve @bahsetmeli notlar.
+- **Otomasyon.** Zamanlanmış senkronizasyon ve raporlar için penceresiz komut satırı modu ve bilgisayarınız kapalıyken yayımlayan, kendi sunucunuzda çalışan isteğe bağlı yayın worker'ı (Docker).
+- **Yerel öncelikli ve gizli.** Sırlar diskte şifreli saklanır. Veriler yalnızca bağladığınız servislere gider.
+
+## Desteklenen platformlar
+
+| Platform | Analitik | Yayımlama | Gelen kutusu (yorumlar) | Notlar | Kurulum rehberi |
+| --- | --- | --- | --- | --- | --- |
+| **Instagram** (İşletme/İçerik üreticisi) | Tam: erişim, etkileşim, kaydetme, hikâyeler, demografi, rakipler, reklam bağlantısı | Görsel, karusel, reels, hikâye, ilk yorum | Okuma, yanıt, gizleme | Var | [Meta uygulaması](docs/tr/meta-app-setup.md) |
+| **Facebook Sayfaları** | İzleyiciler, görüntülemeler, etkileşim, takipler, gönderi metrikleri, reklam bağlantısı | Metin, bağlantı, fotoğraf, albüm, video, reels, ilk yorum; isteğe bağlı olarak Facebook'ta zamanlama | Okuma, yanıt, gizleme | Var | [Meta uygulaması, bölüm 7.2](docs/tr/meta-app-setup.md#72-facebook-sayfalarını-takip-etme) |
+| **Threads** | Görüntülemeler, beğeniler, yanıtlar, yeniden paylaşımlar, alıntılar, bağlantı tıklamaları, takipçiler, demografi (100+ takipçi) | Metin, görsel, video, karusel, ilk yorum olarak yanıt | Okuma, yanıt, gizleme | Var | [Threads](docs/tr/threads-setup.md) |
+| **YouTube** | Görüntülemeler, izlenme süresi, ortalama izleme süresi, kazanılan/kaybedilen aboneler, beğeniler, yorumlar, paylaşımlar, Shorts/canlı yayın tespiti, demografi | – | Okuma; **Yanıtlamayı etkinleştir** sonrasında yanıt ve gizleme | Var | [YouTube](docs/tr/youtube-setup.md) |
+| **TikTok** (deneysel) | Profil, takipçiler, beğeniler, video başına görüntüleme/beğeni/yorum/paylaşım; günlük görüntülemeler ve yeni takipçiler senkronizasyonlardan tahmin edilir | – | – | Var | [TikTok](docs/tr/tiktok-setup.md) |
+| **Meta reklamları** | Hesap, kampanya, reklam seti ve reklam metrikleri, kırılımlar, bütçe temposu, organik + ücretli birleşim | Salt okunur (MetaDash reklamları hiçbir zaman değiştirmez) | – | – | [Meta uygulaması, bölüm 4](docs/tr/meta-app-setup.md#4-marketing-api-erişim-seviyesi-reklam-verisi-için) |
+
+"Notlar", hesaplar ve gönderiler üzerindeki dahili notlardır (ekip çalışma alanlarında paylaşılır). Platform API'lerinin vermediği veriler [Bilinen sınırlamalar](docs/tr/known-limitations.md) sayfasında listelenmiştir.
+
 ## Ekran görüntüleri
 
-Tüm ekran görüntüleri yerleşik [demo verisiyle](#demo-verisi) alınmıştır; hesaplar ve gönderiler kurgusaldır.
+Tüm ekran görüntüleri yerleşik [demo verisiyle](#demo-verisi) alınmıştır. Hesaplar ve gönderiler kurgusaldır.
 
-![Genel Bakış — tüm hesaplar tek tabloda: KPI'lar, etiketler, reklam kolonları](docs/images/tr/overview.png)
+![Genel Bakış: tüm platformlardaki tüm hesaplar tek tabloda; KPI'lar, etiketler ve reklam kolonları](docs/images/tr/overview.png)
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/tr/account.png" alt="Hesap ayrıntısı"><br><sub>Hesap ayrıntısı</sub></td>
-    <td width="50%"><img src="docs/images/tr/content.png" alt="İçerik — tüm gönderiler, filtreler ve reklam metrikleri"><br><sub>İçerik — tüm gönderiler, filtreler ve reklam metrikleri</sub></td>
+    <td width="50%"><img src="docs/images/tr/account.png" alt="Hesap ayrıntısı (Instagram)"><br><sub>Hesap ayrıntısı (Instagram)</sub></td>
+    <td width="50%"><img src="docs/images/tr/account-threads.png" alt="Hesap ayrıntısı (Threads): ana metrik görüntülemeler"><br><sub>Hesap ayrıntısı (Threads): ana metrik görüntülemeler</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/tr/compare.png" alt="Hesap karşılaştırma"><br><sub>Hesap karşılaştırma</sub></td>
-    <td width="50%"><img src="docs/images/tr/ads.png" alt="Reklamlar — reklam hesapları ve bütçe takibi"><br><sub>Reklamlar — reklam hesapları ve bütçe takibi</sub></td>
+    <td width="50%"><img src="docs/images/tr/account-youtube.png" alt="Hesap ayrıntısı (YouTube): izlenme süresi, Shorts ve videolar"><br><sub>Hesap ayrıntısı (YouTube): izlenme süresi, Shorts ve videolar</sub></td>
+    <td width="50%"><img src="docs/images/tr/content.png" alt="İçerik: tüm gönderiler, filtreler ve reklam metrikleri"><br><sub>İçerik: tüm gönderiler, filtreler ve reklam metrikleri</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/tr/competitors.png" alt="Rakipler"><br><sub>Rakipler</sub></td>
-    <td width="50%"><img src="docs/images/tr/reports.png" alt="Raporlar — canlı önizleme, HTML/PDF/Excel dışa aktarım"><br><sub>Raporlar — canlı önizleme, HTML/PDF/Excel dışa aktarım</sub></td>
+    <td width="50%"><img src="docs/images/tr/planner.png" alt="Planlayıcı: sürükle-bırak aylık takvim"><br><sub>Planlayıcı: sürükle-bırak aylık takvim</sub></td>
+    <td width="50%"><img src="docs/images/tr/composer.png" alt="Düzenleyici: birden çok hesap, platform bazlı kontroller ve önizlemeler"><br><sub>Düzenleyici: birden çok hesap, platform bazlı kontroller ve önizlemeler</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/tr/studio.png" alt="Yapay Zekâ Stüdyosu: marka sesi, fikirler, deneyler"><br><sub>Yapay Zekâ Stüdyosu: marka sesi, fikirler, deneyler</sub></td>
+    <td width="50%"><img src="docs/images/tr/inbox.png" alt="Birleşik gelen kutusu: tüm platformların yorumları"><br><sub>Birleşik gelen kutusu: tüm platformların yorumları</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/tr/ask.png" alt="Verine sor: düz dille sorular, salt okunur SQL ile yanıtlar"><br><sub>Verine sor: düz dille sorular, salt okunur SQL ile yanıtlar</sub></td>
+    <td width="50%"><img src="docs/images/tr/reports.png" alt="Raporlar: canlı önizleme, HTML/PDF/Excel dışa aktarım"><br><sub>Raporlar: canlı önizleme, HTML/PDF/Excel dışa aktarım</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/images/tr/presentation.png" alt="Sunum modu"><br><sub>Sunum modu</sub></td>
-    <td width="50%"><img src="docs/images/tr/presentation-builder.png" alt="Sunum hazırlama"><br><sub>Sunum hazırlama</sub></td>
+    <td width="50%"><img src="docs/images/tr/compare.png" alt="Hesap karşılaştırma"><br><sub>Hesap karşılaştırma</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/tr/ads.png" alt="Reklamlar: reklam hesapları ve bütçe takibi"><br><sub>Reklamlar: reklam hesapları ve bütçe takibi</sub></td>
+    <td width="50%"><img src="docs/images/tr/settings.png" alt="Ayarlar: tüm platformların bağlantıları"><br><sub>Ayarlar: tüm platformların bağlantıları</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/images/tr/setup.png" alt="Kurulum sihirbazı"><br><sub>Kurulum sihirbazı</sub></td>
-    <td width="50%"><img src="docs/images/tr/settings.png" alt="Ayarlar"><br><sub>Ayarlar</sub></td>
+    <td width="50%"></td>
   </tr>
 </table>
 
 ## Özellikler
 
-| Bölüm | Neler var |
+### Analitik ve raporlar
+
+| Alan | Neler sunar |
 | --- | --- |
-| **Genel Bakış** | Takip edilen tüm hesapların portföy tablosu: takipçi ve net değişim, erişim, etkileşim oranı, kaydetme oranı, gönderi sayısı, sağlık skoru, organik ve ücretli erişim, reklam harcaması. Arama, etiket filtresi ve lig tablosu. |
-| **Hesap ayrıntısı** | Takipçi ve erişim/etkileşim grafikleri, önceki döneme göre KPI'lar, sağlık skoru kırılımı, gönderi ızgarası ve tablosu, story'ler (tamamlanma ve çıkış oranı), kitle demografisi (şehir, ülke, yaş ve cinsiyet), en iyi paylaşım zamanı ısı haritası, gönderi yaşam eğrileri ("etkileşimin %80'i ilk N saatte"), bağlı reklam hesabı metrikleri ve organik + ücretli görünüm. |
-| **Facebook Sayfaları** | İsteğe bağlıdır ve Sayfa bazında seçilir (Kurulum adım 4 veya Ayarlar → Bağlantılar); aynı Meta token'ı ve `read_insights` izniyle çalışır. İzleyenler (Meta'nın sayfa erişimi), görüntülemeler, gönderi etkileşimleri, sayfa görüntülemeleri, yeni takipçiler ve takipten çıkanlar; gönderilerde izleyenler, görüntülemeler, tepkiler, yorumlar, paylaşımlar ve tıklamalar. Sayfalar tüm ekranlarda bağlı Instagram hesaplarının yanında Facebook işaretiyle görünür ve kendi reklam hesaplarına bağlanabilir. |
-| **Threads** | İsteğe bağlı ayrı bir bağlantıdır (Kurulum adım 6 veya Ayarlar → Bağlantılar; rehber: [`docs/tr/threads-setup.md`](docs/tr/threads-setup.md)). Günlük görüntüleme, beğeni, yanıt, yeniden paylaşım, alıntı, bağlantı tıklaması ve takipçi; gönderi bazında görüntüleme/beğeni/yanıt/yeniden paylaşım/alıntı/paylaşım ve kitle demografisi (100+ takipçi). Uzun ömürlü token otomatik yenilenir. Threads erişim sağlamadığı için ana metrik görüntülemedir. |
-| **Platform filtresi** | Birden fazla platform takip edildiğinde Genel Bakış ve İçerik ekranlarında Tümü / Instagram / Facebook / Threads filtresi (oturumlar arasında hatırlanır) ve takipçi ile erişimin platformlara göre dağılımı görünür. Bir platformun sağlamadığı metrikler sıfır yerine "—" ve açıklama ile gösterilir. |
-| **İçerik** | Filtreli (tür, minimum erişim, yalnızca reklamlı, arama) ve isteğe bağlı reklam metriği sütunlu, hesaplar arası gönderi tablosu; içerik analizi (tür kırılımı, hashtag performansı, en iyi gönderiler); elle seçilen gönderiler için rapor sepeti. Her gönderi; yaşam eğrisi, reklam satırları ve notları içeren bir panelde açılır. |
-| **Planlayıcı** | Instagram, Facebook Sayfaları ve Threads için içerik takvimi (rehber: [`docs/tr/planner.md`](docs/tr/planner.md)). Sürükle bırakla yeniden zamanlanan ay ve hafta görünümleri (Alt/Option ile sürükleyince kopyalar; klavye alternatifleri var), zamanlanmamış taslak listesi, toplu durum değişikliği yapılabilen tablo görünümü ve işlem kaydı. Düzenleyici tek seferde birden çok hesaba gönderi hazırlar: hesap başına açıklama ve ilk yorum, platforma göre anlık karakter/hashtag/bahsetme sayaçları, medya kitaplığı (dosya seçme, sürükle bırak, yapıştırma; görseller ve MP4/MOV), platform bazlı doğrulama (biçimler, medya sayısı, en-boy oranı, video süresi ve kodeği, sınırlar), en iyi zaman önerileri ve yaklaşık önizlemeler. Durum akışı: taslak → incelemede → onaylandı → zamanlandı → yayınlandı. |
-| **Yayınlama** | Zamanlanan gönderileri MetaDash resmî API'lerle (Instagram, Facebook Sayfaları, Threads) uygulama açıkken, isterseniz tepsiden yayınlar; Facebook gönderileri Facebook'un kendisinde de zamanlanabilir, böylece bilgisayarınız kapalıyken de yayınlanır. Yeniden denemeli kuyruk, hesap başına günlük kota, hata kodları ve `fbtrace_id`, kaçırılan gönderi yönetimi ve duraklatma anahtarı. Instagram ve Threads için herkese açık bir medya sunucusu (kendi S3 uyumlu bucket'ınız) gerekir. Müşteri onay paketleri (tek dosyalık HTML/PDF) her gönderi için "onayla / değişiklik iste" yanıtı toplar; yanıt kodu ile uygulanır. |
-| **Karşılaştır** | Seçilen hesapların yan yana karşılaştırması ve gönderi–gönderi karşılaştırması. |
-| **Reklamlar** | Tutarlı tek bir metrik setiyle reklam hesabı tablosu (gösterim, sonuç ve sonuç başına ücret, bütçe, harcama, erişim, sıklık, CPC, CTR, CPM, gönderi/sayfa etkileşimi ve maliyetleri). Kampanya, reklam seti ve reklam seviyeleri; yaş, cinsiyet ve platform kırılımları; organik + ücretli birleşik görünüm; reklamların tanıttıkları Instagram gönderileriyle eşleştirilmesi. |
-| **Bütçe takibi** | Reklam hesabı başına aylık bütçe; takvim ayına göre tempo, kalan bütçe, gereken günlük harcama, bugün / dün / son 7 gün, ay sonu tahmini ve tempo altındaki hesaplar için "boost adayları" (henüz reklamı olmayan son gönderiler). Bütçe dağılımı ağacı, bütçeyi kampanya → reklam seti → reklam şeklinde paylaştırır; elle geçersiz kılınabilir. MetaDash, Meta tarafında hiçbir şeyi değiştirmez. |
-| **Rakipler** | Herkese açık rakip hesapları Business Discovery ile takip edin: takipçi, büyüme, paylaşım sıklığı, ortalama beğeni ve yorum (rakipler için erişim verisi yoktur). |
-| **Raporlar** | Şablonlar: aylık müşteri raporu, haftalık müşteri raporu, özel tarih aralığı, portföy özeti, kampanya raporu (organik + ücretli), haftalık değişim özeti, seçilen gönderiler raporu. Bölümleri seçin, logo ve değerlendirme ekleyin, rapor dilini belirleyin, ön ayar kaydedin. Tek dosyalık HTML (grafikler SVG olarak gömülü, çevrimdışı çalışır), PDF veya çok sayfalı Excel olarak dışa aktarın. |
-| **Sunum** | Verilerinizden üretilen tam ekran slayt destesi (kapak, KPI'lar, büyüme, içerik, en iyi gönderiler, öne çıkan gönderi, hashtag'ler, en iyi zaman, reklamlar, kampanyalar, kırılımlar, reklamlı gönderiler, rapor sepeti, sonraki adımlar). Ok tuşlarıyla ilerleme, `F` tam ekran, `Esc` çıkış. |
-| **Beyaz etiketli raporlar** | Ayarlar → Rapor markalama: ajans adı ve logosu, vurgu rengi, alt bilgi metni (iletişim, web sitesi) ve "MetaDash ile oluşturuldu" notunu gizleme seçeneği; canlı önizlemeli. HTML/PDF raporlara (başlık, bölüm başlıkları, grafikler, alt bilgi), tablo PDF'lerine, Excel başlık satırına ve sunum kapağına uygulanır. Hesap başına isteğe bağlı müşteri logosu (Ayarlar → Hesap yönetimi) tek müşterili raporlarda gösterilir. |
-| **Her yerde dışa aktarım** | Her veri tablosu `.xlsx` veya yatay A4 PDF, her grafik PNG olarak kaydedilebilir. |
-| **Yapay zekâ asistanı (isteğe bağlı, kendi anahtarınızla)** | Varsayılan olarak kapalıdır. Ayarlar → Yapay zekâ asistanı bölümünden açıp kendi API anahtarınızla Anthropic (Claude), OpenAI, Google Gemini veya yerel bir Ollama modeli seçin. **Yapay zekâ ile yaz**, rapor yorumunu raporun kendi rakamlarından ve rapor dilinde taslak olarak yazar (ne oldu, neden, üç sonraki adım); dışa aktarmadan önce düzenleyebilirsiniz. Genel Bakış'taki bir anomalide **Açıkla**, çevredeki günlere, gönderilere, reklam harcamasına ve paylaşım sıklığına bakarak kısa bir olası neden açıklaması verir. |
-| **Verine sor (yapay zekâ)** | Kenar çubuğundaki **Verine sor** ekranında analitikleriniz hakkında Türkçe veya İngilizce soru sorun, örn. "Son 30 günde en hızlı büyüyen 5 hesap hangileri?" veya "Bu ay müşteri başına reklamlara ne kadar harcadık?". Asistan yerel veritabanında salt okunur SQL çalıştırarak yanıtlar (ayar ve kimlik bilgisi tabloları engellidir; sonuçlar 200 satırla sınırlıdır) ve **Bunu nasıl buldum** bölümünde her sorguyu ve küçük bir sonuç tablosunu gösterir. Yapay zekâ asistanının açık olması gerekir. |
-| **Bildirimler** | Her senkronizasyondan sonra ve günde bir kez isteğe bağlı masaüstü bildirimleri: son 2 gündeki olağandışı değişiklikler, aylık bütçesinin %90'ına ulaşan reklam hesapları, 7+ gündür paylaşım yapmayan hesaplar ve süresinin dolmasına 7 günden az kalan Meta token'ı. Her tür Ayarlar'dan kapatılabilir; bildirime tıklamak ilgili ekranı açar. |
-| **Güncellemeler** | Kurulu sürümler GitHub Releases'te yeni sürüm olup olmadığını denetler. Windows ve Linux AppImage'da uygulama içinden indirilip yüklenir (yüklemek için yeniden başlatılır); macOS ve `.deb` sürümlerinde sürüm sayfasına bağlantı verilir. Ayarlar'dan kapatılabilir. |
-| **Senkronizasyon** | Tür bazlı kuyruklarla artımlı senkronizasyon, Meta kullanım başlıkları yükseldikçe otomatik yavaşlama, gönderi yaşına göre kademeli insights yenileme, belirli aralıklarla story yenileme, uygulama açıkken isteğe bağlı günlük otomatik güncelleme. |
-| **Ayarlar ve veri** | Hesap yönetimi (müşteri adı, renk, etiketler, takip), reklam hesabı eşleme, token durumu ve yenileme, senkronizasyon geçmişi ve hataları, desteklenmeyen metrik yönetimi, veritabanı yedekleme ve geri yükleme, bilgisayarlar arası tam veri taşıma (`.metadash` dosyaları), CSV dışa aktarım, salt okunur SQL konsolu, koyu/açık tema, İngilizce/Türkçe arayüz. |
+| **Genel Bakış** | Takip edilen tüm hesapların portföy tablosu: takipçiler ve net değişim, erişim (Threads, YouTube ve TikTok'ta görüntülemeler), etkileşim oranı, kaydetme oranı, gönderiler, sağlık puanı, organik ve ücretli erişim, reklam harcaması. Arama, etiketler, lider tablosu, platform filtresi (Tümü / Instagram / Facebook / Threads / YouTube / TikTok) ve olağandışı değişiklikler için "Dikkat gerektirenler" paneli. |
+| **Hesap ayrıntısı** | Önceki döneme göre KPI'lar ve her platforma özel grafikler, sağlık puanı dökümü, ızgara veya tablo olarak gönderiler, hikâyeler, demografi, en iyi paylaşım zamanı ısı haritası, gönderi yaşam döngüsü eğrileri, bağlı reklam metrikleri, organik + ücretli görünüm ve hesabın gelen kutusu. YouTube'da ayrıca izlenme süresi ve Shorts/video/canlı yayın dağılımı. |
+| **İçerik** | Tüm hesapların gönderileri tek tabloda, filtreler ve reklam kolonlarıyla; içerik analizi (tür dağılımı, hashtag performansı, en iyi gönderiler); rapor sepeti; her gönderi için yaşam döngüsü, reklam satırları, notlar ve **Dönüştür** içeren bir yan panel. |
+| **Karşılaştırma** | Hesaplar yan yana ve gönderiye karşı gönderi. Platformlar karıştığında uyarır. |
+| **Reklamlar ve bütçeler** | Tutarlı tek bir metrik setiyle reklam hesapları; kampanya / reklam seti / reklam seviyeleri; yaş, cinsiyet ve platform kırılımları; tanıttıkları gönderilere bağlanan reklamlar. Aylık bütçeler, harcama temposu, ay sonu tahmini, öne çıkarma adayları ve kampanya → reklam seti → reklam dağıtım ağacı. |
+| **Rakipler** | Business Discovery ile herkese açık Instagram rakipleri: takipçiler, büyüme, paylaşım sıklığı, ortalama beğeni ve yorum. |
+| **Raporlar** | Aylık, haftalık ve özel tarih aralıklı müşteri raporları, portföy özeti, kampanya raporu, haftalık değişim özeti ve seçili gönderiler raporu; ayrıca "Topluluk yanıtı" bölümü. Bölümleri seçin, logo ve yorum ekleyin, rapor dilini belirleyin. Tek dosyalık HTML, PDF veya çok sayfalı Excel olarak dışa aktarın. Kendi markanızla raporlar (ajans adı, logo, vurgu rengi, alt bilgi) ve müşteri bazlı logolar. |
+| **Sunum** | Verilerinizden üretilen tam ekran slayt destesi; slaytları seçip sıralamak için bir oluşturucuyla. |
+| **Dışa aktarım** | Her tablo `.xlsx` veya PDF'e, her grafik PNG'ye; CSV hazır ayarları ve salt okunur SQL konsolu. |
+| **Bildirimler** | Olağandışı değişiklikler, %90'a ulaşan reklam bütçeleri, sessiz hesaplar, süresi dolmak üzere olan token'lar, yayımlama sonuçları, geciken yorumlar ve @bahsetmeler. Her tür ayrı ayrı kapatılabilir. |
+
+### Planlayıcı ve yayımlama
+
+| Alan | Neler sunar |
+| --- | --- |
+| **Takvim** | Sürükle-bırak aylık ve haftalık görünümler (Alt/Option ile sürüklemek kopyalar), klavye alternatifleri, zamanlanmamış taslaklar, toplu işlemli liste, yayın kuyruğu ve denetim günlüğü. |
+| **Düzenleyici** | Birden çok Instagram, Facebook Sayfası ve Threads hesabı için tek gönderi; hesap başına açıklama ve ilk yorum, canlı karakter, hashtag ve bahsetme sayaçları, yerel medya kütüphanesi, her platformun sınırlarına göre doğrulama, en iyi zaman önerileri ve yaklaşık önizlemeler. |
+| **İş akışı ve onay** | Taslak → İncelemede → Onaylandı → Zamanlandı → Yayımlandı. Zamanlamadan önce onayı zorunlu kılabilirsiniz. **Müşteri onay paketleri** tek dosyalık HTML/PDF'lerdir: müşteri çevrimdışı olarak onaylar veya değişiklik ister ve size bir yanıt kodu gönderir. |
+| **Yayımlama** | MetaDash çalıştığı sürece resmî API'ler üzerinden yayımlar; tepsiden veya menü çubuğundan ve oturum açılışında başlatmayla da. Facebook gönderileri Facebook'un kendisinde de zamanlanabilir. Yeniden denemeler, günlük kota kontrolleri, kaçırılan gönderi yönetimi ve duraklatma düğmesi yerleşiktir. Instagram görselleri ve Threads medyası herkese açık bir medya barındırıcısı (kendi S3 uyumlu depolama alanınız) gerektirir. |
+| **Kendi sunucunuzda worker** | Bir VPS, NAS veya Raspberry Pi üzerinde, bilgisayarınız kapalıyken kuyruktaki gönderileri yayımlayan isteğe bağlı Docker servisi. Bkz. [docs/tr/worker.md](docs/tr/worker.md). |
+
+Rehberler: [Planlayıcı](docs/tr/planner.md) · [Yayımlama kurulumu](docs/tr/publishing-setup.md)
+
+### Yapay zekâ (isteğe bağlı, kendi anahtarınızla)
+
+Yapay zekâ özellikleri **varsayılan olarak kapalıdır** ve beta olarak işaretlidir. **Ayarlar → Yapay zekâ asistanı** bölümünden açın ve **Anthropic (Claude)**, **OpenAI**, **Google Gemini** ya da yerel bir **Ollama** modeli seçin. Anahtarlar şifreli saklanır ve kaydedildikten sonra bir daha gösterilmez. Her hesap yapay zekâdan tamamen çıkarılabilir.
+
+| Özellik | Ne yapar |
+| --- | --- |
+| **Verine sor** | "Son 30 günde en hızlı büyüyen 5 hesap hangisi?" gibi soruları düz dille sorun. Asistan yerel veritabanınızda salt okunur SQL çalıştırarak yanıtlar ve **Bunu nasıl buldum** altında her sorguyu gösterir. |
+| **Yapay zekâ ile yaz / Açıkla** | Raporun kendi rakamlarından rapor yorumu taslağı hazırlar ve Genel Bakış'taki bir anomaliyi açıklar. |
+| **Stüdyo: Marka sesi** | Hesap başına marka sesi özeti; yerelde hesaplanan açıklama istatistikleri (yapay zekâ gerekmez) ve isteğe bağlı olarak yapay zekâ ile türetilen bir öneri. |
+| **Stüdyo: Açıklamalar ve hashtag'ler** | Düzenleyicide açıklama varyantları (isteğe bağlı olarak görselleri de kullanarak) ve kendi gönderilerinizin performans artışına dayalı hashtag önerileri. |
+| **Stüdyo: Fikirler ve dönüştürme** | Özel günleri de içeren ve en iyi saatlerinizde Planlayıcı taslaklarına dönüşen aylık içerik fikirleri. Bir gönderiyi karusele, Threads gönderisine, Facebook gönderisine veya hikâye karelerine dönüştürün. |
+| **Stüdyo: Yanıtlar ve deneyler** | Gelen kutusunda yanıt önerileri (yorum yazanlar anonimleştirilir, her yanıt onaylanır), isteğe bağlı duygu etiketleri ve güven aralıklı A/B açıklama deneyleri. |
+| **Kullanım** | Özellik başına token sayıları ve tahmini maliyet. Her yapay zekâ işleminde "Ne gönderilecek?" önizlemesi vardır. |
+
+Rehber: [Yapay Zekâ Stüdyosu](docs/tr/ai-studio.md)
+
+### Birleşik gelen kutusu
+
+Instagram, Facebook Sayfaları, Threads ve YouTube yorumları tek listede. Duruma, platforma, hesaba, duyguya ve atanan kişiye göre filtreleyebilir, klavye kısayollarını kullanabilirsiniz. Yanıtlar her zaman onayınızı gerektirir; platformun izin verdiği yerlerde yorumları gizleyebilirsiniz. Gelen kutusu ilk yanıt süresini, yanıtlanma yüzdesini ve hedef süre içinde yanıtlanma yüzdesini (sağlık puanının yanıt bileşeni) izler, yeni yorumları arka planda denetler ve müşteri raporlarına "Topluluk yanıtı" bölümü ekler. Doğrudan mesajlar dahil değildir. Rehber: [docs/tr/inbox.md](docs/tr/inbox.md)
+
+### Ekip ve müşteri görünümü
+
+Bir kurulum **yayıncıdır**: token'ları tutar, senkronize eder ve ekibinizin zaten eşitlediği bir klasöre sırlardan arındırılmış, isteğe bağlı olarak şifreli bir anlık görüntü yazar. Ekip arkadaşları **abone olur** ve salt okunur bir kopya alır. Notlar, @bahsetmeler ve gelen kutusu durumu üye başına olay günlükleriyle taşınır. **Analist** rolü ayarları sınırlar; **Müşteriye sun** yalnızca seçilen müşterilerin hesaplarını bir PIN arkasında gösterir. Roller bir güvenlik sınırı değil, korkuluktur. Rehber: [docs/tr/team.md](docs/tr/team.md)
+
+### Komut satırı ve otomasyon
+
+Uygulama dosyası `--cli` ile penceresiz çalışır: `sync`, `report`, `export`, `backup`, `accounts`, `status`, `inbox`, `worker` ve `team`. Örneğin her ayın 1'inde geçen ayın PDF raporlarını yazmak için cron, launchd veya Görev Zamanlayıcı'da kullanabilirsiniz. **Ayarlar → Komut satırı aracı** bir `metadash` komutu kurar. Rehber: [docs/tr/cli.md](docs/tr/cli.md)
+
+### Diller
+
+Arayüz varsayılan olarak **İngilizce**dir. **Türkçe** eksiksizdir. **Deutsch** ve **Español** kısmidir: dil seçicide listelenirler ve henüz çevrilmemiş her metin İngilizce görünür. **Ayarlar → Tema · Dil** bölümünden değiştirebilirsiniz. Raporların kendi dil ayarı vardır. Çeviriler düz JSON dosyalarıdır; katkı vermek için [docs/tr/translating.md](docs/tr/translating.md) sayfasına bakın.
 
 ## Uygulamayı indirme ve kurma
 
-En güncel kurulum dosyasını **[GitHub Releases](https://github.com/mbahadirs/metadash/releases)** sayfasından indirin.
+En son kurulum dosyasını **[GitHub Releases](https://github.com/mbahadirs/metadash/releases)** sayfasından indirin.
 
 | Platform | Dosya |
 | --- | --- |
 | macOS, Apple Silicon | `MetaDash-<sürüm>-mac-arm64.dmg` |
 | macOS, Intel | `MetaDash-<sürüm>-mac-x64.dmg` |
-| Windows x64 | `MetaDash-Setup-<sürüm>.exe` (kurulum sihirbazı; kurulum klasörü seçilebilir) |
+| Windows x64 | `MetaDash-Setup-<sürüm>.exe` (kurulum programı; klasörü seçebilirsiniz) |
 | Linux x64 | `MetaDash-<sürüm>-linux-x86_64.AppImage` veya `MetaDash-<sürüm>-linux-amd64.deb` |
 
-### İmzasız paketler
+İsteğe bağlı yayın worker'ı bir Docker imajıdır (`ghcr.io/mbahadirs/metadash-worker`, amd64 ve arm64). Bkz. [docs/tr/worker.md](docs/tr/worker.md).
 
-Sürüm paketleri yalnızca depoda imzalama sırları tanımlıysa kod imzalı olur; bu yüzden işletim sisteminiz ilk açılışta uyarı verebilir.
+### Kod imzasız paketler
+
+Sürüm paketleri yalnızca depoda imzalama sırları tanımlıysa kod imzalı olur; bu yüzden işletim sisteminiz MetaDash'i ilk açtığınızda uyarı verebilir.
 
 - **macOS** ("MetaDash doğrulanamadı" veya "hasarlı"): uygulamayı Uygulamalar klasörüne taşıyın, ardından ya şunu çalıştırın
 
@@ -103,51 +178,82 @@ Sürüm paketleri yalnızca depoda imzalama sırları tanımlıysa kod imzalı o
   xattr -cr /Applications/MetaDash.app
   ```
 
-  ya da uygulamayı bir kez açmayı deneyip **Sistem Ayarları → Gizlilik ve Güvenlik** bölümünde **Yine de Aç**'a tıklayın.
+  ya da uygulamayı bir kez açmayı deneyip **Sistem Ayarları → Gizlilik ve Güvenlik** bölümünde **Yine de Aç**'a tıklayın. macOS'ta ve `.deb` paketinde MetaDash güncellemeleri kendisi kurmaz: yeni sürümü bildirir ve sürüm sayfasına bağlantı verir. Windows ve AppImage uygulama içinden güncellenir.
 - **Windows** (SmartScreen "Windows bilgisayarınızı korudu"): **Ek bilgi → Yine de çalıştır**'a tıklayın.
 - **Linux:** AppImage'ı çalıştırılabilir yapın (`chmod +x MetaDash-*.AppImage`) ve çalıştırın ya da Debian paketini `sudo apt install ./MetaDash-*.deb` ile kurun.
 
 ## Hızlı başlangıç
 
-1. Development modunda bir **Meta uygulaması oluşturun** ve gerekli izinleri ekleyin. Graph API Explorer ve sorun giderme dahil tüm adımlar **[docs/tr/meta-app-setup.md](docs/tr/meta-app-setup.md)** dosyasındadır. Kurulum sihirbazındaki kılavuz düğmesi aynı belgeyi açar.
-2. MetaDash'te **Kurulum sihirbazını** tamamlayın:
+1. **Önce demo verisiyle deneyin.** Kurulum sihirbazının karşılama adımında **Demo verisiyle keşfet**'i seçin. Bu, 40 Instagram hesabı, 8 Facebook Sayfası, 6 Threads profili, 2 YouTube kanalı ve 3 TikTok hesabı yükler. Hepsi kurgusaldır ve geliştirici uygulaması gerekmez. Daha sonra gerçek hesaplara geçmek için **Ayarlar → Tüm verileri sil**'i kullanıp kurulumu yeniden çalıştırın.
+2. **Meta'yı bağlayın (Instagram, Facebook Sayfaları, reklamlar).** Development modunda bir Meta uygulaması oluşturun ([rehber](docs/tr/meta-app-setup.md)), ardından kurulum sihirbazının 7 adımını izleyin:
    1. **Karşılama**
-   2. **Meta uygulaması** – App ID ve App Secret'ı yapıştırın.
-   3. **Token** – Graph API Explorer'dan aldığınız kullanıcı token'ını yapıştırın. MetaDash bunu 60 günlük uzun ömürlü token'a çevirir ve verilen izinleri gösterir.
-   4. **Hesap seçimi** – takip edilecek Instagram hesaplarını seçin; müşteri adlarını ve etiketleri girin.
-   5. **Reklam hesapları** – isteğe bağlı olarak her reklam hesabını bir Instagram hesabıyla eşleyin.
-   6. **İlk senkronizasyon**
-3. Verileri tazelemek için üst çubuktaki **Güncelle** düğmesini kullanın ya da **Ayarlar**'da günlük otomatik güncellemeyi açın.
+   2. **Meta uygulaması**: App ID ve App Secret'ı yapıştırın.
+   3. **Token**: Graph API Explorer'dan aldığınız kullanıcı token'ını yapıştırın. MetaDash bunu 60 günlük bir token'a çevirir ve verilen izinleri gösterir.
+   4. **Hesaplar**: Instagram hesaplarını ve isteğe bağlı olarak Facebook Sayfalarını seçin; müşteri adlarını ve etiketleri girin.
+   5. **Reklam hesapları**: isteğe bağlı olarak her reklam hesabını bir hesapla eşleyin.
+   6. **Threads** (isteğe bağlı): Threads uygulamanızla bağlanın ([rehber](docs/tr/threads-setup.md)).
+   7. **İlk senkronizasyon**
+3. **Diğer platformları** **Ayarlar → Bağlantılar** bölümünden ekleyin:
+   - **YouTube**: kendi Google OAuth "Masaüstü uygulaması" istemciniz ([rehber](docs/tr/youtube-setup.md)).
+   - **TikTok** (deneysel): kendi TikTok geliştirici uygulamanız, sandbox veya onaylı ([rehber](docs/tr/tiktok-setup.md)).
+4. Verileri üst çubuktaki **Güncelle** ile tazeleyin ya da Ayarlar'da günlük otomatik senkronizasyonu açın.
+5. **İsteğe bağlı eklentiler:** yayımlama ([kurulum](docs/tr/publishing-setup.md)), yapay zekâ (**Ayarlar → Yapay zekâ asistanı**), ekip çalışma alanı ([rehber](docs/tr/team.md)), komut satırı ([rehber](docs/tr/cli.md)) ve worker ([rehber](docs/tr/worker.md)).
 
-İzinler: `instagram_basic`, `instagram_manage_insights`, `pages_show_list`, `pages_read_engagement`, `ads_read` (zorunlu); `business_management` (Sayfalar veya reklam hesapları bir Business Manager'daysa gerekir) ve `instagram_manage_comments` (yorum modülü) isteğe bağlıdır.
-
-## Dil
-
-Arayüz varsayılan olarak **İngilizce**dir. **Settings → Theme · Language** (Ayarlar → Tema · Dil) bölümünden **Türkçe**'ye geçebilirsiniz. Raporların kendi dil seçicisi vardır; İngilizce arayüzden Türkçe rapor üretebilirsiniz, tersi de mümkündür.
+Meta izinleri: `instagram_basic`, `instagram_manage_insights`, `pages_show_list`, `pages_read_engagement` ve `ads_read` zorunludur. `business_management`, `instagram_manage_comments` ve `read_insights` (Facebook Sayfaları için) isteğe bağlıdır. Yayımlama ve gelen kutusu özellikleri ek izinler gerektirir; rehberlerde listelenmiştir.
 
 ## Veri ve gizlilik
 
-- **Her şey bilgisayarınızda kalır.** Tüm veriler, kullanıcı veri dizinindeki tek bir SQLite veritabanında (`data.db`, WAL modu) tutulur:
+**Her şey bilgisayarınızda saklanır**; kullanıcı veri klasöründeki tek bir SQLite veritabanında (`data.db`, WAL modu):
 
-  | İşletim sistemi | Konum |
-  | --- | --- |
-  | macOS | `~/Library/Application Support/MetaDash/` |
-  | Windows | `%APPDATA%\MetaDash\` |
-  | Linux | `$XDG_CONFIG_HOME/MetaDash/` (genellikle `~/.config/MetaDash/`) |
+| İşletim sistemi | Konum |
+| --- | --- |
+| macOS | `~/Library/Application Support/MetaDash/` |
+| Windows | `%APPDATA%\MetaDash\` |
+| Linux | `$XDG_CONFIG_HOME/MetaDash/` (genellikle `~/.config/MetaDash/`) |
 
-- **Sırlar şifreli saklanır.** Meta erişim token'ı ve App Secret, makine kimliğinden (macOS'ta donanım UUID'si, Windows'ta `MachineGuid`, Linux'ta `/etc/machine-id`) türetilen bir anahtarla AES-256-GCM kullanılarak şifrelenir. Kopyalanan bir veritabanı başka bilgisayarda bu sırları çözemez. Yeni bir makineye geçmek için **Ayarlar → Veri taşıma**'yı kullanın; sırlar sizin belirlediğiniz bir parolayla yeniden şifrelenerek taşınabilir.
-- **Telemetri, analitik ya da MetaDash sunucusu yoktur.** Main process `https://graph.facebook.com` adresine istek yapar (API çağrıları ve çevrimiçi kontrolü). Profil fotoğrafları ve gönderi küçük resimleri, API'nin döndürdüğü Meta CDN adreslerinden gösterilir.
-- **Güncelleme denetimi (yalnızca kurulu sürümlerde).** Kurulu sürümler, açılıştan kısa süre sonra ve 6 saatte bir GitHub'da yeni sürüm olup olmadığını denetler: macOS ve `.deb` sürümleri `https://api.github.com` adresini (son sürüm) sorgular; Windows ve Linux AppImage sürümleri sürüm bilgisini (`latest*.yml`) `https://github.com` sürüm indirmelerinden okur ve kurulum dosyasını yalnızca **İndir**'e tıkladığınızda indirir. Sizinle veya verilerinizle ilgili hiçbir bilgi gönderilmez. **Ayarlar → Hakkında → Güncellemeleri otomatik denetle** ile kapatabilirsiniz; geliştirme sürümleri hiç denetlemez.
-- **Yapay zekâ asistanı (isteğe bağlı, varsayılan olarak kapalı).** Asistanı Ayarlar'dan açıp **Yapay zekâ ile yaz** veya **Açıkla**'ya tıklamadıkça ya da **Verine sor**'da soru sormadıkça hiçbir yapay zekâ sağlayıcısına veri gönderilmez. Tıkladığınızda ilgili analitiklerin kısa bir özeti (hesap adları, metrikler, 120 karaktere kısaltılmış gönderi açıklamaları, reklam harcaması; **Verine sor** için sorunuz ve asistanın çalıştırdığı salt okunur sorguların sonuçları, ayar ve kimlik bilgisi tabloları asla) bilgisayarınızdan doğrudan seçtiğiniz sağlayıcıya (`api.anthropic.com`, `api.openai.com` veya `generativelanguage.googleapis.com`) kendi API anahtarınızla ve o sağlayıcının koşullarıyla gönderilir. API anahtarları Meta token'ı gibi şifreli saklanır ve kaydedildikten sonra bir daha gösterilmez. Her şeyin bu bilgisayarda kalması için **Ollama**'yı seçin (istekler yalnızca yerel Ollama adresinize gider; varsayılan `http://127.0.0.1:11434`).
-- **Masaüstü bildirimleri** tamamen yerel veritabanınızdan üretilir; bilgisayarınızdan hiçbir veri çıkmaz.
-- "Instagram'da aç" gibi bağlantılar varsayılan tarayıcınızda açılır.
+**Bilgisayardan ne çıkar?** Telemetri, analitik veya MetaDash sunucusu yoktur. Main process yalnızca şu servislere bağlanır:
+
+| Hedef | Ne zaman | Ne |
+| --- | --- | --- |
+| Platform API'leri: `graph.facebook.com` (Instagram, Facebook, reklamlar), `graph.threads.net`, Google (`oauth2.googleapis.com`, `www.googleapis.com`, `youtubeanalytics.googleapis.com`), `open.tiktokapis.com` | Senkronizasyon, hesap bağlama, yayımlama, gelen kutusu yanıtları | Bağladığınız hesaplar için token'larınız ve API istekleri |
+| Medya barındırıcınız (S3 uyumlu depolama alanı veya bir Facebook Sayfası) | Yalnızca Instagram görselleri veya Threads medyası yayımladığınızda | O gönderinin medya dosyası |
+| GitHub (`api.github.com`, `github.com`) | Yalnızca kurulu sürümlerde: açılıştan sonra ve 6 saatte bir | Güncelleme denetimi. Sizinle ilgili hiçbir bilgi gönderilmez. **Ayarlar → Hakkında** bölümünden kapatabilirsiniz. |
+| Yapay zekâ sağlayıcınız (`api.anthropic.com`, `api.openai.com`, `generativelanguage.googleapis.com`) veya yerel Ollama'nız | Yalnızca yapay zekâ açıksa **ve** bir yapay zekâ özelliğini kullandığınızda | O özelliğin "Ne gönderilecek?" önizlemesinde gösterilen veriler, kendi anahtarınızla. Ollama her şeyi yerelde tutar. |
+| Kendi sunucunuzdaki worker | Yalnızca bir worker bağlarsanız | "Yayınlayan: Worker" olarak ayarladığınız gönderiler, medyaları ve hesap başına bir yayımlama token'ı |
+| Paylaşılan ekip klasörünüz | Yalnızca bir ekip oluşturur veya bir ekibe katılırsanız | Hiçbir sır içermeyen (isteğe bağlı olarak şifreli) bir anlık görüntü ile notlar ve gelen kutusu olayları. Dosyaları kendi eşitleme istemciniz (Dropbox, iCloud, …) taşır. |
+
+Profil fotoğrafları ve küçük resimler platformların CDN adreslerinden yüklenir. "Instagram'da aç" gibi bağlantılar tarayıcınızda açılır.
+
+**Sırlar diskte şifreli saklanır.** Token'lar, uygulama sırları, yapay zekâ anahtarları ve S3 anahtarları, makine kimliğinden türetilen bir anahtarla AES-256-GCM kullanılarak şifrelenir; kopyalanan bir veritabanı başka bir bilgisayarda bunları çözemez. Yeni bir makineye geçmek için **Ayarlar → Veri taşıma**'yı bir parolayla kullanın. Ayrıntılar: [Mimari → Güvenlik modeli](docs/tr/architecture.md#güvenlik-modeli), [SECURITY.md](SECURITY.md).
+
+## Belgeler
+
+Tam dizin [docs/tr/README.md](docs/tr/README.md) dosyasındadır. İngilizce sürümler [docs/](docs/README.md) klasöründedir.
+
+| Konu | Rehber |
+| --- | --- |
+| Meta uygulaması (Instagram, Facebook Sayfaları, reklamlar) | [meta-app-setup.md](docs/tr/meta-app-setup.md) |
+| Threads | [threads-setup.md](docs/tr/threads-setup.md) |
+| YouTube | [youtube-setup.md](docs/tr/youtube-setup.md) |
+| TikTok (deneysel) | [tiktok-setup.md](docs/tr/tiktok-setup.md) |
+| Planlayıcı | [planner.md](docs/tr/planner.md) |
+| Yayımlama ve medya barındırıcıları | [publishing-setup.md](docs/tr/publishing-setup.md) |
+| Yapay Zekâ Stüdyosu | [ai-studio.md](docs/tr/ai-studio.md) |
+| Birleşik gelen kutusu | [inbox.md](docs/tr/inbox.md) |
+| Ekip çalışma alanı ve roller | [team.md](docs/tr/team.md) |
+| Komut satırı aracı | [cli.md](docs/tr/cli.md) |
+| Kendi sunucunuzda yayın worker'ı | [worker.md](docs/tr/worker.md) |
+| Bilinen sınırlamalar | [known-limitations.md](docs/tr/known-limitations.md) |
+| Mimari | [architecture.md](docs/tr/architecture.md) |
+| Platform ekleme (sağlayıcılar) | [providers.md](docs/tr/providers.md) |
+| Çeviri | [translating.md](docs/tr/translating.md) |
 
 ## Geliştirme
 
 ### Gereksinimler
 
-- Node.js 20 veya üzeri, npm
-- `better-sqlite3`'ün Electron sürümünüz için derlenmesi gerekirse bir C/C++ derleme ortamı (macOS'ta Xcode Command Line Tools, Windows'ta Visual Studio Build Tools, Linux'ta `build-essential` ve `python3`)
+- Node.js 20 veya üstü, npm (isteğe bağlı worker Docker olmadan çalıştırılırsa Node.js 22 gerekir)
+- `better-sqlite3`'ün Electron sürümünüz için derlenmesi gerekirse bir C/C++ derleme ortamı: macOS'ta Xcode Command Line Tools, Windows'ta Visual Studio Build Tools, Linux'ta `build-essential` ve `python3`
 
 ### Kurulum
 
@@ -155,119 +261,126 @@ Arayüz varsayılan olarak **İngilizce**dir. **Settings → Theme · Language**
 git clone https://github.com/mbahadirs/metadash.git
 cd metadash
 npm install        # postinstall, better-sqlite3'ü Electron için yeniden derler
-npm run dev        # Vite geliştirme sunucusu + Electron, canlı yeniden yükleme
+npm run seed       # isteğe bağlı: demo verisi, geliştirici uygulaması gerekmez
+npm run dev        # Vite geliştirme sunucusu + anında yenilemeli Electron
 ```
 
-`npm start`, renderer'ı bir kez derleyip Electron'u geliştirme sunucusu olmadan açar.
+### Betikler
+
+| Betik | Ne yapar |
+| --- | --- |
+| `npm run dev` | Vite geliştirme sunucusu + anında yenilemeli Electron |
+| `npm start` | Renderer'ı bir kez derler ve Electron'u geliştirme sunucusu olmadan başlatır |
+| `npm run seed` / `npm run seed:reset` | Demo verisi yazar (zaten varsa atlar) / silip yeniden üretir |
+| `npm test` | Vitest; yerel `better-sqlite3` derlemesi eşleşsin diye Electron'un Node'u altında çalışır |
+| `npm run typecheck` | Renderer'ın TypeScript denetimi |
+| `npm run i18n:check` | Eksik veya fazla çeviri anahtarları, yer tutucu uyuşmazlıkları, kodda kullanılan bilinmeyen anahtarlar |
+| `npm run smoke` | Renderer'ı derler ve gerçek bir Electron penceresinde her ekranı gezer (önce demo verisi yükleyin) |
+| `npm run cli -- <komut>` | Penceresiz komut satırını kaynak koddan çalıştırır, ör. `npm run cli -- status` |
+| `node scripts/cli-smoke.mjs` | Geçici bir demo veritabanında, gerçek bir PDF dahil uçtan uca komut satırı duman testi |
+| `npm run rebuild` | `better-sqlite3`'ü Electron için yeniden derler (`NODE_MODULE_VERSION` hatalarını giderir) |
+| `npm run build:mac` / `build:win` / `build:linux` / `build` | Kurulum paketleri (aşağıya bakın) |
 
 ### Demo verisi
 
-Arayüz üzerinde çalışmak için Meta uygulaması gerekmez. Geliştirme sürümleri deterministik bir demo veri kümesi üretebilir: 120 günlük veriyle 40 hesap; takipçi anlık görüntüleri, günlük insights, gönderiler ve yaşam eğrisi anlık görüntüleri, story'ler, yorumlar, demografi, 16 reklam hesabı (kampanyalar, reklam setleri, reklamlar ve kırılımlar), rakipler ve senkronizasyon geçmişi.
+Arayüz üzerinde çalışmak için hiçbir geliştirici uygulamasına ihtiyacınız yoktur. Demo veri seti deterministiktir: 120 güne yayılan 40 Instagram hesabı, 8 Facebook Sayfası, 6 Threads profili, 2 YouTube kanalı ve 3 TikTok hesabı; gönderiler, hikâyeler, yorumlar ve gelen kutusu konuşmaları, demografi, 16 reklam hesabı, rakipler ve planlayıcı içeriğiyle. Diğer yükleme yolları:
 
-```bash
-npm run seed          # demo verisini kullanıcı veri dizinine yazar (zaten varsa atlar)
-npm run seed:reset    # demo verisini silip yeniden üretir
-```
+- Kurulum sihirbazında **Demo verisiyle keşfet**'e ya da Ayarlar'da **Demo verisi yükle**'ye tıklayın.
+- Electron'u `--demo` ile başlatın; ör. bir terminalde `npx vite`, diğerinde `npm run dev:electron -- --demo`.
 
-Demo verisi için diğer yollar:
-
-- Kurulum sihirbazında veya Ayarlar'da **Demo verisi yükle**'ye tıklayın.
-- Electron'u `--demo` ile başlatın; boş veritabanı açılışta doldurulur. Örneğin bir terminalde `npx vite`, diğerinde `npm run dev:electron -- --demo` çalıştırın.
-
-Demo verisiyle **Güncelle** Meta API'yi çağırmaz; senkronizasyon aşamalarını simüle eder ve veri kümesini bir gün ileri alır. Paketlenmiş sürümlerde demo verisi kapalıdır. Gerçek hesaplara geçmek için **Ayarlar → Tüm verileri sil**'i kullanıp Kurulum sihirbazını çalıştırın.
+Demo verisiyle **Güncelle** hiçbir API'yi çağırmaz: senkronizasyonu taklit eder ve veri setini bir gün ilerletir. Yayımlama ve gelen kutusu yanıtları da taklit edilir.
 
 ### Ortam değişkenleri
 
 | Değişken | Amaç |
 | --- | --- |
-| `METADASH_USER_DATA` | Kullanıcı veri dizinini (`data.db` konumu) değiştirir. Geliştirme verisini ayrı tutmak için kullanışlıdır. `npm run seed` de bunu dikkate alır. |
+| `METADASH_USER_DATA` | Kullanıcı veri klasörünü (`data.db`'nin bulunduğu yer) değiştirir. `npm run seed` de dikkate alır. |
 | `VITE_DEV_SERVER_URL` | Renderer'ı `dist/renderer` yerine bir geliştirme sunucusundan yükler (`npm run dev` ayarlar). |
-| `METADASH_GRAPH_DELAY_MS` | Kuyruktaki Graph API istekleri arasındaki temel gecikme, ms (varsayılan `250`). |
-| `METADASH_SMOKE` | `1` smoke testini çalıştırır: tüm ekranları gezer, ekran görüntüsü kaydeder, renderer hatasında sıfır dışı kodla çıkar (`npm run smoke` ayarlar). |
-| `METADASH_SMOKE_DIR` | Smoke testi ekran görüntüsü dizini (varsayılan `<userData>/smoke`). |
-| `METADASH_SMOKE_ROUTES` | Varsayılan yerine gezilecek, virgülle ayrılmış hash rotaları. |
-| `METADASH_SMOKE_THEME` | `light` veya `dark`; ekran görüntüleri için temayı sabitler. |
-| `METADASH_SMOKE_SYNC` | `1` smoke testinin sonunda bir senkronizasyon da çalıştırır (demo verisiyle kullanın). |
-
-### Test
-
-```bash
-npm test            # Vitest; native better-sqlite3 derlemesi eşleşsin diye Electron'un Node'u altında çalışır
-npm run typecheck   # renderer için TypeScript kontrolü
-npm run smoke       # renderer'ı derler ve gerçek bir Electron penceresinde tüm ekranları gezer
-```
-
-Test paketi analitiği, veritabanı katmanını, Meta hata işleme ve metrik eşlemesini, organik veri ayrıştırmayı ve sahte bir Graph API'ye karşı uçtan uca senkronizasyonu kapsar (`tests/sync.integration.test.js`: token dönüşümü, hesap keşfi, sayfalama, desteklenmeyen metriklerin düşürülmesi, story'ler, reklamlar, reklam–gönderi eşleştirmesi, 190 hata kodunda durma).
-
-Smoke testinden önce demo verisi yükleyin (`npm run seed`).
+| `METADASH_GRAPH_DELAY_MS` | Kuyruğa alınan Graph API istekleri arasındaki temel gecikme, ms (varsayılan `250`). |
+| `METADASH_SMOKE` | `1` duman testini çalıştırır: her ekranı gezer, ekran görüntüsü kaydeder, renderer hatalarında sıfırdan farklı kodla çıkar. |
+| `METADASH_SMOKE_DIR` / `_ROUTES` / `_THEME` / `_SYNC` | Ekran görüntüsü klasörü, virgülle ayrılmış rotalar, `light`/`dark` ve ayrıca senkronizasyon çalıştırmak için `1`. |
 
 ### Kurulum paketleri oluşturma
 
 ```bash
 npm run build:mac     # dmg + zip, arm64 ve x64
-npm run build:win     # NSIS kurulum sihirbazı, x64
+npm run build:win     # NSIS kurulum programı, x64
 npm run build:linux   # AppImage + deb, x64
 npm run build         # hepsi
 ```
 
-Çıktılar `release/` klasörüne yazılır. Her derleme betiği sonunda `better-sqlite3`'ü Electron için yeniden derler; böylece `npm run dev` çalışmaya devam eder. Native modüller nedeniyle çapraz derleme güvenilir değildir; her platformu kendi işletim sisteminde derleyin (sürüm iş akışı da bunu yapar).
+Çıktılar `release/` klasörüne yazılır. Her derleme betiği ardından `better-sqlite3`'ü Electron için yeniden derler; böylece `npm run dev` çalışmaya devam eder. Her platformu kendi işletim sisteminde derleyin; yerel modüller çapraz derlemeyi güvenilmez kılar.
 
-İsteğe bağlı kod imzalama: electron-builder, macOS Anahtar Zinciri'ndeki "Developer ID Application" sertifikasını ya da `CSC_LINK` / `CSC_KEY_PASSWORD` değişkenlerini otomatik kullanır. Noter onaylı macOS paketi için `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` ve `APPLE_TEAM_ID` değişkenlerini tanımlayıp `npm run build:mac:notarized` çalıştırın.
+İsteğe bağlı kod imzalama: electron-builder, macOS anahtar zincirindeki "Developer ID Application" sertifikasını ya da `CSC_LINK` / `CSC_KEY_PASSWORD` değerlerini kullanır. Noter onaylı bir macOS paketi için `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` ve `APPLE_TEAM_ID` değerlerini ayarlayıp `npm run build:mac:notarized` çalıştırın.
+
+Worker imajı: depo kökünden `docker build -f worker/Dockerfile -t metadash-worker .`. Duman testi: `sh worker/test/smoke.sh`.
 
 ### Sürüm yayınlama
 
-Sürümler GitHub Actions ile derlenir ([`.github/workflows/release.yml`](.github/workflows/release.yml)).
+Sürümleri GitHub Actions derler ([`.github/workflows/release.yml`](.github/workflows/release.yml)).
 
-1. [CHANGELOG.md](CHANGELOG.md) dosyasını güncelleyip commit'leyin.
-2. Sürümü artırın: `npm version patch` (veya `minor` / `major`). Bu komut `package.json`'ı günceller, commit oluşturur ve `vX.Y.Z` etiketini ekler.
+1. [CHANGELOG.md](CHANGELOG.md) dosyasını güncelleyip commit edin.
+2. Sürümü artırın: `npm version patch` (veya `minor` / `major`). Bu komut `package.json`'ı günceller, commit eder ve bir `vX.Y.Z` etiketi oluşturur.
 3. Commit'i ve etiketi gönderin: `git push --follow-tags`.
-4. İş akışı etiketin `package.json` sürümüyle eşleştiğini kontrol eder, testleri çalıştırır, macOS, Windows ve Linux üzerinde derler ve kurulum dosyalarını ekleyerek bir GitHub Release yayınlar.
+4. Sürüm iş akışı etiketin `package.json` ile eşleştiğini denetler, testleri çalıştırır, macOS, Windows ve Linux'ta derler ve kurulum dosyalarıyla bir GitHub Release yayınlar. Aynı etiket, çok mimarili worker imajını GHCR'a gönderen [`worker-image.yml`](.github/workflows/worker-image.yml) iş akışını da tetikler. `worker-vX.Y.Z` etiketi yalnızca worker imajını yayınlar.
 
-Depoda imzalama sırları (`CSC_LINK`, `CSC_KEY_PASSWORD`; noter onayı için ayrıca `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`) tanımlıysa paketler imzalanır; aksi hâlde imzasız olur. İş akışı, mevcut bir etiketi yeniden derlemek için elle de başlatılabilir.
+Depoda imzalama sırları varsa (`CSC_LINK`, `CSC_KEY_PASSWORD`; noter onayı için ayrıca `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`) paketler imzalanır; yoksa imzasız olur. Var olan bir etiketi yeniden derlemek için sürüm iş akışını elle de başlatabilirsiniz.
 
 ## Proje yapısı
 
 ```
 src/
-  main/                  Electron main process (ES modülleri)
-    index.js             uygulama yaşam döngüsü, pencere, smoke testi
-    preload.cjs          contextBridge: window.api'yi renderer'a açar
-    i18n.js              main process kullanıcı mesajları
-    ipc/                 alana göre gruplanmış IPC işleyicileri
-    meta/                Graph API istemcisi, hız sınırlayıcı, hatalar, metrik eşlemesi, auth,
-                         organik / story / reklam / rakip veri çekicileri
-    sync/                orkestratör (p-queue), işler, zamanlayıcı, ilerleme olayları, demo senkronizasyonu
-    db/                  better-sqlite3 bağlantısı, numaralı SQL migration'ları, sorgu modülleri
-    ai/                  isteğe bağlı yapay zekâ asistanı: sağlayıcılar (Anthropic SDK, OpenAI, Gemini, Ollama), araç döngüsü, istemler, özetler
-    analytics/           türetilmiş metrikler: sağlık, etkileşim, en iyi zaman, yaşam eğrisi, anomali, bütçe, ...
-    export/              HTML / PDF / Excel raporları, tablo dışa aktarımı, CSV, veri taşıma
-    config/              ayar deposu, sır şifreleme, makine kimliği
-    seed/                deterministik demo veri üreticisi
-  renderer/              React 18 + Vite + TypeScript + Tailwind
-    routes/              Overview, Account, Content, Compare, Ads, Competitors,
-                         Reports, Presentation, Settings, Setup
+  main/                    Electron main process (ES modülleri)
+    index.js               uygulama yaşam döngüsü, pencere, duman testi, --cli girişi
+    preload.cjs            contextBridge: window.api'yi renderer'a açar
+    ipc/                   alana göre IPC işleyicileri (+ setup.<platform>.handlers.js)
+    providers/             platform başına bir sağlayıcı: instagram, facebook, threads, youtube, tiktok
+                           (+ yetenekler, ortak istatistik/metrik yardımcıları, _template)
+    meta/                  Meta Graph API istemcisi, hız sınırlayıcı, hatalar, yetkilendirme, reklamlar, rakipler
+    oauth/                 PKCE, tek seferlik loopback alıcısı, tarayıcı açıcı (YouTube, TikTok)
+    sync/                  orkestratör (p-queue), işler, zamanlayıcı, süreçler arası kilit, demo senkronizasyonu
+    db/                    better-sqlite3 bağlantısı, numaralı SQL migration'ları (001–014), sorgu modülleri
+    analytics/             sağlık, etkileşim, en iyi zaman, yaşam döngüsü, anomali, bütçe, hashtag'ler, A/B testleri,
+                           türetilmiş seriler
+    planner/               medya kütüphanesi ve inceleme, doğrulama, en iyi zaman önerileri, onay paketleri
+    publishing/            yayın kuyruğu, platform adımları, sınırlar, medya barındırıcıları (S3, Facebook Sayfası, URL)
+    inbox/                 yorum adaptörleri, yoklayıcı, yanıtlar, SLA metrikleri, duygu analizi
+    ai/                    sağlayıcılar (Anthropic SDK, OpenAI, Gemini, Ollama), Verine sor, Stüdyo, kullanım/fiyat
+    team/                  paylaşılan klasör anlık görüntüleri, olay günlükleri, roller, müşteri görünümü, notlar
+    worker/                kendi sunucunuzdaki yayın worker'ının istemcisi (eşleştirme, token mühürleme, senkronizasyon)
+    cli/                   penceresiz komut satırı aracı
+    export/                HTML / PDF / Excel raporları, tablo dışa aktarımları, CSV, veri taşıma, markalama
+    locales/               main process metinleri: <dil>/<ad-alanı>.json, index.json (dil listesi)
+    config/                ayar deposu, sır şifreleme, makine kimliği
+    seed/                  deterministik demo verisi
+    tray.js, lifecycle.js  tepsi/menü çubuğu, oturum açılışında başlatma, arka plan modu
+  renderer/                React 18 + Vite + TypeScript + Tailwind
+    routes/                Overview, Account, Content, Compare, Ads, Competitors, Reports, Presentation,
+                           Planner, Studio, Inbox, Ask, Settings, Setup
+    platforms/             platform başına arayüz sözlüğü (etiketler, simgeler, KPI kutucukları)
+    locales/               arayüz metinleri: <dil>/<ad-alanı>.json, keys.ts (üretilen anahtar tipi)
     components/ charts/ hooks/ store/ lib/ styles/
-scripts/
-  seed.js                demo verisi komut satırı aracı
-  afterPack.cjs          paketlenmiş uygulamada Electron fuse'larını ayarlar
-tests/                   Vitest test paketleri
-docs/                    Meta uygulaması kurulum kılavuzu ve mimari (Türkçeleri docs/tr/ altında)
-resources/               derleme kaynakları (macOS entitlement'ları, kurulum ekran görüntüleri)
-electron-builder.yml     paketleme yapılandırması
+  shared/publish/          uygulama ile worker'ın paylaştığı saf yayımlama kodu
+worker/                    isteğe bağlı, kendi sunucunuzda çalışan yayın worker'ı (Node 22, sıfır bağımlılık, Docker)
+scripts/                   seed, i18n denetimi/çıkarımı, komut satırı duman testi, tepsi simgeleri, afterPack (Electron fuses)
+tests/                     Vitest test takımları ve API fikstürleri
+docs/                      rehberler (Türkçeleri docs/tr/ altında), oauth/callback.html (TikTok kod yapıştırma sayfası)
+resources/                 derleme kaynakları (simgeler, macOS entitlements)
+electron-builder.yml       paketleme yapılandırması
 ```
 
 ## Mimari
 
-Renderer'ın Node.js erişimi yoktur. Main process ile yalnızca preload betiğinin açtığı `window.api` üzerinden konuşur ve her çağrı `{ ok: true, data }` ya da `{ ok: false, error: { code, message, hint } }` döndürür. Veritabanı, Meta token'ı ve tüm ağ erişimi main process'tedir. Senkronizasyon main process'te, tür bazlı kuyruklar ve Meta kullanım başlıklarına göre çalışan bir hız sınırlayıcı üzerinden yürür.
+Renderer'ın Node.js erişimi yoktur. Main process ile yalnızca preload betiğinin açtığı `window.api` üzerinden konuşur ve her çağrı `{ ok: true, data }` ya da `{ ok: false, error: { code, message, hint } }` döndürür. Veritabanı, token'lar ve tüm ağ erişimi main process'e aittir. Her platform tek bir arayüzün arkasındaki bir **sağlayıcıdır** (provider); böylece senkronizasyon, analitik, raporlar ve arayüz platform adları yerine yetenekleri okur.
 
-Ayrıntılar için **[docs/tr/architecture.md](docs/tr/architecture.md)**: IPC, veritabanı ve migration'lar, senkronizasyon orkestrasyonu, analitik, dışa aktarım, veri taşıma ve güvenlik modeli.
+IPC, veritabanı ve migration'lar, sağlayıcılar, senkronizasyon, yayımlama, analitik, dışa aktarımlar, veri taşıma ve güvenlik modeli için **[docs/tr/architecture.md](docs/tr/architecture.md)** dosyasına bakın. Platform eklemek için: [docs/tr/providers.md](docs/tr/providers.md).
 
 ## Katkıda bulunma
 
-Katkılarınızı bekliyoruz. Geliştirme akışı, commit kuralları ve çeviri ekleme için [CONTRIBUTING.md](CONTRIBUTING.md) dosyasına bakın (İngilizce; Türkçe issue ve PR'lar da memnuniyetle karşılanır). Güvenlik sorunlarını bildirmek için [SECURITY.md](SECURITY.md) dosyasını izleyin. Sürüm notları [CHANGELOG.md](CHANGELOG.md) dosyasındadır.
+Katkılarınızı bekliyoruz: hata bildirimleri, çeviriler, belgeler ve kod. Geliştirme akışı, denetimler, commit kuralları ve çeviri akışı için [CONTRIBUTING.md](CONTRIBUTING.md) dosyasına bakın; issue ve pull request'leri Türkçe de açabilirsiniz. Bir güvenlik sorununu bildirmek için [SECURITY.md](SECURITY.md) dosyasındaki adımları izleyin. Sürüm notları [CHANGELOG.md](CHANGELOG.md) dosyasındadır.
 
 ## Lisans
 
 [MIT](LICENSE) © 2026 Bahadır Şahin ve katkıda bulunanlar.
 
-MetaDash bağımsız bir projedir; Meta Platforms, Inc. ile bağlantılı değildir, onun tarafından desteklenmez veya onaylanmaz. Instagram ve Facebook, Meta Platforms, Inc.'in ticari markalarıdır.
+MetaDash bağımsız bir projedir; Meta Platforms, Inc., Google LLC veya TikTok Pte. Ltd. ile bağlantılı değildir ve bu şirketler tarafından onaylanmamış ya da desteklenmemiştir. Instagram, Facebook ve Threads, Meta Platforms, Inc.'in; YouTube, Google LLC'nin; TikTok, ByteDance Ltd.'nin ticari markalarıdır.

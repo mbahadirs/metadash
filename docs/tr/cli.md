@@ -1,5 +1,7 @@
 # Komut satırı aracı (penceresiz mod)
 
+[English](../cli.md)
+
 MetaDash penceresini açmadan da çalışabilir. `--cli` ile başlatılan uygulama dosyası veriyi senkronize eder, rapor ve dışa aktarım yazar, durum bilgisini verir. Betiklerde ve zamanlanmış işlerde kullanabilirsiniz; örneğin her ayın 1'inde geçen ayın PDF raporlarını üretmek için.
 
 - Komut satırı uygulamayla aynı veritabanını, bağlantıları, marka ayarlarını ve rapor şablonlarını kullanır. Ayrıca bir şey kurmanız gerekmez.

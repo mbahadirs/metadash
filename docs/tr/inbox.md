@@ -1,6 +1,8 @@
 # Birleşik gelen kutusu
 
-Gelen kutusu, bağlı tüm platformların yorumlarını tek listede toplar: Instagram, Facebook Sayfaları, Threads ve sağlayıcısı gelen kutusu adaptörü sunduğunda YouTube. Kenar çubuğunda **Gelen kutusu** olarak yer alır. Stüdyo → Gelen kutusu sekmesi ve her hesabın **Gelen kutusu** sekmesi aynı görünümü gösterir.
+[English](../inbox.md)
+
+Gelen kutusu, bağlı tüm platformların yorumlarını tek listede toplar: Instagram, Facebook Sayfaları, Threads ve YouTube. TikTok'un gelen kutusu yoktur, çünkü API'si üçüncü taraf uygulamalara yorumlara erişim vermez. Kenar çubuğunda **Gelen kutusu** olarak yer alır. Stüdyo → Gelen kutusu sekmesi ve her hesabın **Gelen kutusu** sekmesi aynı görünümü gösterir.
 
 Doğrudan mesajlar kapsam dışıdır. Instagram ve Facebook mesajlaşması ek izinler, App Review ve webhook gerektirdiği için sonraki bir sürümün adayıdır.
 
@@ -8,8 +10,8 @@ Doğrudan mesajlar kapsam dışıdır. Instagram ve Facebook mesajlaşması ek i
 
 - **Filtreleme.** Yanıtsız, Geciken, Yanıtlandı, Tamamlandı veya Tümü seçilebilir. Platform, hesap, duygu ve atanan kişiye göre daraltabilir, yalnızca soruları gösterebilir veya arama yapabilirsiniz. Liste sanallaştırılmıştır; büyük gelen kutuları da hızlı kalır.
 - **Yanıt verme.** Yanıtı kendiniz yazabilir veya marka sesinizle yapay zekâ önerisi isteyebilirsiniz. MetaDash hiçbir yanıtı kendiliğinden göndermez: her yanıt açık onay ister. Yanıt üçüncü bir kişiden bahsediyorsa onay penceresi ayrıca uyarır.
-  - Karakter sayacı platformun sınırını kullanır: Instagram 2.200*, Facebook 8.000*, Threads 500.
-  - (*) Bu sınırlar Meta tarafından belgelenmemiştir.
+  - Karakter sayacı platformun sınırını kullanır: Instagram 2.200*, Facebook 8.000*, Threads 500, YouTube 10.000*.
+  - (*) Bu sınırlar platform tarafından belgelenmemiştir. Bkz. [Bilinen sınırlamalar](known-limitations.md).
 - **İş akışı.** Bir yorumu tamamlandı olarak işaretleyebilirsiniz (yanıtsız kutudan çıkar). Yorumu yok sayabilir, yeniden açabilir veya bir ekip arkadaşınıza atayabilirsiniz. Ekipte durum ve atama değişiklikleri paylaşılan klasör üzerinden eşitlenir.
 - **Gizleme.** Platform izin veriyorsa bir yorumu platformda gizleyebilir veya yeniden gösterebilirsiniz.
 - **Klavye.** `j` / `k` listede gezinir, `e` yorumu tamamlandı yapar, `r` yanıt kutusuna geçer.
@@ -57,17 +59,18 @@ Yapay zekâ etiketleri isteğe bağlıdır: olumlu, nötr, olumsuz, soru, şikâ
 
 ## İzinler
 
-Aşağıdaki satırlar 2026-09'da Meta izin başvurusuna göre kontrol edildi. VERIFY ile işaretli olanlar doğrulanmamıştır.
+Aşağıdaki satırlar 2026-09'da Meta izin başvurusu ve Google'ın YouTube API belgelerine göre kontrol edildi. VERIFY ile işaretli olanlar doğrulanmamıştır (bkz. [Bilinen sınırlamalar](known-limitations.md)).
 
 | Platform | Okuma | Yanıt | Gizleme |
 |---|---|---|---|
 | Instagram | `instagram_basic`, `instagram_manage_comments` | `instagram_manage_comments` | `instagram_manage_comments` |
 | Facebook Sayfası | `pages_read_engagement` + `pages_read_user_content` (kullanıcı yorumları; yoksa yazar "Facebook kullanıcısı" görünür) | `pages_manage_engagement` (MODERATE görevi olan Sayfa rolü) | `pages_manage_engagement` (VERIFY) |
 | Threads | `threads_basic`, `threads_read_replies` | `threads_manage_replies` + `threads_content_publish` | `threads_manage_replies` |
-| YouTube | sağlayıcı adaptörü (yanıt için `youtube.force-ssl`) | | |
+| YouTube | `youtube.readonly` | `youtube.force-ssl` (Ayarlar → Bağlantılar'da **Yanıtlamayı etkinleştir**) | `youtube.force-ssl` (incelemeye alınır; VERIFY) |
 
 - **Meta.** `pages_read_user_content` ve `pages_manage_engagement`, Meta bağlantısının isteğe bağlı izinleridir. Sayfalarda okuma ve yanıt için Meta'yı yeniden bağlayıp bu izinleri verin.
-- **Threads.** Gelen kutusu izinleri, "yayımlama izinlerini iste" açıkken (Ayarlar → Bağlantılar) yayımlama izinleriyle birlikte istenir. Önce bunları uygulamanızın Threads kullanım senaryosuna ekleyin.
+- **Threads.** Gelen kutusu izinleri, **Paylaşım iznini de iste** açıkken (Ayarlar → Bağlantılar) yayımlama izinleriyle birlikte istenir. Önce bunları uygulamanızın Threads kullanım senaryosuna ekleyin.
+- **YouTube.** Okuma için ek adım gerekmez. Yanıtlama ve gizleme için kanalın yanındaki **Yanıtlamayı etkinleştir** ile Google'dan `youtube.force-ssl` yeniden istenir. Her yanıt ya da denetim çağrısı 50 kota birimi harcar ([youtube-setup.md](youtube-setup.md)).
 - **Bir izin eksikse** yanıt kutusu devre dışı kalır ve eksik izni belirtir.
 
 ## Ayarlar

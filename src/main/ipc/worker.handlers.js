@@ -1,5 +1,5 @@
 import { workerState, setExecutor, recall } from '../worker/sync.js';
-import { generate, configure, setPreferences, test, tokens, pushToken, revokeToken, sync, disconnect } from '../worker/service.js';
+import { generate, inspect, configure, setPreferences, test, tokens, pushToken, revokeToken, sync, disconnect } from '../worker/service.js';
 
 /**
  * Self-hosted publish worker channels (v2.0 chunk E). Payloads/results: v20-contract.md, preload.cjs, lib/types.ts.
@@ -8,6 +8,7 @@ import { generate, configure, setPreferences, test, tokens, pushToken, revokeTok
 export const WORKER_CHANNELS = Object.freeze([
   'worker:getState',
   'worker:generatePairing',
+  'worker:inspect',
   'worker:configure',
   'worker:test',
   'worker:tokens',
@@ -25,14 +26,16 @@ const str = (v, max = 4096) => (typeof v === 'string' ? v.slice(0, max) : undefi
 export function registerWorkerHandlers(handle) {
   handle('worker:getState', () => workerState());
   handle('worker:generatePairing', () => generate());
-  // { url, pairing? | secret? } connects; without url/pairing/secret it only updates preferences
+  // { url?, pairing? | secret? } → { url, scheme, host, local, insecure } — decoded target for the review step, no network.
+  handle('worker:inspect', (p) => { const o = obj(p); return inspect({ url: str(o.url, 2048), pairing: str(o.pairing), secret: str(o.secret, 512) }); });
+  // { url, pairing? | secret?, allowInsecureHttp? } connects (plain http to a non-private host needs allowInsecureHttp); without url/pairing/secret it only updates preferences
   // { defaultExecutor?: 'local'|'worker', enabled?: boolean, notify?: boolean } (those keys are not settings:set DEFAULTS).
   handle('worker:configure', (p) => {
     const o = obj(p);
     if (o.url == null && o.pairing == null && o.secret == null) {
       return setPreferences({ defaultExecutor: o.defaultExecutor === 'worker' ? 'worker' : o.defaultExecutor === 'local' ? 'local' : undefined, enabled: typeof o.enabled === 'boolean' ? o.enabled : undefined, notify: typeof o.notify === 'boolean' ? o.notify : undefined });
     }
-    return configure({ url: str(o.url, 2048), pairing: str(o.pairing), secret: str(o.secret, 512) });
+    return configure({ url: str(o.url, 2048), pairing: str(o.pairing), secret: str(o.secret, 512), allowInsecureHttp: o.allowInsecureHttp === true });
   });
   handle('worker:test', () => test());
   handle('worker:tokens', () => tokens());

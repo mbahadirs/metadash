@@ -38,7 +38,7 @@ Günlük seri olmadığı için MetaDash günlük izlenme ve yeni takipçiyi her
 - günlük izlenme = her videonun kümülatif izlenme sayısının eşitlemeler arasındaki artışı.
 
 Hesap sayfası bunları "eşitlemelerden tahmini" olarak etiketler. Doğru günler için günde en az bir kez eşitleyin
-(Ayarlar → Arka plan); eşitleme yapılmayan günün artışı bir sonraki eşitlenen güne yazılır.
+(Ayarlar → Senkronizasyon → günlük otomatik güncelleme ya da zamanlanmış bir [CLI](cli.md) eşitlemesi); eşitleme yapılmayan günün artışı bir sonraki eşitlenen güne yazılır.
 
 Diğer sınırlar:
 - Kapak görselleri yaklaşık 6 saat sonra geçersiz olan CDN bağlantılarıdır; MetaDash her eşitlemede yeniler.

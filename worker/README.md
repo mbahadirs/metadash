@@ -13,6 +13,12 @@ docker compose --profile https up -d
 # 3. MetaDash → enter the worker address + secret → Connect → send tokens → "Publish via: Worker"
 ```
 
+Behind a reverse proxy (the `https` profile's Caddy, or your own) the worker must run with `MD_TRUST_PROXY=1`, or
+every client shares the proxy's address and one bad client can lock everyone out. `docker-compose.yml` sets it by
+default (`MD_TRUST_PROXY=${MD_TRUST_PROXY:-1}`). `X-Forwarded-For` is honoured only when the connection comes from a
+private/loopback address (the proxy), and the right-most public entry (the one the proxy appended) is used. Requests
+without signature headers get 401 without counting toward the lockout, and `/v1/health` is never locked out.
+
 Build from the repository root (the worker shares `src/shared/publish` with the app):
 `docker build -f worker/Dockerfile -t metadash-worker .` — smoke test: `sh worker/test/smoke.sh`.
 

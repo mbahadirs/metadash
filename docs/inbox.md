@@ -1,6 +1,8 @@
 # Unified inbox
 
-The inbox collects comments from every connected platform in one list: Instagram, Facebook Pages, Threads, and YouTube once its provider has an inbox adapter. It lives at **Inbox** in the sidebar. The Studio → Inbox tab and each account's **Inbox** tab show the same view.
+[Türkçe](tr/inbox.md)
+
+The inbox collects comments from every connected platform in one list: Instagram, Facebook Pages, Threads and YouTube. TikTok has no inbox, because its API does not give third-party apps access to comments. It lives at **Inbox** in the sidebar. The Studio → Inbox tab and each account's **Inbox** tab show the same view.
 
 Direct messages are not included. Instagram and Facebook messaging need extra permissions, App Review and webhooks, so they are a candidate for a later version.
 
@@ -8,8 +10,8 @@ Direct messages are not included. Instagram and Facebook messaging need extra pe
 
 - **Filter.** Show Unanswered, Overdue, Replied, Done or All comments. You can narrow by platform, account, sentiment and assignee, show questions only, or search. The list is virtualised, so large inboxes stay fast.
 - **Reply.** Write a reply yourself, or ask AI for suggestions in your brand voice. MetaDash never sends a reply on its own: each reply needs an explicit confirmation. The dialog also warns you when the reply mentions a third party.
-  - The character counter uses each platform's limit: Instagram 2,200*, Facebook 8,000*, Threads 500.
-  - (*) These limits are not documented by Meta.
+  - The character counter uses each platform's limit: Instagram 2,200*, Facebook 8,000*, Threads 500, YouTube 10,000*.
+  - (*) These limits are not documented by the platform. See [Known limitations](known-limitations.md).
 - **Workflow.** Mark a comment done (it leaves the inbox without a reply), ignore it, reopen it, or assign it to a teammate. In a team, status and assignment changes sync through the shared folder.
 - **Hide.** Hide or unhide a comment on the platform, where the platform allows it.
 - **Keyboard.** `j` / `k` move through the list, `e` marks the comment done, `r` jumps to the reply box.
@@ -57,17 +59,18 @@ AI labels are optional: positive, neutral, negative, question, complaint, spam.
 
 ## Permissions
 
-The rows below were checked against Meta's permission reference on 2026-09. Items marked VERIFY are not confirmed.
+The rows below were checked against Meta's permission reference and Google's YouTube API documentation on 2026-09. Items marked VERIFY are not confirmed (see [Known limitations](known-limitations.md)).
 
 | Platform | Read | Reply | Hide |
 |---|---|---|---|
 | Instagram | `instagram_basic`, `instagram_manage_comments` | `instagram_manage_comments` | `instagram_manage_comments` |
 | Facebook Page | `pages_read_engagement` + `pages_read_user_content` (comments by users; without it the author shows as "Facebook user") | `pages_manage_engagement` (Page role with the MODERATE task) | `pages_manage_engagement` (VERIFY) |
 | Threads | `threads_basic`, `threads_read_replies` | `threads_manage_replies` + `threads_content_publish` | `threads_manage_replies` |
-| YouTube | provider adapter (`youtube.force-ssl` to reply) | | |
+| YouTube | `youtube.readonly` | `youtube.force-ssl` (**Enable replying** in Settings → Connections) | `youtube.force-ssl` (held for review; VERIFY) |
 
 - **Meta.** `pages_read_user_content` and `pages_manage_engagement` are optional scopes of the Meta connection. Reconnect Meta and grant them to read and reply on Pages.
-- **Threads.** The inbox scopes are requested together with the publishing scopes when "request publishing permissions" is on (Settings → Connections). Add them to your app's Threads use case first.
+- **Threads.** The inbox scopes are requested together with the publishing scopes when **Also request publishing permission** is on (Settings → Connections). Add them to your app's Threads use case first.
+- **YouTube.** Reading needs no extra step. Replying and hiding need **Enable replying** next to the channel, which asks Google again for `youtube.force-ssl`. Each reply or moderation call costs 50 quota units ([youtube-setup.md](youtube-setup.md#6-quota)).
 - **When a permission is missing,** the reply box is disabled and names the missing permission.
 
 ## Settings

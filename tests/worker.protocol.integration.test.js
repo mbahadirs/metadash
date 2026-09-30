@@ -68,7 +68,7 @@ describe('worker protocol (desktop client ↔ in-process worker)', () => {
   it('serves an unsigned minimal health check and refuses unsigned or wrongly signed API calls', async () => {
     const h = await (await realFetch(`${url}/v1/health`)).json();
     expect(h).toEqual({ ok: true, protocol: 1, version: expect.any(String) });
-    expect((await realFetch(`${url}/v1/info`)).status).toBe(400); // no protocol header
+    expect((await realFetch(`${url}/v1/info`)).status).toBe(401); // no X-MD-* headers: unauthorized, not counted toward the lockout
     const bad = signedHeaders(deriveKey(generateSecret(), 'auth'), { method: 'GET', path: '/v1/info', now: now() });
     expect((await realFetch(`${url}/v1/info`, { headers: bad })).status).toBe(401);
     expect((await signed('GET', '/v1/info')).status).toBe(200);

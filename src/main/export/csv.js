@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { getDb } from '../db/index.js';
 import { msg } from '../i18n.js';
+import { neutralizeFormula } from './formulaGuard.js';
 
 const READ_ONLY = /^\s*(select|with)\b/i;
 const FORBIDDEN = /\b(insert|update|delete|drop|alter|create|attach|detach|pragma|vacuum|replace)\b/i;
@@ -20,8 +21,9 @@ export function runReadOnly(sql, limit = 1000) {
 export function toCsv(columns, rows) {
   const cell = (v) => {
     if (v == null) return '';
-    const s = typeof v === 'object' ? JSON.stringify(v) : String(v);
-    return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    if (typeof v === 'number' || typeof v === 'bigint') return String(v);
+    const s = neutralizeFormula(typeof v === 'object' ? JSON.stringify(v) : String(v));
+    return /[",\r\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const lines = [columns.map(cell).join(','), ...rows.map((r) => columns.map((c) => cell(Array.isArray(r) ? r[columns.indexOf(c)] : r[c])).join(','))];
   return '﻿' + lines.join('\r\n');

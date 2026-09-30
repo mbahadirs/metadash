@@ -1,11 +1,11 @@
 # Adding a platform (provider guide)
 
+[Türkçe](tr/providers.md)
+
 MetaDash talks to every social platform through a **provider**: a module in `src/main/providers/<platform>/` that
 turns the vendor API into a small, common shape (profile, posts, post insights, daily insights, demographics,
 comments). Everything above the provider layer (sync, analytics, reports, the UI) is platform-neutral and reads
 **capabilities** instead of platform names.
-
-Türkçe: [docs/tr/providers.md](tr/providers.md)
 
 ## Architecture
 

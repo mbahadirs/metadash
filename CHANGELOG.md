@@ -6,34 +6,85 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-Multi-platform, part 1: Facebook Pages and Threads next to Instagram. v1.4 "Planner": plan, approve and publish posts.
+## [2.0.0] - 2026-09-30
+
+MetaDash 2.0 brings everything since 1.2.0 together: more platforms (Facebook Pages, Threads, YouTube and TikTok), a content planner that publishes, an AI studio, a unified comment inbox, team workspaces, a headless CLI and an optional self-hosted publish worker. AI features are still **beta**, and TikTok is **experimental**. Existing databases are migrated automatically (migrations 008–014). To use the new permissions, renew your Meta token after updating.
 
 ### Added
 
-- **Planner (v1.4):** new sidebar screen (guide: `docs/planner.md`) with Calendar, List, Queue, Approvals and Log tabs.
-  - Month and week calendar with drag-and-drop rescheduling (month keeps the time of day, week snaps to 15 minutes), Alt/Option-drag to duplicate, past drops refused, optimistic updates with rollback, and keyboard alternatives (R = reschedule dialog, Alt+arrows = move by a day / 15 minutes). Unscheduled drafts sit next to the calendar as a drag source.
-  - Composer for Instagram, Facebook Page and Threads accounts at once: per-account format (auto-inferred from the media), captions and first comments with per-account overrides, live per-platform character (grapheme), hashtag, mention and link counters, a local media library (file picker, drag and drop from the OS, paste; JPEG/PNG/WebP/GIF/MP4/MOV, deduplicated, probed without ffmpeg, previewed through a private `mdmedia://` protocol), alt text, reordering, live validation against each platform's limits (errors block scheduling), best-time chips, approximate previews, autosave with conflict detection, and a "Results & history" tab with per-account publish state, permalink, error code, `fbtrace_id`, retry/cancel and the audit log.
-  - Status workflow draft → in review → approved → scheduled → published (plus changes requested, failed/partly published, archived); an optional "Require approval before scheduling" setting, and content edits after approval send the post back to review. Bulk status changes in the list; "Duplicate as draft" from an analytics post.
-- **Publishing (v1.4):** MetaDash publishes scheduled posts itself through the official APIs while it is running: Instagram (image, carousel, reel, story, first comment), Facebook Pages (text, link, photo, album, video, reel; optionally scheduled on Facebook so they go out while the computer is off) and Threads (text, image, video, carousel, reply as first comment). A background queue with leases, retries with backoff, per-account daily quota checks, missed-post handling (ask / publish late / skip), pause/resume, success and failure notifications and a demo publisher. Instagram and Threads need a public media URL, so media are uploaded to your own S3-compatible bucket (Cloudflare R2, AWS S3, Backblaze B2, MinIO, Wasabi) with encrypted keys; setup guide in `docs/publishing-setup.md`. Existing users must regenerate their token to add the publishing permissions.
-- **Background mode (v1.4):** optional tray icon (next post, pause publishing, sync now, open Planner) so MetaDash keeps running with the window closed, launch at login (hidden), a single-instance lock and a confirmation before quitting while posts are due.
-- **Client approval packs (v1.4):** export selected posts as one self-contained HTML (with an offline approve / request-changes form) or PDF with your report branding; the client's response code is imported back and applied only to posts whose content hasn't changed since the pack was sent.
+**Platforms**
 
-- **Facebook Pages (optional):** track Pages with the existing Meta token (plus the optional `read_insights` permission). Pages are opt-in: pick them in Setup step 4 ("Facebook Pages (optional)") or in **Settings → Connections**. Daily viewers (Meta's page reach), views, post engagements, page views, new followers and unfollows; posts with viewers, views, reactions, comments, shares and clicks. Pages that you can't analyze (missing ANALYZE task) are shown but skipped. A Page can be linked to its own ad account.
-- **Threads (optional):** a separate Threads connection with its own app ID/secret. Connect in the new optional Setup step 6 or in **Settings → Connections** by pasting a short-lived token or an authorization code; the long-lived token is refreshed automatically before it expires, and refresh failures show a "Reconnect Threads" banner. Daily views, likes, replies, reposts, quotes, link clicks and followers; post views, likes, replies, reposts, quotes and shares; audience demographics (age, gender, country, city; 100+ followers). Guide: `docs/threads-setup.md`.
-- **Provider layer** (`src/main/providers`): every platform implements one provider interface (discover, profile, posts, post insights, daily insights, demographics, comments, maintenance) with a capability table and a primary metric (reach, or views for Threads). Metric names fall back through candidate lists and the working name is remembered per platform (`metric_resolution`).
-- **Platform filter:** All / Instagram / Facebook / Threads chips on Overview and Content, shown once more than one platform is tracked and remembered between sessions, plus a per-platform split of followers, reach/views and posts on the Overview (with a note that followers can overlap across platforms).
-- Platform badges on avatars, a "Text" content type for text/link posts, reposts/quotes/clicks columns when present, and **Settings → Connections** with the status of each platform, the Facebook Page list and the Threads connect/refresh/disconnect controls.
-- Demo data includes Facebook Pages and Threads profiles.
+- **Provider layer:** every platform implements one provider interface (discover, profile, posts, post insights, daily insights, demographics, comments, maintenance, inbox) with declared capabilities and a primary metric. Screens and reports read capabilities, so a metric a platform does not have shows "—" instead of zero. Metric names fall back through candidate lists, and the name that works is remembered per platform. Guide for contributors: `docs/providers.md`.
+- **Facebook Pages (optional):** opt-in Page tracking with the existing Meta token (plus `read_insights`). Daily viewers, views, post engagements, page views, follows and unfollows; post viewers, views, reactions, comments, shares and clicks; Page-level ad account linking.
+- **Threads:** a separate connection (token or authorization code) with automatic refresh of the long-lived token. Views, likes, replies, reposts, quotes, link clicks, followers and demographics (100+ followers). Guide: `docs/threads-setup.md`.
+- **YouTube:** connect channels with your own Google OAuth "Desktop app" client (loopback + PKCE; each channel has its own token). YouTube Data API v3 and YouTube Analytics: views, watch time, average view duration, subscribers gained/lost, likes, comments, shares, Shorts/video/live detection and demographics. A daily quota ledger per OAuth client, and a 30-day freshness warning to comply with Google's data policy. Disconnecting revokes access and can delete the channel's data. Guide: `docs/youtube-setup.md`.
+- **TikTok (experimental):** Login Kit (loopback + PKCE, with a paste-code fallback page in `docs/oauth/callback.html`) and Display API. Profile, followers, likes, per-video views/likes/comments/shares; daily views and new followers are estimated from syncs. Sandbox and production apps. Guide: `docs/tiktok-setup.md`.
+- **Platform filter and badges** on Overview, Content and the Planner, a per-platform split of followers and reach/views, and platform-specific KPIs, charts and tabs on the account page.
+- **Settings → Connections:** status, connect, refresh and disconnect for every platform.
+
+**Planner and publishing**
+
+- **Planner** (`docs/planner.md`): month and week calendar with drag and drop (Alt/Option-drag duplicates, keyboard alternatives), unscheduled drafts, a list with bulk status changes, the publishing queue, approvals and an audit log.
+- **Composer:** one post for several Instagram, Facebook Page and Threads accounts, with a caption and first comment per account, live per-platform counters, a local media library (images and MP4/MOV, deduplicated, probed without ffmpeg), alt text, live validation against each platform's limits, best-time suggestions, approximate previews, autosave with conflict detection, and per-account results with error codes and `fbtrace_id`.
+- **Workflow:** draft → in review → approved → scheduled → published (plus changes requested, failed/partly published and archived), with an optional "Require approval before scheduling" setting.
+- **Publishing** through the official APIs: Instagram (image, carousel, reel, story, first comment; resumable video upload), Facebook Pages (text, link, photo, album, video, reel; optionally scheduled on Facebook itself) and Threads (text, image, video, carousel, reply as first comment). A lease-based queue with retries, daily quota checks, missed-post handling, pause/resume and notifications. Media hosts for Instagram images and Threads: S3-compatible storage (R2, S3, B2, MinIO, Wasabi; signed locally with SigV4), an experimental Facebook Page host, or files you already host. Guide: `docs/publishing-setup.md`.
+- **Background mode:** tray or menu bar icon, keep running when the window is closed, launch at login (hidden), a single-instance lock, a check after wake, and a confirmation before quitting while posts are due.
+- **Client approval packs:** self-contained HTML (with an offline approve / request-changes form) or PDF with your branding. The client's response code is applied only to posts that have not changed since export.
+- **Self-hosted publish worker (optional):** a zero-dependency Node 22 service (Docker image for amd64/arm64) that publishes queued Instagram, Facebook Page and Threads posts while your computer is off. It uses an HMAC-signed protocol, encrypts tokens at rest, accepts only publishing-scoped tokens by default, and recovers after a crash without publishing twice. Choose "Publish via: Worker" per post. Guide: `docs/worker.md`.
+
+**AI (optional, bring your own key, beta)**
+
+- **AI Studio** (`docs/ai-studio.md`): brand voice briefs per account (local caption statistics, optional AI-derived proposal), caption variants in the composer (optionally using the images), data-driven hashtag suggestions with lift, overused and forgotten-winner flags, monthly content ideas with Turkish and global special days that become Planner drafts at your best times, repurposing to carousel, Threads, Facebook or story frames, reply suggestions with anonymised commenters, and A/B caption experiments with bootstrap confidence intervals.
+- Vision support, structured output, a "What will be sent?" preview for every AI action, a per-account AI opt-out, and usage and estimated cost per feature (Studio → Usage).
+
+**Inbox, team and automation**
+
+- **Unified inbox** (`docs/inbox.md`): comments from Instagram, Facebook Pages, Threads and YouTube in one list with filters, assignment, keyboard shortcuts, confirmed replies, hide/unhide, background polling every 30 minutes, optional AI sentiment, response-time metrics (first response time, answered %, within target %) in the health score, a "Community response" report section and overdue notifications.
+- **Team workspaces** (`docs/team.md`): share a read-only workspace through a synced folder (Dropbox, iCloud Drive, OneDrive, Google Drive, NAS). The publisher writes a snapshot without secrets (optionally encrypted with a team passphrase); subscribers open it read-only. Roles (admin, analyst, client view with a PIN), and notes on accounts, posts and comments with @mentions and visibility.
+- **Command-line tool** (`docs/cli.md`): `MetaDash --cli` runs headless: `sync`, `report` (same templates and PDF rendering as the app), `export`, `backup`, `accounts`, `status`, `inbox`, `worker` and `team`, with `--json` output and documented exit codes. **Settings → Command-line tool** installs a `metadash` command. The CLI can run next to the app thanks to a cross-process sync lease.
+
+**Languages and docs**
+
+- Translations moved to per-language JSON files (`src/renderer/locales/<lang>/*.json`, `src/main/locales/<lang>/*.json`). German and Spanish are added as partial languages that fall back to English. `npm run i18n:check` verifies keys and placeholders. Guide: `docs/translating.md`.
+- New guides: YouTube, TikTok, Planner, publishing, AI Studio, inbox, team, CLI, worker, providers, translating, known limitations and a documentation index (`docs/README.md`), all in English and Turkish.
+- Demo data now includes 8 Facebook Pages, 6 Threads profiles, 2 YouTube channels, 3 TikTok accounts, planner posts and inbox comments.
 
 ### Changed
 
 - **Graph API v26.0** (was v21.0).
-- Screens follow each platform's capabilities instead of showing zeros: missing metrics show "—" with a "Not available for …" tooltip (save rate on Facebook and Threads, reach on Threads). Account tabs follow capabilities (Facebook: overview/posts/ads; Threads: overview/posts/demographics) with platform-specific KPIs and charts (Facebook: viewers + post engagements; Threads: views + likes). Compare warns when accounts from different platforms are mixed and disables save rate; Reports greys out sections that none of the selected accounts support; Presentation skips ad slides for platforms without ads; Competitors lists Instagram accounts only.
-- Setup now has seven steps (the optional Threads step comes before the first sync); the token step explains that `read_insights` is only needed for Facebook Pages.
-- Token warnings name the platform: a Meta problem links to Setup step 3, a Threads problem to Settings → Connections, and a failing Threads token no longer cancels the Instagram/Facebook sync (the run ends as "partial").
-- The unsupported-metrics list in Settings shows the platform of each metric and re-enables it per platform.
-- Account tracking, profile activation and sync errors are now platform-scoped internally (database migration 008).
+- **Setup has 7 steps:** Facebook Pages can be picked next to Instagram accounts, and an optional Threads step comes before the first sync. YouTube and TikTok are connected in Settings → Connections.
+- Health score: the response component now uses the inbox's answered rate and within-target rate. Platforms without an inbox keep a re-weighted score.
+- Compare warns when platforms are mixed, Reports grey out sections that no selected account supports, Presentation skips ad slides for platforms without ads, and Competitors lists Instagram accounts only.
+- Token warnings name the platform and link to the right place. A failing Threads, YouTube or TikTok token no longer stops the rest of the sync (the run ends as "partial").
+- The unsupported-metrics list shows the platform of each metric.
+- The Studio inbox now shows the unified inbox.
+- The app may now contact the platform APIs you connect (Threads, Google, TikTok), your media host, your worker and your AI provider. See "Data and privacy" in the README.
 
+### Fixed
+
+- Demo data: comments are never dated in the future, and demo syncs roll YouTube and TikTok forward too.
+- Platform-specific token errors are no longer reported as Meta token problems.
+
+### Security
+
+- Tokens for every platform, S3 keys, the worker secret and the team key are encrypted at rest with the machine-bound key (AES-256-GCM). They are never written to the team folder, and they are exported only with a passphrase.
+- OAuth sign-in uses PKCE and a one-shot `127.0.0.1` listener with a constant-time state check that closes after one request or 5 minutes.
+- The worker protocol signs every request (HMAC-SHA256 with timestamp and nonce), seals tokens with a separate derived key, rate-limits clients and locks them out after repeated failures, and refuses broad tokens unless you allow them.
+- AI prompts quote captions and comments as data, anonymise commenter handles, and never include account ids, usernames or tokens. Replies are never sent without confirmation.
+- Client approval packs have a strict Content Security Policy and escape all captions. Their response code is a checksum, not a signature (see SECURITY.md).
+- Providers are not loaded as runtime plugins; new platforms go through code review.
+- The worker pairing string (`mdw1:…`) is treated as a credential: before the first token is sent, MetaDash shows the decoded worker address and asks for confirmation, and it warns about plain `http://` addresses that are not on this computer. Only paste pairing strings from a worker you run yourself.
+- Behind the bundled Caddy proxy, the worker rate-limits and locks out per real client instead of per proxy address: `docker-compose.yml` sets `MD_TRUST_PROXY=1`, and `X-Forwarded-For` is honoured only from loopback or private-network peers (right-most public hop).
+- CSV and Excel exports neutralise spreadsheet formulas: text cells that start with `=`, `+`, `-`, `@`, a tab or a carriage return are prefixed with `'`.
+- The Content Security Policy of packaged builds no longer allows connections to the Vite dev server.
+
+### Known limitations
+
+- TikTok is experimental: there are no daily analytics, reach, demographics or comments, daily values are estimated, and sandbox apps are limited to 10 target users.
+- YouTube: if your OAuth consent screen stays in Testing, refresh tokens expire after 7 days. The Data API has a quota of 10,000 units per day per Google Cloud project, and Analytics data arrives 2–3 days late.
+- Publishing is available only for Instagram, Facebook Pages and Threads. Instagram images and Threads media need a public media host. Posts that MetaDash sends need the app running unless you use the worker or schedule on Facebook.
+- AI features are beta. Builds may be unsigned.
+- Some platform limits and API behaviours could not be confirmed from the official docs. They are listed in `docs/known-limitations.md`; please report differences.
 
 ## [1.2.0] - 2026-09-29
 
@@ -100,7 +151,8 @@ First open-source release under the MIT License.
 - **Data:** local SQLite database, AES-256-GCM encrypted secrets, backup/restore, passphrase-protected data transfer between computers.
 - **Security:** sandboxed renderer with context isolation, strict CSP, Electron fuses on packaged builds, hardened runtime on macOS.
 
-[Unreleased]: https://github.com/mbahadirs/metadash/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/mbahadirs/metadash/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/mbahadirs/metadash/compare/v1.2.0...v2.0.0
 [1.2.0]: https://github.com/mbahadirs/metadash/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/mbahadirs/metadash/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mbahadirs/metadash/releases/tag/v1.0.0

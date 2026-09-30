@@ -32,6 +32,11 @@ Meta's interface changes often; menu names may differ slightly. Expect about 10 
    - `threads_basic` (profile and posts, always required)
    - `threads_manage_insights` (views, likes, replies, reposts, quotes, followers, demographics)
 
+   Optional: `threads_content_publish` and `threads_manage_replies` to publish from the Planner
+   ([publishing-setup.md](publishing-setup.md)), and `threads_read_replies` to read replies in the unified inbox
+   ([inbox.md](inbox.md)). MetaDash asks for them only when **Also request publishing permission** is on in
+   Settings → Connections.
+
 ## 2. Find the Threads App ID and App Secret
 
 An app with the Threads use case has **two** app IDs and secrets. MetaDash needs the **Threads** ones:

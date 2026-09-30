@@ -7,6 +7,7 @@
   "worker_err_pairing": "Eşleştirme metni geçersiz. mdw1: ile başlayan metnin tamamını kopyalayın.",
   "worker_err_secret": "Worker gizli anahtarını (en az 32 karakter) ya da eşleştirme metnini yapıştırın.",
   "worker_err_url": "Worker adresini girin, örneğin https://worker.example.com.",
+  "worker_err_insecure_http": "{url} şifresiz http:// kullanıyor ve kendi ağınızda değil; gizli anahtar ve yayın token'larınız yolda okunabilir. https:// (Caddy profili) ya da Tailscale gibi özel bir ağ kullanın veya şifresiz göndermek istediğinizi onaylayın.",
   "worker_err_account_unknown": "{id} hesabı bulunamadı.",
   "worker_err_platform": "Worker yalnızca Instagram, Facebook ve Threads'e yayın yapabilir ({platform} desteklenmiyor).",
   "worker_err_no_token": "Bu hesap için token yok. Önce hesabı bağlayın ya da worker'a özel bir token yapıştırın.",

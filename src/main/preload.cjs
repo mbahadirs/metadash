@@ -338,6 +338,7 @@ const api = {
   worker: {
     getState: () => invoke('worker:getState'),
     generatePairing: () => invoke('worker:generatePairing'),
+    inspect: (p) => invoke('worker:inspect', p),
     configure: (p) => invoke('worker:configure', p),
     test: () => invoke('worker:test'),
     tokens: () => invoke('worker:tokens'),

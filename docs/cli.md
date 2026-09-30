@@ -1,5 +1,7 @@
 # Command-line tool (headless mode)
 
+[Türkçe](tr/cli.md)
+
 MetaDash can run without opening its window. The app binary started with `--cli` syncs data, writes reports and exports, and prints status. You can use it in scripts and scheduled jobs, for example to email last month's PDF reports on the 1st of each month.
 
 - The CLI uses the same database, connections, branding and report templates as the app. Nothing is set up separately.

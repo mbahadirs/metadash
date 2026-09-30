@@ -1,6 +1,9 @@
-# AI studio
+# AI Studio
 
-<!-- Section owned by v1.5 chunk B. -->
+[Türkçe](tr/ai-studio.md)
+
+The AI Studio (**AI Studio** in the sidebar) collects MetaDash's AI writing tools. Like every AI feature, it is **optional, off by default and in beta**. Turn AI on in **Settings → AI assistant**, choose Anthropic (Claude), OpenAI, Google Gemini or a local Ollama model, and paste your own API key (Ollama needs none and keeps everything on your computer). Every action has a **What will be sent?** preview, and each account can opt out of AI entirely. Studio → Usage shows token counts and estimated costs. Assumptions about the providers' APIs are listed in [Known limitations](known-limitations.md#ai-providers).
+
 ## Brand voice & captions
 
 ### Brand voice (Studio → Voice)
@@ -39,21 +42,20 @@ With **Re-rank with AI** the caption, notes and the tested-tag table are sent to
 
 Every result shows "≈ N in / M out tokens · ≈ $x (estimate)", or "local" for Ollama. The "What will be sent?" panel shows an estimate before you press the button. Every call is logged by feature (voice, caption, hashtags) in Studio → Usage. Only counts are stored, never your captions.
 
-<!-- Section owned by v1.5 chunk D. -->
 ## Comment replies & experiments
 
 ### Inbox (Studio → Inbox)
 
-The inbox lists comments from other people on your Instagram posts from the last 14 days that nobody from the account has answered yet, grouped by account. A comment counts as answered once it has an owner reply, which is the same rule the health score's response rate uses, or once you marked it done in the inbox.
+Since v2.0, Studio → Inbox shows the [unified inbox](inbox.md) with comments from Instagram, Facebook Pages, Threads and YouTube; filters, assignment, polling, response-time metrics and per-platform permissions are described there. This section covers the AI parts: reply suggestions and what they send. A comment counts as answered once it has an owner reply, which is the same rule the health score's response rate uses, or once you marked it done in the inbox.
 
-- **Refresh comments** fetches fresh comments for each account's posts from the last 14 days, up to 25 posts per account. It goes through the normal Meta rate limiter. Comments also arrive with the regular sync when comment sync is on.
+- **Refresh comments** fetches fresh comments right away. Comments also arrive with the regular sync and through background polling (see [inbox.md](inbox.md#how-comments-arrive)).
 - **Suggest replies** sends one comment to your AI provider and returns 3 short replies plus a category (question, praise, complaint, spam or other). Complaint suggestions include a "let's continue in DM" option. The replies follow the account's brand voice brief (Studio → Voice) when one exists.
 - **Send reply…** always opens a confirmation dialog. It shows the exact text and which account posts it to which person. Nothing is sent without that confirmation, and there is no automatic or bulk sending.
 - **Mark done** removes a comment from the unanswered list without replying.
 
 After a reply is sent, it is stored locally as an owner reply with its response time. The account's response rate and response-time metrics therefore update right away, before the next sync.
 
-**Permissions.** The reply is posted with `POST /{ig-comment-id}/replies`. This needs `instagram_manage_comments`, plus `instagram_basic`, `pages_show_list` and `pages_read_engagement`, which the normal setup already grants. If the Page role comes from Business Manager, it also needs `ads_management` or `ads_read`. If the permission is missing, MetaDash says so before any request is made. Add it in your Meta app and reconnect in Settings → Connection. Only top-level comments can be answered. Instagram does not allow replies to hidden comments or live-video comments. Facebook and Threads comments are not synced, so they cannot be answered from the inbox. The Facebook endpoint (`POST /{comment-id}/comments` with a Page token and `pages_manage_engagement`) is documented in the code for later.
+**Permissions.** Each platform needs its own reply permission; the table is in [inbox.md](inbox.md#permissions). For Instagram, the reply is posted with `POST /{ig-comment-id}/replies` and needs `instagram_manage_comments` (plus `ads_management` or `ads_read` if the Page role comes from Business Manager). If a permission is missing, MetaDash says so before any request is made. Instagram does not allow replies to hidden comments or live-video comments.
 
 **Demo mode:** sending is simulated. Nothing reaches Instagram, but the inbox and metrics behave as if the reply was sent.
 
@@ -81,7 +83,6 @@ Instagram has no real split test for feed captions. An experiment in MetaDash is
   Even a directional result is not proof: topic, day and time also differ between posts.
 - **Conclude:** write what you learned. Optionally, **Summarize with AI** drafts a short summary. It sends only the numbers and up to 5 short captions (200 characters each) per arm, never account names or ids.
 
-<!-- Section owned by v1.5 chunk C. -->
 ## Ideas & repurposing
 
 ### Monthly content ideas (Studio → Ideas)

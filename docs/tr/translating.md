@@ -20,12 +20,18 @@ Her dosya düz bir `"anahtar": "metin"` nesnesidir. Kaynak İngilizcedir (`en`):
 | `planner` | İçerik planlayıcı ve onaylar |
 | `background` | Tepsi ve arka plan modu, yayın ayarları |
 | `studio`, `studio.voice`, `studio.ideas`, `studio.inbox` | Yapay zekâ stüdyosu |
+| `inbox` | Birleşik gelen kutusu |
+| `team` | Ekip çalışma alanı, roller, müşteri görünümü, notlar |
+| `worker` | Kendi sunucunuzdaki yayın worker'ı ayarları |
+| `cli` | Komut satırı aracı ayarları |
+| `providers` | Platformların ortak metinleri (içerik türleri, Deneysel rozeti) |
+| `youtube`, `tiktok` | YouTube ve TikTok bağlantıları ve ekranları |
 
 | Ana süreç ad alanı | İçerik |
 | --- | --- |
 | `messages` | Genel mesajlar (kurulum, güncelleme, yapay zekâ hataları) |
 | `errors` | Meta/ağ hata mesajları ve ipuçları |
-| `planner`, `publishing`, `background`, `studio*` | Özellik mesajları |
+| `planner`, `publishing`, `background`, `studio*`, `inbox`, `team`, `worker`, `cli`, `providers`, `youtube`, `tiktok` | Özellik mesajları (`cli` komut satırı aracının hata mesajlarını da içerir) |
 | `report` | HTML, PDF ve Excel raporlarındaki başlık ve etiketler (`weekdays` Pazar ile başlayan, virgülle ayrılmış bir listedir) |
 | `approval` | Müşteri onay paketindeki etiketler |
 
@@ -60,7 +66,7 @@ Süslü parantez içindeki metni uygulama doldurur: `"{n} gönderi"`, `"@{u} ola
 
 - Kısa, sade ve samimi. Düğmeler fiildir ("Kaydet", "Bağlan").
 - Dilinizde yazılımlar için olağan olan hitap biçimini seçin ve tutarlı kullanın. Türkçede "siz" kullanılır.
-- Platform ve ürün adları asla çevrilmez: Instagram, Facebook, Threads, Meta, Reels, Stories, MetaDash, Graph API Explorer.
+- Platform ve ürün adları asla çevrilmez: Instagram, Facebook, Threads, YouTube, YouTube Shorts, TikTok, Meta, Reels, Stories, MetaDash, Graph API Explorer.
 - Token, App ID, App Secret, API ve hashtag gibi yaygın teknik terimler, dilinizde yerleşik bir karşılığı yoksa İngilizce kalır.
 - Metrik adları, varsa platformun kendi dilinizdeki adlandırmasını izler (örneğin Facebook erişimi için "İzleyenler").
 

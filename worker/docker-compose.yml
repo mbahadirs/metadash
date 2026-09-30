@@ -9,6 +9,9 @@ services:
     env_file: .env
     environment:
       MD_DATA_DIR: /data
+      # Required behind Caddy (--profile https): rate limits / lockout per real client, not per proxy address.
+      # Only trusted from private/loopback peers (see worker/src/clientip.js).
+      MD_TRUST_PROXY: ${MD_TRUST_PROXY:-1}
     volumes:
       - worker-data:/data
     ports:

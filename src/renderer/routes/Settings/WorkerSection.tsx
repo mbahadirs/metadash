@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useT } from '@/lib/i18n';
 import { useAccounts } from '@/hooks/queries';
 import { WORKER_KEY, useWorkerState, workerApi, type WorkerStateX } from '@/hooks/useWorker';
-import type { Account, WorkerExecutor, WorkerPairing, WorkerToken } from '@/lib/types';
+import type { Account, WorkerExecutor, WorkerPairing, WorkerTarget, WorkerToken } from '@/lib/types';
 import { Section, Toggle, Loading, CopyButton } from '@/components/ui';
 
 const WORKER_PLATFORMS = ['instagram', 'facebook', 'threads'];
@@ -34,14 +34,26 @@ function PairingWizard() {
   const [secret, setSecret] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Review step: the decoded target is shown and must be confirmed before the secret is sent anywhere.
+  const [target, setTarget] = useState<WorkerTarget | null>(null);
+  const [owner, setOwner] = useState(false);
+  const [insecureOk, setInsecureOk] = useState(false);
 
+  const input = () => {
+    const pasted = secret.trim();
+    return pasted.startsWith('mdw1:') ? { url: url.trim() || undefined, pairing: pasted } : { url: url.trim(), secret: pasted || pairing?.secret || '' };
+  };
+  const resetReview = () => { setTarget(null); setOwner(false); setInsecureOk(false); };
   const generate = async () => { setErr(null); try { setPairing(await workerApi.generatePairing()); } catch (e) { setErr(errText(e)); } };
+  const review = async () => {
+    setErr(null); resetReview();
+    try { setTarget(await workerApi.inspect(input())); } catch (e) { setErr(errText(e)); }
+  };
   const connect = async () => {
+    if (!target || !owner || (target.insecure && !insecureOk)) return;
     setBusy(true); setErr(null);
     try {
-      const pasted = secret.trim();
-      const input = pasted.startsWith('mdw1:') ? { url: url.trim() || undefined, pairing: pasted } : { url: url.trim(), secret: pasted || pairing?.secret || '' };
-      qc.setQueryData(WORKER_KEY, await workerApi.configure(input));
+      qc.setQueryData(WORKER_KEY, await workerApi.configure({ ...input(), allowInsecureHttp: target.insecure && insecureOk }));
     } catch (e) { setErr(errText(e)); } finally { setBusy(false); }
   };
 
@@ -67,13 +79,43 @@ function PairingWizard() {
         <li>
           <div>{t('worker_step_connect')}</div>
           <div className="grid sm:grid-cols-2 gap-2 mt-1">
-            <input className="input" value={url} placeholder="https://worker.example.com" aria-label={t('worker_url')} onChange={(e) => setUrl(e.target.value)} />
-            <input className="input" type="password" autoComplete="off" value={secret} placeholder={pairing ? t('worker_secret_generated') : t('worker_secret_placeholder')} aria-label={t('worker_secret')} onChange={(e) => setSecret(e.target.value)} />
+            <input className="input" value={url} placeholder="https://worker.example.com" aria-label={t('worker_url')} onChange={(e) => { setUrl(e.target.value); resetReview(); }} />
+            <input className="input" type="password" autoComplete="off" value={secret} placeholder={pairing ? t('worker_secret_generated') : t('worker_secret_placeholder')} aria-label={t('worker_secret')} onChange={(e) => { setSecret(e.target.value); resetReview(); }} />
           </div>
-          <button type="button" className="btn btn-primary btn-sm mt-2" disabled={busy || (!url.trim() && !secret.trim().startsWith('mdw1:'))} onClick={() => void connect()}>{busy ? t('worker_connecting') : t('worker_connect')}</button>
+          {!target
+            ? <button type="button" className="btn btn-primary btn-sm mt-2" disabled={busy || (!url.trim() && !secret.trim().startsWith('mdw1:'))} onClick={() => void review()}>{t('worker_review')}</button>
+            : <TargetReview target={target} fromPairing={secret.trim().startsWith('mdw1:')} owner={owner} setOwner={setOwner} insecureOk={insecureOk} setInsecureOk={setInsecureOk} busy={busy} onConnect={() => void connect()} onChange={resetReview} />}
         </li>
       </ol>
       {err && <div className="text-xs text-neg" role="alert">{err}</div>}
+    </div>
+  );
+}
+
+/** Shows where the secret (and later the tokens) will go; Connect stays disabled until the user confirms ownership. */
+function TargetReview({ target, fromPairing, owner, setOwner, insecureOk, setInsecureOk, busy, onConnect, onChange }: {
+  target: WorkerTarget; fromPairing: boolean; owner: boolean; setOwner: (v: boolean) => void; insecureOk: boolean; setInsecureOk: (v: boolean) => void;
+  busy: boolean; onConnect: () => void; onChange: () => void;
+}) {
+  const t = useT();
+  const scheme = target.scheme === 'https' ? t('worker_review_https') : target.local ? t('worker_review_http_local') : t('worker_review_http_public');
+  const ready = owner && (!target.insecure || insecureOk);
+  return (
+    <div className={`mt-2 rounded border p-3 space-y-2 ${target.insecure ? 'border-neg' : 'border-line'}`} role="group" aria-label={t('worker_review')}>
+      <div className="text-xs text-ink-2">{t('worker_review_title')}</div>
+      <div className="font-mono text-base font-semibold break-all">{target.url}</div>
+      <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-xs">
+        <div><span className="text-ink-2">{t('worker_review_scheme')}: </span><span className={`badge ${target.scheme === 'https' ? 'badge-pos' : target.insecure ? 'badge-neg' : 'badge-warn'}`}>{target.scheme.toUpperCase()}</span> {scheme}</div>
+        <div><span className="text-ink-2">{t('worker_review_host')}: </span><span className="break-all">{target.host}</span></div>
+      </div>
+      {fromPairing && <div className="text-xs text-warn">{t('worker_review_pairing_hint')}</div>}
+      {target.insecure && <div className="text-xs text-neg" role="alert">{t('worker_review_insecure_warn')}</div>}
+      <label className="flex items-start gap-2 text-xs"><input type="checkbox" checked={owner} onChange={(e) => setOwner(e.target.checked)} />{t('worker_review_owner')}</label>
+      {target.insecure && <label className="flex items-start gap-2 text-xs"><input type="checkbox" checked={insecureOk} onChange={(e) => setInsecureOk(e.target.checked)} />{t('worker_review_insecure_confirm')}</label>}
+      <div className="flex gap-2">
+        <button type="button" className="btn btn-primary btn-sm" disabled={busy || !ready} onClick={onConnect}>{busy ? t('worker_connecting') : t('worker_connect')}</button>
+        <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={onChange}>{t('worker_review_change')}</button>
+      </div>
     </div>
   );
 }

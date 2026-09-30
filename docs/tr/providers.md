@@ -1,11 +1,11 @@
 # Platform ekleme (sağlayıcı rehberi)
 
+[English](../providers.md)
+
 MetaDash her sosyal platformla bir **sağlayıcı** (provider) üzerinden konuşur: `src/main/providers/<platform>/`
 altındaki bu modül, üreticinin API'sini ortak ve küçük bir biçime çevirir (profil, gönderiler, gönderi
 istatistikleri, günlük istatistikler, demografi, yorumlar). Sağlayıcı katmanının üstündeki her şey (senkronizasyon,
 analiz, raporlar, arayüz) platformdan bağımsızdır ve platform adları yerine **yetenekleri** (capabilities) okur.
-
-English: [docs/providers.md](../providers.md)
 
 ## Mimari
 

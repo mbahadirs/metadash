@@ -19,7 +19,7 @@ Prerequisites: Node.js 20+, npm, and a C/C++ toolchain in case `better-sqlite3` 
 git clone https://github.com/<your-username>/metadash.git
 cd metadash
 npm install          # also rebuilds better-sqlite3 for Electron
-npm run seed         # optional: 40-account demo dataset, no Meta app needed
+npm run seed         # optional: demo data for every platform, no developer app needed
 npm run dev          # Vite + Electron with hot reload
 ```
 
@@ -27,28 +27,34 @@ Tips:
 
 - Use `METADASH_USER_DATA=/some/dir` to keep a separate database for development (works with `npm run seed` and `npm run dev`).
 - `npm run seed:reset` regenerates the demo data from scratch.
-- Architecture, IPC conventions and the database layer are described in [docs/architecture.md](docs/architecture.md).
+- Architecture, IPC conventions and the database layer are described in [docs/architecture.md](docs/architecture.md). All guides are listed in [docs/README.md](docs/README.md).
 
 ## Checks
 
-Run these before opening a pull request; CI runs the first two plus a renderer build.
+Run these before opening a pull request. CI runs the type check, the tests and a renderer build.
 
 ```bash
 npm run typecheck    # TypeScript check of the renderer
 npm test             # Vitest (runs under Electron's Node)
+npm run i18n:check   # translation keys and placeholders; required when you touch UI or main-process strings
 npm run smoke        # optional but recommended for UI changes: walks every screen with demo data
+node scripts/cli-smoke.mjs   # optional, for CLI changes: runs every command against a temporary demo database
 ```
+
+For changes to the publish worker, also run `sh worker/test/smoke.sh` (needs Docker).
 
 If `npm test` fails with a native module error (`NODE_MODULE_VERSION` mismatch), run `npm run rebuild`.
 
 ## Coding guidelines
 
-- **Main process** (`src/main`): plain JavaScript ES modules. All database access goes through `src/main/db/queries/`, all Meta API access through `src/main/meta/client.js`.
+- **Main process** (`src/main`): plain JavaScript ES modules. All database access goes through `src/main/db/queries/`. Platform API access goes through the platform's provider in `src/main/providers/<platform>/` (Meta requests through `src/main/meta/client.js`).
+- **New platforms:** follow [docs/providers.md](docs/providers.md) (provider interface, capabilities, fixtures, contract test, definition of done). Providers are not loaded as runtime plugins; they are contributed and reviewed like any other code.
+- **Shared publishing code** (`src/shared/publish`) is used by both the app and the worker. Keep it pure: it may import only other files in `src/shared` and `node:` built-ins, and must not read `process.env` (`tests/shared.publish.purity.test.js` checks this).
 - **IPC:** add a handler in the matching `src/main/ipc/*.handlers.js` with `handle(channel, fn)` so the renderer gets the standard `{ ok, data } | { ok: false, error }` envelope, then expose it in `src/main/preload.cjs`. Validate inputs in the handler.
-- **Schema changes:** add a new numbered file in `src/main/db/migrations/` (e.g. `007_something.sql`). Never edit a migration that has already been released.
-- **Metrics:** Graph API metric names live only in `src/main/meta/metricMap.js`.
+- **Schema changes:** add a new numbered file in `src/main/db/migrations/` (the next one is `015_something.sql`). Never edit a migration that has already been released.
+- **Metrics:** API metric names live in each provider's `metrics.js` (Instagram: `src/main/providers/instagram/metrics.js`). Everything above the provider layer uses canonical names.
 - **Renderer** (`src/renderer`): TypeScript + React function components, TanStack Query hooks in `hooks/queries.ts`, Tailwind for styling. No Node APIs in the renderer.
-- **Tests:** add or update tests in `tests/` for new logic, especially analytics, sync and anything that parses Meta responses.
+- **Tests:** add or update tests in `tests/` for new logic, especially analytics, sync and anything that parses platform API responses. Use the fixtures in `tests/fixtures/` (`fakeFetch.js`) instead of real network calls.
 - Match the style of the surrounding code; keep functions small and avoid unrelated reformatting.
 
 ## Translations
@@ -91,17 +97,18 @@ Examples: `feat: add reach column to competitor table`, `fix: handle empty demog
 ## Pull request checklist
 
 - [ ] The PR has a clear description and links the related issue.
-- [ ] `npm run typecheck` and `npm test` pass.
+- [ ] `npm run typecheck`, `npm test` and `npm run i18n:check` pass.
 - [ ] New or changed logic has tests.
-- [ ] New UI strings are in `src/renderer/lib/i18n.ts` (and report/main-process strings in their files) in both English and Turkish.
+- [ ] New strings are in the English and Turkish JSON files (`src/renderer/locales/<lang>/`, `src/main/locales/<lang>/`); German and Spanish may stay untranslated.
 - [ ] Schema changes use a new migration file.
 - [ ] Docs are updated (README / `docs/`, English and Turkish where applicable).
 - [ ] No secrets, tokens, personal data or database files are committed.
 - [ ] User-visible changes are noted under `Unreleased` in [CHANGELOG.md](CHANGELOG.md).
+- [ ] If the change relies on platform API behaviour that the vendor does not document, it is marked `VERIFY` in the code and listed in [docs/known-limitations.md](docs/known-limitations.md).
 
 ## Releases
 
-Maintainers cut releases by bumping the version with `npm version <patch|minor|major>` and pushing the tag; GitHub Actions builds and publishes the installers. See [Releasing](README.md#releasing) in the README.
+Maintainers cut releases by bumping the version with `npm version <patch|minor|major>` and pushing the tag. GitHub Actions builds and publishes the installers and the worker image. See [Releasing](README.md#releasing) in the README.
 
 ## License
 

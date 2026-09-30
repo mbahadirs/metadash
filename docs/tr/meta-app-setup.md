@@ -208,7 +208,7 @@ me/adaccounts?fields=name,account_status,currency
 
 ## 7. MetaDash tarafında
 
-1. Kurulum sihirbazı: **Karşılama → Meta uygulaması** (App ID + Secret) **→ Token** (yapıştır, dönüştür) **→ Hesap seçimi** (bulunan Instagram hesapları; müşteri adı ve etiket verin) **→ Reklam hesapları** (isteğe bağlı olarak her birini bir Instagram hesabıyla eşleyin) **→ İlk senkronizasyon**.
+1. Kurulum sihirbazı 7 adımdır: **Karşılama → Meta uygulaması** (App ID + Secret) **→ Token** (yapıştır, dönüştür) **→ Hesap seçimi** (bulunan Instagram hesapları ve isteğe bağlı olarak Facebook Sayfaları; müşteri adı ve etiket verin) **→ Reklam hesapları** (isteğe bağlı olarak her birini bir hesapla eşleyin) **→ Threads** (isteğe bağlı, ayrı uygulama; bkz. [threads-setup.md](threads-setup.md)) **→ İlk senkronizasyon**. YouTube ve TikTok daha sonra **Ayarlar → Bağlantılar**'dan bağlanır ([youtube-setup.md](youtube-setup.md), [tiktok-setup.md](tiktok-setup.md)).
 2. İlk senkronizasyon onlarca hesap için birkaç dakika sürebilir; ilerleme üst çubukta görünür.
 3. Sonrasında verileri üst çubuktaki **Güncelle** düğmesiyle ya da Ayarlar'daki günlük otomatik güncellemeyle tazeleyin.
 
@@ -237,7 +237,7 @@ Notlar:
 
 ### 7.3 Yayımlama izinleri (Planlayıcı, isteğe bağlı)
 
-Planlayıcı'dan (v1.4) yayımlamak ek izinler gerektirir. Analiz bu izinler olmadan da çalışır; yalnızca MetaDash'ten yayımlayacaksanız ekleyin.
+Planlayıcı'dan yayımlamak ek izinler gerektirir. Analiz bu izinler olmadan da çalışır; yalnızca MetaDash'ten yayımlayacaksanız ekleyin.
 
 | Platform | İzin | Ne için |
 |---|---|---|
@@ -250,6 +250,10 @@ Planlayıcı'dan (v1.4) yayımlamak ek izinler gerektirir. Analiz bu izinler olm
 2. Token'ı oluştururken Graph API Explorer'da bu izinleri işaretleyin (Bölüm 6) ve token'ı MetaDash'te yeniden dönüştürün (Ayarlar → Bağlantı → **Token yenile**). Bir token yalnızca oluşturulurken işaretlenen izinleri taşır; mevcut kullanıcılar token'ı yenilemelidir.
 3. **Facebook Sayfaları** için her Sayfada `CREATE_CONTENT` görevi de gerekir (Explorer: `me/accounts?fields=name,tasks` — `tasks` içinde `CREATE_CONTENT` olmalı).
 4. Ayarlar → Yayımlama, platform başına hazır olma durumunu ve eksikleri gösterir. Instagram ve Threads için medya barındırma ve ayrıntılı anlatım [publishing-setup.md](publishing-setup.md) dosyasındadır.
+
+### 7.4 Gelen kutusu izinleri (isteğe bağlı)
+
+[Birleşik gelen kutusu](inbox.md) yorumları aynı token ile okur ve yanıtlar. Instagram için `instagram_manage_comments` gerekir. Facebook Sayfaları için `pages_read_user_content` (yorumları yazarlarıyla okumak için) ve `pages_manage_engagement` (yanıtlamak ve gizlemek için; Sayfa rolünüzde `MODERATE` görevi olmalı) ekleyin. İzinleri kullanım senaryosuna ekleyin (Bölüm 3.2), Explorer'da işaretleyin (Bölüm 6) ve token'ı yenileyin. Tablonun tamamı [inbox.md](inbox.md) dosyasının "İzinler" bölümündedir.
 
 ---
 

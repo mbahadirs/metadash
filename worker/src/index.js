@@ -11,7 +11,8 @@ import { createLogger } from './log.js';
  *   MD_DATA_DIR          state + media directory (default /data)
  *   PORT / HOST          listen address (default 8787 / 0.0.0.0)
  *   MD_STRICT_SCOPES     1 (default) re-checks token scopes with Meta on receipt
- *   MD_TRUST_PROXY       1 = use X-Forwarded-For for rate limiting (only behind your own reverse proxy)
+ *   MD_TRUST_PROXY       1 = use X-Forwarded-For for rate limiting (required behind a reverse proxy; only honoured
+ *                        from private/loopback peers, right-most public entry; docker-compose.yml defaults to 1)
  *   MD_LOG_LEVEL         debug | info (default) | warn | error
  *   TZ                   time zone shown in /v1/info
  * No telemetry: the worker only talks to the Meta APIs and to whoever calls it.

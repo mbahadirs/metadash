@@ -1,5 +1,7 @@
 # Team workspace and roles (no server)
 
+[Türkçe](tr/team.md)
+
 MetaDash v2.0 lets a small team share one workspace through a folder that is already synced between their
 computers: Dropbox, iCloud Drive, OneDrive, Google Drive for desktop or a NAS/SMB share. There is no MetaDash
 server and no account system.

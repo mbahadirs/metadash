@@ -3,7 +3,7 @@
  *   take(key)      → true when the request may proceed (bucket of `capacity`, refilled `perMinute` per minute)
  *   fail(key)      → counts an authentication failure; `maxFailures` within `failWindowMs` blocks the key for `blockMs`
  *   blocked(key)   → true while the key is locked out
- * Keys are client IPs (behind a reverse proxy: the proxy's address unless MD_TRUST_PROXY=1, see server.js).
+ * Keys are client IPs (behind a reverse proxy: the proxy's address unless MD_TRUST_PROXY=1, see clientip.js).
  */
 const MAX_KEYS = 10_000;
 

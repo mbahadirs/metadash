@@ -1,8 +1,10 @@
 import ExcelJS from 'exceljs';
+import { neutralizeFormula } from './formulaGuard.js';
 
 /**
  * Generic workbook writer. sheets: [{ name, columns: [{ key, label, type }], rows: object[] }]
  * type: 'text' | 'int' | 'float' | 'percent' | 'money' | 'date' | 'datetime'
+ * Text cells (and headers) starting with = + - @ TAB CR get a leading apostrophe (formulaGuard.js); numbers stay numeric.
  */
 const NUM_FMT = { int: '#,##0', float: '#,##0.00', percent: '0.00"%"', money: '#,##0.00', date: 'dd.mm.yyyy', datetime: 'dd.mm.yyyy hh:mm' };
 
@@ -19,7 +21,7 @@ export async function writeWorkbook(filePath, sheets, { creator = 'MetaDash', ti
     while (used.has(name)) name = `${name.slice(0, 28)} ${i++}`;
     used.add(name);
     const ws = wb.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 1 }] });
-    ws.columns = sheet.columns.map((c) => ({ header: c.label ?? c.key, key: c.key, width: Math.min(60, Math.max(10, String(c.label ?? c.key).length + 4)) }));
+    ws.columns = sheet.columns.map((c) => ({ header: neutralizeFormula(String(c.label ?? c.key)), key: c.key, width: Math.min(60, Math.max(10, String(c.label ?? c.key).length + 4)) }));
     for (const row of sheet.rows ?? []) {
       const out = {};
       for (const c of sheet.columns) out[c.key] = coerce(row[c.key], c.type);
@@ -60,13 +62,13 @@ function coerce(v, type) {
   if (v == null || v === '') return null;
   if (type === 'date' || type === 'datetime') {
     const d = typeof v === 'number' ? new Date(v) : new Date(String(v).length === 10 ? `${v}T00:00:00` : v);
-    return Number.isNaN(d.getTime()) ? String(v) : d;
+    return Number.isNaN(d.getTime()) ? neutralizeFormula(String(v)) : d;
   }
   if (['int', 'float', 'percent', 'money'].includes(type)) {
     if (typeof v === 'number') return v;
     const n = Number(String(v).replace(/[^\d.,-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
-    return Number.isFinite(n) ? n : String(v);
+    return Number.isFinite(n) ? n : neutralizeFormula(String(v));
   }
-  if (typeof v === 'object') return JSON.stringify(v);
-  return v;
+  if (typeof v === 'object') return neutralizeFormula(JSON.stringify(v));
+  return neutralizeFormula(v);
 }

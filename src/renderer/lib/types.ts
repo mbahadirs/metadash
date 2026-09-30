@@ -305,6 +305,8 @@ export interface WorkerState {
   tokens: WorkerToken[];
 }
 export interface WorkerPairing { secret: string; envSnippet: string; pairing: string }
+/** worker:inspect — where a pairing string / URL points (reviewed before connecting). */
+export interface WorkerTarget { url: string; scheme: 'http' | 'https'; host: string; local: boolean; insecure: boolean }
 export interface WorkerStatusEvent { configured: boolean; state: 'idle' | 'syncing' | 'error' | 'offline'; lastSyncAt: number | null; lastError: string | null; queue: { queued: number; publishing: number; failed: number } | null }
 
 /** Team workspace, roles and session (F1). */

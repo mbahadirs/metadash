@@ -1,6 +1,9 @@
 # Yapay zekâ stüdyosu
 
-<!-- v1.5 B parçasına ait bölüm. -->
+[English](../ai-studio.md)
+
+Yapay zekâ stüdyosu (kenar çubuğunda **Yapay Zekâ Stüdyosu**), MetaDash'in yapay zekâ yazım araçlarını bir araya getirir. Tüm yapay zekâ özellikleri gibi **isteğe bağlıdır, varsayılan olarak kapalıdır ve beta aşamasındadır**. Yapay zekâyı **Ayarlar → Yapay zekâ asistanı** bölümünden açın, Anthropic (Claude), OpenAI, Google Gemini veya yerel bir Ollama modeli seçin ve kendi API anahtarınızı yapıştırın (Ollama anahtar gerektirmez ve her şeyi bilgisayarınızda tutar). Her işlemin bir **Ne gönderilecek?** önizlemesi vardır ve her hesap yapay zekâ kullanımını tamamen kapatabilir. Stüdyo → Kullanım, token sayılarını ve tahmini maliyetleri gösterir. Sağlayıcı API'leriyle ilgili varsayımlar [Bilinen sınırlamalar](known-limitations.md#yapay-zekâ-sağlayıcıları) sayfasındadır.
+
 ## Marka sesi ve açıklamalar
 
 ### Marka sesi (Stüdyo → Marka sesi)
@@ -39,21 +42,20 @@ Açıklama alanının altındaki **Yapay zekâ yardımı** paneli yalnızca yapa
 
 Her sonuç "≈ N girdi / M çıktı token · ≈ $x (tahmini)" satırını gösterir; Ollama için "yerel" yazar. "Ne gönderilecek?" paneli düğmeye basmadan önce bir tahmin gösterir. Her çağrı özelliğe göre (ses, açıklama, hashtag) Stüdyo → Kullanım bölümünde kaydedilir. Yalnızca sayılar saklanır, açıklamalarınız saklanmaz.
 
-<!-- v1.5 D parçasına ait bölüm. -->
 ## Yorum yanıtları ve deneyler
 
 ### Gelen kutusu (Stüdyo → Gelen kutusu)
 
-Gelen kutusu, Instagram gönderilerinize son 14 günde başkalarının yazdığı ve hesabın henüz yanıtlamadığı yorumları hesap hesap listeler. Bir yorum, hesap sahibinden bir yanıt aldığında (sağlık skorundaki yanıt oranıyla aynı kural) ya da gelen kutusunda "Tamamlandı" olarak işaretlendiğinde yanıtlanmış sayılır.
+v2.0'dan itibaren Stüdyo → Gelen kutusu, Instagram, Facebook Sayfaları, Threads ve YouTube yorumlarını içeren [birleşik gelen kutusunu](inbox.md) gösterir; filtreler, atama, yoklama, yanıt süresi ölçümleri ve platform izinleri orada anlatılır. Bu bölüm yapay zekâ kısmını anlatır: yanıt önerileri ve neler gönderildiği. Bir yorum, hesap sahibinden bir yanıt aldığında (sağlık skorundaki yanıt oranıyla aynı kural) ya da gelen kutusunda "Tamamlandı" olarak işaretlendiğinde yanıtlanmış sayılır.
 
-- **Yorumları yenile**, her hesabın son 14 gündeki gönderilerinin yorumlarını yeniden çeker (hesap başına en fazla 25 gönderi). Normal Meta istek sınırlayıcısını kullanır. Yorum senkronu açıksa yorumlar normal senkronla da gelir.
+- **Yorumları yenile** yorumları hemen çeker. Yorumlar normal senkronla ve arka plan yoklamasıyla da gelir (bkz. [inbox.md](inbox.md)).
 - **Yanıt öner**, tek bir yorumu yapay zekâ sağlayıcınıza gönderir ve 3 kısa yanıt ile bir kategori döndürür (soru, övgü, şikâyet, spam veya diğer). Şikâyet önerileri "DM'den devam edelim" seçeneğini de içerir. Hesabın marka sesi özeti (Stüdyo → Marka sesi) varsa yanıtlar ona uyar.
 - **Yanıtı gönder…** her zaman bir onay penceresi açar. Pencere, gönderilecek metnin tamamını ve hangi hesaptan kime gideceğini gösterir. Bu onay olmadan hiçbir şey gönderilmez; otomatik veya toplu gönderim yoktur.
 - **Tamamlandı**, yorumu yanıtlamadan yanıt bekleyenler listesinden çıkarır.
 
 Gönderilen yanıt, yanıt süresiyle birlikte yerelde hesap sahibinin yanıtı olarak kaydedilir. Böylece hesabın yanıt oranı ve yanıt süresi metrikleri bir sonraki senkronu beklemeden hemen güncellenir.
 
-**İzinler.** Yanıt `POST /{ig-comment-id}/replies` ile gönderilir. Bunun için `instagram_manage_comments` gerekir; ayrıca normal kurulumun zaten verdiği `instagram_basic`, `pages_show_list` ve `pages_read_engagement` izinleri de gerekir. Sayfa rolü Business Manager üzerinden geliyorsa `ads_management` veya `ads_read` de gerekir. İzin eksikse MetaDash bunu istek göndermeden önce söyler. İzni Meta uygulamanıza ekleyip Ayarlar → Bağlantı'dan yeniden bağlanın. Yalnızca ana yorumlar yanıtlanabilir. Instagram gizlenmiş yorumlara ve canlı yayın yorumlarına yanıt verilmesine izin vermez. Facebook ve Threads yorumları senkronlanmadığı için gelen kutusundan yanıtlanamaz. Facebook uç noktası (`POST /{comment-id}/comments`, Sayfa token'ı ve `pages_manage_engagement` ile) ileride kullanılmak üzere kodda belgelenmiştir.
+**İzinler.** Her platformun kendi yanıt izni vardır; tablo [inbox.md](inbox.md) dosyasının "İzinler" bölümündedir. Instagram'da yanıt `POST /{ig-comment-id}/replies` ile gönderilir ve `instagram_manage_comments` gerektirir (Sayfa rolü Business Manager üzerinden geliyorsa ayrıca `ads_management` veya `ads_read`). Bir izin eksikse MetaDash bunu istek göndermeden önce söyler. Instagram gizlenmiş yorumlara ve canlı yayın yorumlarına yanıt verilmesine izin vermez.
 
 **Demo modu:** gönderim simüle edilir. Instagram'a hiçbir şey gitmez, ancak gelen kutusu ve metrikler yanıt gönderilmiş gibi davranır.
 
@@ -81,7 +83,6 @@ Instagram, gönderi açıklamaları için gerçek bir bölünmüş test (split t
   Yön gösteren bir sonuç bile kanıt değildir: gönderiler arasında konu, gün ve saat de farklıdır.
 - **Sonuçlandırma:** ne öğrendiğinizi yazın. İsterseniz **Yapay zekâ ile özetle** kısa bir özet taslağı hazırlar. Bu özet için yalnızca sayılar ve kol başına en fazla 5 kısa açıklama (her biri 200 karakter) gönderilir; hesap adları veya kimlikleri asla gönderilmez.
 
-<!-- Section owned by v1.5 chunk C. -->
 ## Fikirler ve dönüştürme
 
 ### Aylık içerik fikirleri (Stüdyo → Fikirler)

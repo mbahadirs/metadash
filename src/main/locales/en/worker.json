@@ -7,6 +7,7 @@
   "worker_err_pairing": "That pairing string is not valid. Copy the whole string starting with mdw1:.",
   "worker_err_secret": "Paste the worker secret (at least 32 characters) or a pairing string.",
   "worker_err_url": "Enter the worker address, for example https://worker.example.com.",
+  "worker_err_insecure_http": "{url} uses unencrypted http:// and is not on your own network, so the secret and your publishing tokens could be read on the way. Use https:// (Caddy profile) or a private network such as Tailscale, or confirm that you want to send them unencrypted.",
   "worker_err_account_unknown": "Account {id} is not known.",
   "worker_err_platform": "The worker can publish to Instagram, Facebook and Threads only ({platform} is not supported).",
   "worker_err_no_token": "There is no token for this account. Connect the account first, or paste a dedicated worker token.",

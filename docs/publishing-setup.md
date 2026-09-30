@@ -1,5 +1,7 @@
 # Publishing setup (Planner)
 
+[Türkçe](tr/publishing-setup.md)
+
 MetaDash can publish the posts you plan in the **Planner** to Instagram, Facebook Pages and Threads. This guide covers the permissions each platform needs, the media host that Instagram and Threads require, the limits MetaDash checks, and what happens when your computer is off.
 
 Publishing is optional. Analytics works without any of this.
@@ -100,9 +102,10 @@ If you already sync a folder to a web server, point MetaDash at its public base 
 |---|---|---|
 | Facebook post with **Schedule on Facebook** | ✅ Facebook publishes it | ✅ |
 | Instagram, Threads, Facebook without that option | ❌ missed | ✅ |
+| Any post set to **Publish via: Worker** ([self-hosted worker](worker.md)) | ✅ the worker publishes it | ✅ |
 
 - **Schedule on Facebook** hands the post to Facebook's own scheduler right away. It needs a time between 10 minutes and 30 days ahead. A first comment on such a post is only added once MetaDash is running and sees that the post is live.
-- Everything else is published by MetaDash itself, so the app must be running at the scheduled time. Turn on **tray mode** (Settings → Background) so closing the window keeps MetaDash running, and optionally **launch at login**. A closed laptop lid still puts the computer to sleep.
+- Everything else is published by MetaDash itself, so the app must be running at the scheduled time. Turn on **tray mode** (Settings → Background mode) so closing the window keeps MetaDash running, and optionally **launch at login**. A closed laptop lid still puts the computer to sleep.
 - Instagram videos are prepared up to 30 minutes before the scheduled time and images 5 minutes before, so MetaDash should already be running then.
 
 **Missed posts.** If the computer was asleep more than 15 minutes (**grace period**) past a post's time, MetaDash follows the **missed-post policy** in Settings:
@@ -122,7 +125,7 @@ If you already sync a folder to a web server, point MetaDash at its public base 
 
 ## 5. Limits
 
-MetaDash checks these before scheduling. Values marked **VERIFY** are not confirmed by current Meta documentation (or the documents disagree); MetaDash uses the conservative value. All of them live in `src/main/publishing/limits.js`. Checked against Meta's developer documentation on 2026-09-29.
+MetaDash checks these before scheduling. Values marked **VERIFY** are not confirmed by current Meta documentation (or the documents disagree); MetaDash uses the conservative value. All of them live in `src/main/publishing/limits.js`. Checked against Meta's developer documentation on 2026-09-29. If Meta behaves differently, see [Known limitations](known-limitations.md) and please open an issue.
 
 | | Instagram | Facebook Page | Threads |
 |---|---|---|---|

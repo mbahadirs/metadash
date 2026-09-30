@@ -1,5 +1,7 @@
 # Kendi sunucunuzda yayın worker'ı (isteğe bağlı)
 
+[English](../worker.md)
+
 MetaDash planlanan gönderileri bilgisayarınızdan yayınlar (tepsi modu). Bilgisayar planlanan saatte uykudaysa ya da
 kapalıysa gönderi kaçırılır. **Worker**, kendiniz çalıştırdığınız küçük ve isteğe bağlı bir servistir — bir VPS, NAS
 ya da Raspberry Pi üzerinde — ona verdiğiniz gönderileri tutar ve **Instagram, Facebook Sayfaları ve Threads**'e
@@ -38,6 +40,10 @@ ver** işaretlenmedikçe reddedilir. En iyisi yalnızca yayın izinli ayrı bir 
    ```
 3. MetaDash'e dönün, worker adresini ve gizli anahtarı (ya da `mdw1:…` eşleştirme metnini) girip **Bağlan**'a basın.
    Masaüstü, kaydetmeden önce gizli anahtarı imzalı bir istekle doğrular.
+
+   > **Yalnızca kendi çalıştırdığınız bir worker'ın eşleştirme metnini yapıştırın.** Eşleştirme metni bir kimlik
+   > bilgisidir: MetaDash'in yayın token'larınızı nereye göndereceğini belirler. İlk token gönderilmeden önce MetaDash
+   > çözülmüş worker adresini gösterir ve onayınızı ister; adres bu bilgisayarda değilse ve düz `http://` ise uyarır.
 4. Worker'ın yayın yapacağı her hesap için bir token gönderin, ardından oluşturucuda gönderi ve hesap bazında
    **Yayınlayan → Worker** seçin (ya da yeni Meta gönderileri için worker'ı varsayılan yapın).
 
@@ -74,6 +80,11 @@ kullanın**:
 - **Herkese açık HTTPS:** Compose `https` profili otomatik sertifikalı **Caddy** çalıştırır. `MD_DOMAIN` ve
   `MD_PUBLIC_URL=https://<alan-adı>` ayarlayın. Başka bir ters vekil de olur, yeter ki **yolları ve sorgu
   dizelerini değiştirmesin** (imza bunları kapsar) ve 110 MB istek gövdelerine izin versin.
+- **Bir vekilin arkasında `MD_TRUST_PROXY=1` ayarlayın.** Aksi hâlde her istek vekilin adresinden gelmiş gibi görünür;
+  tüm istemciler tek bir hız sınırını paylaşır ve herhangi birinden gelen 20 hatalı istek *herkesi* 15 dakika
+  kilitler. Compose dosyası bunu varsayılan olarak `1` yapar. Başlık yalnızca doğrudan bağlanan taraf bir loopback
+  ya da özel ağ adresiyse (vekiliniz) dikkate alınır ve içindeki en sağdaki herkese açık adres kullanılır; böylece
+  istemciler kendi adreslerini seçemez.
 
 ### Medya adresleri
 
@@ -98,7 +109,7 @@ Facebook yüklemeleri ve Instagram videoları worker tarafından doğrudan yükl
 | `MD_DATA_DIR` | `/data` | durum dosyası + medya |
 | `PORT` / `HOST` | `8787` / `0.0.0.0` | |
 | `MD_STRICT_SCOPES` | `1` | alınan Instagram token izinlerini Meta'da (`/me/permissions`) ve token geçerliliğini yeniden kontrol eder |
-| `MD_TRUST_PROXY` | `0` | hız sınırı için `X-Forwarded-For` kullan (yalnızca kendi vekilinizin arkasında) |
+| `MD_TRUST_PROXY` | `0` (`docker-compose.yml` içinde `1`) | hız sınırı ve kilitleme için `X-Forwarded-For` kullan; ters vekil arkasında gereklidir. Yalnızca loopback/özel ağ adreslerinden gelen bağlantılarda dikkate alınır |
 | `MD_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
 | `TZ` | kapsayıcı varsayılanı | `/v1/info`'da gösterilir |
 
@@ -149,6 +160,7 @@ Hız sınırı: istemci başına dakikada 120 istek; 10 dakikada 20 kimlik doğr
 | Tehdit | Önlem |
 |---|---|
 | Ağdaki biri API'yi çağırır | her uç noktada HMAC, nonce + zaman penceresi, hız sınırı ve kilitleme |
+| Başkasının eşleştirme metni token'larınızı başka yere yönlendirir | masaüstü ilk token gönderiminden önce çözülmüş adresi gösterip onay ister; yerel olmayan `http://` için uyarır; yalnızca kendi çalıştırdığınız worker ile eşleştirin |
 | TLS sonlandıran vekil ya da ağ gözlemcisi | token'lar gizli anahtardan türetilen bir anahtarla mühürlü gider; içerik için TLS/Tailscale kullanın |
 | Çalınan `/data` birimi ya da yedek | token'lar `MD_WORKER_DATA_KEY` ile şifreli (`/data`'da değil) |
 | Worker makinesi tamamen ele geçirilir | saldırgan yalnızca yayın token'larını alır (Facebook için kullanıcı token'ı yok, uygulama gizli anahtarı yok, analitik yok); token'ları Meta'da iptal edip yeniden eşleştirin |
@@ -161,6 +173,8 @@ Hız sınırı: istemci başına dakikada 120 istek; 10 dakikada 20 kimlik doğr
 ## Sorun giderme
 
 - *Worker isteği reddetti (gizli anahtar)*: yanlış anahtar ya da saatler 5 dakikadan fazla farklı (NTP'yi açın).
+- *Birkaç hatalı istekten sonra herkes kilitleniyor*: worker bir vekilin arkasında `MD_TRUST_PROXY=1` olmadan
+  çalışıyor (bkz. [Ağ ve TLS](#ağ-ve-tls)).
 - *Erişilemiyor*: `docker compose ps`, adresi ve Tailscale'in açık olduğunu kontrol edin. CLI'dan
   `metadash worker test` gidiş-dönüşü yazdırır.
 - *Herkese açık medya adresi gerekiyor*: `MD_PUBLIC_URL` (HTTPS ile) ayarlayın ya da Ayarlar → Yayınlama'da bir

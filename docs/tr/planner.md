@@ -1,7 +1,69 @@
 # Planlayıcı
 
-<!-- v1.4 C parçasına ait bölümler: "En iyi zaman önerileri", "Müşteri onayı", "Arka planda çalışma".
-     Takvim, düzenleyici, doğrulama ve kuyruk arayüzü bölümlerini D parçası yazar. -->
+[English](../planner.md)
+
+Planlayıcı, MetaDash'in içerik takvimidir: Instagram, Facebook Sayfaları ve Threads için gönderi planlayın, onaylatın ve yayımlayın. Yayımlama ek izinler ve Instagram görselleri ile Threads medyası için bir medya sunucusu gerektirir; bkz. [publishing-setup.md](publishing-setup.md). Düzenleyicideki yapay zekâ yardımı [ai-studio.md](ai-studio.md) dosyasında anlatılır.
+
+## Planlayıcıyı açmak
+
+Kenar çubuğundaki **Planlayıcı** (takvim simgesi) içerik takvimini açar. Araç çubuğunda hesap filtresi, genel platform filtresi (birden fazla platform izleniyorsa görünür) ve **Yeni gönderi** düğmesi bulunur. Ekranda beş sekme vardır:
+
+| Sekme | İçerik |
+| --- | --- |
+| **Takvim** | Zamanlanmış gönderilerin ay ya da hafta görünümü ve zamanı olmayan taslaklar için **Zamanlanmamış** listesi |
+| **Liste** | Tüm gönderiler; durum filtreleri, arama (başlık, metin ya da `P-0042` numarası) ve toplu durum değişikliği |
+| **Yayın kuyruğu** | Her hesabın yayın durumu, sonraki deneme, son hata, yeniden dene/iptal, günlük kota göstergeleri, duraklatma anahtarı ve kaçırılan gönderiler bandı |
+| **Onaylar** | İncelemedeki, değişiklik istenen ya da onaylanmış gönderiler; elle onay, onay paketi oluşturma ve müşteri yanıtını içe aktarma |
+| **Kayıt** | Her değişikliğin kaydı (kim, ne, ne zaman), en yenisi üstte |
+
+Doğrudan bağlantılar da çalışır; örneğin `#/planner?tab=queue&missed=1` (bildirimler ve tepsi kullanır) ya da `#/planner?post=12` (12 numaralı gönderiyi açar).
+
+## Takvim
+
+- **Ay** altı haftayı gösterir; her günde en fazla üç gönderi ve o haftayı açan "+n daha" bağlantısı vardır. **Hafta** 7 × 24 saatlik bir ızgaradır ve 08:00'e kaydırılmış açılır.
+- Gönderi kartında saat, platform işaretleri, duruma göre renkli bir çizgi, doğrulama hatası varsa kırmızı bir nokta ve gönderi Facebook'ta zamanlandıysa ✓ görünür ("Facebook'ta zamanlandı" bilgisayarınız kapalıyken de yayınlanır).
+- **Sürükle bırak:** gönderiyi başka bir güne (ay görünümünde saat korunur) ya da saate (hafta görünümünde bıraktığınız yere göre 15 dakikaya yuvarlanır) sürükleyin. Bırakırken **Alt/Option** basılıysa gönderi taşınmaz, kopyalanır. Geçmişe bırakmak reddedilir. Takvimdeki bir gönderiyi **Zamanlanmamış** alanına bırakmak zamanını kaldırır (zamanlanmış gönderilerde önce zamanlamayı kaldırın). Takvim hemen güncellenir, değişiklik başarısız olursa geri alınır.
+- **Klavye:** Tab ile bir gönderiye gelin; **Enter** açar, **R** yeniden zamanlama penceresini açar (tarih/saat, "taşımak yerine kopyala", zamanı kaldır), **Alt+←/→** bir gün, **Alt+↑/↓** 15 dakika taşır (**Shift** ile kopyalar).
+- **En iyi zamanlar:** tek bir hesap seçiliyken hafta görünümü önerilen saatleri renklendirir (paylaşım geçmişinize göre).
+- Gün ya da saat hücresindeki **+** o zamana yeni gönderi başlatır.
+
+## Gönderi düzenleyici
+
+Bir gönderiye (ya da **Yeni gönderi**'ye) tıklamak sağda düzenleyiciyi açar (dar pencerelerde tam genişlik).
+
+- **Hesaplar:** Instagram, Facebook Sayfası ve Threads hesaplarını istediğiniz gibi karıştırın. Her hesabın bir biçimi olur (Otomatik, medyaya göre seçer: tek görsel → görsel/fotoğraf, birden fazla → carousel/albüm, video → reels ya da video; değiştirebilirsiniz). Sayfalar için **Facebook'ta zamanla** anahtarı (Facebook gönderiyi kendisi yayınlar, bilgisayarınız kapalıyken de çalışır) ve Facebook bağlantı gönderileri için adres alanı vardır. Yayın izni olmayan hesaplar işaretlenir.
+- **Medya:** **Dosya ekle** ile seçin, Finder/Gezgin'den sürükleyin ya da bir görsel yapıştırın. Dosyalar MetaDash medya kitaplığına (`<veri klasörü>/planner-media`) kopyalanır; aynı dosya bir kez saklanır. Sürükleyerek ya da ← / → düğmeleriyle sıralayın, alternatif metin ekleyin, küçük resme tıklayarak boyut, çözünürlük, süre ve kodek bilgisiyle önizleyin. Sorunlu medyanın çerçevesi renklidir.
+- **Açıklama:** ortak bir açıklama ve ilk yorum, ayrıca her hesap için ayrı açıklama ya da ilk yorum sekmesi. Anlık sayaçlar karakterleri (emoji tek sayılır), hashtag'leri ve bahsetmeleri her platformun sınırıyla gösterir (Instagram 2.200 karakter / 30 hashtag / 20 bahsetme, Facebook 63.206, Threads 500 karakter / 1 konu etiketi / 5 bağlantı).
+- **Zamanlama:** bilgisayarınızın saat diliminde tarih ve saat, seçili hesaplar için en iyi zaman önerileri. Kaydedilmiş bir gönderinin zamanını değiştirmek hemen uygulanır.
+- **Kontroller:** gönderi siz yazarken doğrulanır (biçimler, medya sayısı ve boyutu, en-boy oranı, video süresi/kodeği, geçmiş zaman, eksik medya sunucusu ya da izin, kota, birbirine çok yakın gönderiler). Hatalar zamanlamayı engeller; uyarılar ve notlar engellemez.
+- **Önizleme:** her hesap için yaklaşık bir Instagram / Facebook / Threads görünümü.
+- **Yayınlayan:** [kendi sunucunuzdaki worker](worker.md) bağlıysa hesap başına *Bu bilgisayar* (varsayılan) veya *Worker*. Worker'a verilen gönderiler bilgisayarınız kapalıyken de yayımlanır.
+- **Kaydetme:** yeni gönderi **Taslağı kaydet** (Cmd/Ctrl+S) ya da ilk iş akışı adımıyla oluşturulur; sonrasında değişiklikler otomatik kaydedilir. Gönderi bu arada başka bir yerde değiştiyse bir uyarı bandı son hâli yüklemenizi ya da üzerine yazmanızı sağlar. Kaydedilmemiş yeni bir gönderiyi kapatırken onay istenir.
+- **Sonuçlar ve geçmiş:** kaydedilmiş gönderilerde ikinci sekme her hesabın yayın durumunu, canlı gönderi bağlantısını, yayın zamanını, deneme sayısını, sonraki denemeyi ve Meta hata kodu ile `fbtrace_id` içeren son hatayı (destek için yararlı) hesap başına **Yeniden dene** ve **İptal** ile gösterir; altında gönderinin geçmişi yer alır.
+
+## İş akışı
+
+Gönderi **Taslak → İncelemede → Onaylandı → Zamanlandı → Yayınlandı** yolunu izler. Düzenleyicinin alt çubuğu geçerli adımları gösterir:
+
+| Durum | İşlemler |
+| --- | --- |
+| Taslak | İncelemeye gönder, Zamanla (onay zorunlu değilse), Arşivle, Sil |
+| İncelemede | Onayla (isteğe bağlı onaylayan adı), Değişiklik iste (notla), Taslağa geri al |
+| Değişiklik istendi | İncelemeye gönder, Taslağa geri al |
+| Onaylandı | Zamanla, Taslağa geri al |
+| Zamanlandı | Zamanlamayı kaldır, Şimdi yayınla |
+| Başarısız / Kısmen yayınlandı | Yeniden dene |
+| Arşivlendi | Geri yükle |
+
+Her gönderi kopyalanabilir. **Planlamadan önce onay zorunlu olsun** açıkken (Ayarlar → Yayın) taslak doğrudan zamanlanamaz; onaylanmış ya da zamanlanmış bir gönderinin içeriğini değiştirmek onu incelemeye geri gönderir. Gönderiyi yalnızca zamanda taşımak onayı bozmaz.
+
+## Liste, kuyruk ve kayıt
+
+- **Liste:** satırları seçin (onay kutuları ya da Boşluk) ve toplu işlem çubuğuyla incelemeye gönderin, onaylayın, taslağa alın ya da arşivleyin. Adıma uygun olmayan gönderiler atlanır ve nedeni gösterilir.
+- **Yayın kuyruğu:** yayıncının sıradaki işlerini gösterir. **Yayın açık/kapalı** tüm yayınları duraklatır. MetaDash kapalıyken zamanı gelen gönderiler bir bantta **Şimdi yayınla**, **Yeniden zamanla** (seçtiğiniz zamana) ve **Atla** seçenekleriyle listelenir.
+- **Kayıt:** tüm değişiklik geçmişi; **Daha fazla yükle** daha eskilerini getirir.
+
+Planlayıcı her iki temada ve tüm arayüz dillerinde çalışır.
 
 ## En iyi zaman önerileri
 
@@ -55,65 +117,3 @@ MetaDash'in kendisinin gönderdiği gönderiler (Instagram, Threads ve uygulama 
 - *Bana sor* (varsayılan): bir bildirim alırsınız; Kuyruk sekmesi Şimdi yayınla, Yeniden planla veya Atla seçeneklerini sunar.
 - *Geç de olsa yayınla*: en fazla *En fazla gecikme* dakika geciken gönderiler yayınlanır.
 - *Atla*: gönderiler kaçırıldı olarak işaretlenir.
-
-<!-- Planlayıcı arayüz bölümleri: v1.4 chunk D. Tepsi / arka plan ve onay paketi bölümleri ayrıca yazılır (chunk C). -->
-
-## Planlayıcıyı açmak
-
-Kenar çubuğundaki **Planlayıcı** (takvim simgesi) içerik takvimini açar. Araç çubuğunda hesap filtresi, genel platform filtresi (Tümü / Instagram / Facebook / Threads; birden fazla platform izleniyorsa görünür) ve **Yeni gönderi** düğmesi bulunur. Ekranda beş sekme vardır:
-
-| Sekme | İçerik |
-| --- | --- |
-| **Takvim** | Zamanlanmış gönderilerin ay ya da hafta görünümü ve zamanı olmayan taslaklar için **Zamanlanmamış** listesi |
-| **Liste** | Tüm gönderiler; durum filtreleri, arama (başlık, metin ya da `P-0042` numarası) ve toplu durum değişikliği |
-| **Yayın kuyruğu** | Her hesabın yayın durumu, sonraki deneme, son hata, yeniden dene/iptal, günlük kota göstergeleri, duraklatma anahtarı ve kaçırılan gönderiler bandı |
-| **Onaylar** | İncelemedeki, değişiklik istenen ya da onaylanmış gönderiler; elle onay, onay paketi oluşturma ve müşteri yanıtını içe aktarma |
-| **Kayıt** | Her değişikliğin kaydı (kim, ne, ne zaman), en yenisi üstte |
-
-Doğrudan bağlantılar da çalışır; örneğin `#/planner?tab=queue&missed=1` (bildirimler ve tepsi kullanır) ya da `#/planner?post=12` (12 numaralı gönderiyi açar).
-
-## Takvim
-
-- **Ay** altı haftayı gösterir; her günde en fazla üç gönderi ve o haftayı açan "+n daha" bağlantısı vardır. **Hafta** 7 × 24 saatlik bir ızgaradır ve 08:00'e kaydırılmış açılır.
-- Gönderi kartında saat, platform işaretleri, duruma göre renkli bir çizgi, doğrulama hatası varsa kırmızı bir nokta ve gönderi Facebook'ta zamanlandıysa ✓ görünür ("Facebook'ta zamanlandı" bilgisayarınız kapalıyken de yayınlanır).
-- **Sürükle bırak:** gönderiyi başka bir güne (ay görünümünde saat korunur) ya da saate (hafta görünümünde bıraktığınız yere göre 15 dakikaya yuvarlanır) sürükleyin. Bırakırken **Alt/Option** basılıysa gönderi taşınmaz, kopyalanır. Geçmişe bırakmak reddedilir. Takvimdeki bir gönderiyi **Zamanlanmamış** alanına bırakmak zamanını kaldırır (zamanlanmış gönderilerde önce zamanlamayı kaldırın). Takvim hemen güncellenir, değişiklik başarısız olursa geri alınır.
-- **Klavye:** Tab ile bir gönderiye gelin; **Enter** açar, **R** yeniden zamanlama penceresini açar (tarih/saat, "taşımak yerine kopyala", zamanı kaldır), **Alt+←/→** bir gün, **Alt+↑/↓** 15 dakika taşır (**Shift** ile kopyalar).
-- **En iyi zamanlar:** tek bir hesap seçiliyken hafta görünümü önerilen saatleri renklendirir (paylaşım geçmişinize göre).
-- Gün ya da saat hücresindeki **+** o zamana yeni gönderi başlatır.
-
-## Gönderi düzenleyici
-
-Bir gönderiye (ya da **Yeni gönderi**'ye) tıklamak sağda düzenleyiciyi açar (dar pencerelerde tam genişlik).
-
-- **Hesaplar:** Instagram, Facebook Sayfası ve Threads hesaplarını istediğiniz gibi karıştırın. Her hesabın bir biçimi olur (Otomatik, medyaya göre seçer: tek görsel → görsel/fotoğraf, birden fazla → carousel/albüm, video → reels ya da video; değiştirebilirsiniz). Sayfalar için **Facebook'ta zamanla** anahtarı (Facebook gönderiyi kendisi yayınlar, bilgisayarınız kapalıyken de çalışır) ve Facebook bağlantı gönderileri için adres alanı vardır. Yayın izni olmayan hesaplar işaretlenir.
-- **Medya:** **Dosya ekle** ile seçin, Finder/Gezgin'den sürükleyin ya da bir görsel yapıştırın. Dosyalar MetaDash medya kitaplığına (`<veri klasörü>/planner-media`) kopyalanır; aynı dosya bir kez saklanır. Sürükleyerek ya da ← / → düğmeleriyle sıralayın, alternatif metin ekleyin, küçük resme tıklayarak boyut, çözünürlük, süre ve kodek bilgisiyle önizleyin. Sorunlu medyanın çerçevesi renklidir.
-- **Açıklama:** ortak bir açıklama ve ilk yorum, ayrıca her hesap için ayrı açıklama ya da ilk yorum sekmesi. Anlık sayaçlar karakterleri (emoji tek sayılır), hashtag'leri ve bahsetmeleri her platformun sınırıyla gösterir (Instagram 2.200 karakter / 30 hashtag / 20 bahsetme, Facebook 63.206, Threads 500 karakter / 1 konu etiketi / 5 bağlantı).
-- **Zamanlama:** bilgisayarınızın saat diliminde tarih ve saat, seçili hesaplar için en iyi zaman önerileri. Kaydedilmiş bir gönderinin zamanını değiştirmek hemen uygulanır.
-- **Kontroller:** gönderi siz yazarken doğrulanır (biçimler, medya sayısı ve boyutu, en-boy oranı, video süresi/kodeği, geçmiş zaman, eksik medya sunucusu ya da izin, kota, birbirine çok yakın gönderiler). Hatalar zamanlamayı engeller; uyarılar ve notlar engellemez.
-- **Önizleme:** her hesap için yaklaşık bir Instagram / Facebook / Threads görünümü.
-- **Kaydetme:** yeni gönderi **Taslağı kaydet** (Cmd/Ctrl+S) ya da ilk iş akışı adımıyla oluşturulur; sonrasında değişiklikler otomatik kaydedilir. Gönderi bu arada başka bir yerde değiştiyse bir uyarı bandı son hâli yüklemenizi ya da üzerine yazmanızı sağlar. Kaydedilmemiş yeni bir gönderiyi kapatırken onay istenir.
-- **Sonuçlar ve geçmiş:** kaydedilmiş gönderilerde ikinci sekme her hesabın yayın durumunu, canlı gönderi bağlantısını, yayın zamanını, deneme sayısını, sonraki denemeyi ve Meta hata kodu ile `fbtrace_id` içeren son hatayı (destek için yararlı) hesap başına **Yeniden dene** ve **İptal** ile gösterir; altında gönderinin geçmişi yer alır.
-
-## İş akışı
-
-Gönderi **Taslak → İncelemede → Onaylandı → Zamanlandı → Yayınlandı** yolunu izler. Düzenleyicinin alt çubuğu geçerli adımları gösterir:
-
-| Durum | İşlemler |
-| --- | --- |
-| Taslak | İncelemeye gönder, Zamanla (onay zorunlu değilse), Arşivle, Sil |
-| İncelemede | Onayla (isteğe bağlı onaylayan adı), Değişiklik iste (notla), Taslağa geri al |
-| Değişiklik istendi | İncelemeye gönder, Taslağa geri al |
-| Onaylandı | Zamanla, Taslağa geri al |
-| Zamanlandı | Zamanlamayı kaldır, Şimdi yayınla |
-| Başarısız / Kısmen yayınlandı | Yeniden dene |
-| Arşivlendi | Geri yükle |
-
-Her gönderi kopyalanabilir. **Planlamadan önce onay zorunlu olsun** açıkken (Ayarlar → Yayın) taslak doğrudan zamanlanamaz; onaylanmış ya da zamanlanmış bir gönderinin içeriğini değiştirmek onu incelemeye geri gönderir. Gönderiyi yalnızca zamanda taşımak onayı bozmaz.
-
-## Liste, kuyruk ve kayıt
-
-- **Liste:** satırları seçin (onay kutuları ya da Boşluk) ve toplu işlem çubuğuyla incelemeye gönderin, onaylayın, taslağa alın ya da arşivleyin. Adıma uygun olmayan gönderiler atlanır ve nedeni gösterilir.
-- **Yayın kuyruğu:** yayıncının sıradaki işlerini gösterir. **Yayın açık/kapalı** tüm yayınları duraklatır. MetaDash kapalıyken zamanı gelen gönderiler bir bantta **Şimdi yayınla**, **Yeniden zamanla** (seçtiğiniz zamana) ve **Atla** seçenekleriyle listelenir.
-- **Kayıt:** tüm değişiklik geçmişi; **Daha fazla yükle** daha eskilerini getirir.
-
-Planlayıcı her iki temada ve Türkçe/İngilizce çalışır.

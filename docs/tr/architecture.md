@@ -2,7 +2,7 @@
 
 [English](../architecture.md)
 
-MetaDash tek kullanıcılı bir Electron masaüstü uygulamasıdır. Arka uç sunucusu yoktur: main process Meta Graph API'yi doğrudan çağırır, her şeyi yerel bir SQLite veritabanında saklar ve türetilmiş verileri IPC üzerinden React renderer'a sunar.
+MetaDash tek kullanıcılı bir Electron masaüstü uygulamasıdır. MetaDash'e ait bir arka uç sunucusu yoktur: main process platform API'lerini (Meta Graph API, Threads API, YouTube Data ve Analytics API'leri, TikTok Display API) doğrudan çağırır, her şeyi yerel bir SQLite veritabanında saklar ve türetilmiş verileri IPC üzerinden React renderer'a sunar. Masaüstü uygulamasının dışındaki bileşenler yalnızca isteğe bağlı [kendi sunucunuzdaki worker](worker.md) ve [ekip klasörüdür](team.md); ikisini de siz çalıştırırsınız.
 
 ```
 ┌──────────────────────── Renderer (sandbox içinde) ─────────────────────────┐
@@ -15,8 +15,9 @@ MetaDash tek kullanıcılı bir Electron masaüstü uygulamasıdır. Arka uç su
 │ Main process (Node, ES modülleri)                                          │
 │ ipc/*.handlers.js ──► analytics/ ──► db/queries/ ──► better-sqlite3 (WAL)  │
 │        │                                                ▲                  │
-│        ├──► sync/orchestrator ──► sync/jobs ──► meta/client ──► graph.facebook.com
-│        │         (p-queue)                  (yeniden deneme, hız sınırlayıcı)│
+│        ├──► sync/orchestrator ──► sync/jobs ──► providers/<platform> ──► platform API'leri
+│        │      (p-queue, kilit)        (yeniden deneme, hız sınırları, kota)│
+│        ├──► publishing/ · inbox/ · ai/ · team/ · worker/ (istemci)         │
 │        └──► export/ (HTML, PDF, Excel, CSV, veri taşıma)                   │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -35,7 +36,7 @@ Kapanışta zamanlayıcıyı durdurur ve veritabanını kapatır. `METADASH_SMOK
 
 ### Preload (`src/main/preload.cjs`)
 
-Preload betiği iki dünya arasındaki tek köprüdür. `contextBridge.exposeInMainWorld('api', …)` ile sabit, isim alanlarına bölünmüş bir API açar (`setup`, `accounts`, `tags`, `notes`, `sync`, `analytics`, `ads`, `competitors`, `export`, `system`, `db`, `settings`, `sql`, `transfer`); her metot tam olarak bir IPC kanalına karşılık gelir. Olay aboneliği (`api.on`) bir izin listesiyle sınırlıdır: `sync:progress`, `sync:done`, `token:warning`. Preload ayrıca grafik SVG'lerini canvas üzerinde PNG'ye dönüştürüp kaydedilmek üzere main process'e iletir.
+Preload betiği iki dünya arasındaki tek köprüdür. `contextBridge.exposeInMainWorld('api', …)` ile sabit, isim alanlarına bölünmüş bir API açar (`setup`, `platforms`, `accounts`, `tags`, `notes`, `sync`, `analytics`, `ads`, `competitors`, `export`, `system`, `db`, `settings`, `sql`, `update`, `ai`, `planner`, `publishing`, `studio`, `inbox`, `worker`, `team`, `session`, `cli`, `app`, `transfer`); her metot tam olarak bir IPC kanalına karşılık gelir. Olay aboneliği (`api.on`) bir izin listesiyle sınırlıdır: `sync:progress`, `sync:done`, `token:warning`, `update:status`, `app:navigate`, `planner:changed`, `publish:progress`, `publish:missed`, `studio:progress`, `studio:changed`, `inbox:updated`, `worker:status`, `team:status`, `session:changed`. Preload ayrıca grafik SVG'lerini canvas üzerinde PNG'ye dönüştürüp kaydedilmek üzere main process'e iletir.
 
 ### Renderer (`src/renderer`)
 
@@ -43,15 +44,17 @@ Vite ile `dist/renderer`'a derlenen bir React 18 tek sayfa uygulamasıdır; üre
 
 | Dizin | İçerik |
 | --- | --- |
-| `routes/` | Her ekran için bir klasör: Overview, Account, Content, Compare, Ads, Competitors, Reports, Presentation, Settings, Setup |
+| `routes/` | Her ekran için bir klasör: Overview, Account, Content, Compare, Ads, Competitors, Reports, Presentation, Planner, Studio, Inbox, Ask, Settings, Setup |
 | `components/` | Yerleşim, veri tablosu, gönderi kartı/paneli, dönem seçici, Excel/PDF düğmeleri, arayüz bileşenleri |
 | `charts/` | Grafik sarmalayıcı (PNG dışa aktarım), zaman serisi, ısı haritası, yaşam eğrisi, sparkline, çubuk liste |
 | `hooks/` | `queries.ts` (her IPC çağrısı için TanStack Query hook'ları), `useSyncEvents.ts` (ilerleme olayları) |
-| `lib/` | `api.ts` (zarf çözme), `i18n.ts`, biçimlendirme, reklam metriği tanımları, tipler, `platforms.ts` (platform adları, yedek yetenek tablosu, içerik türleri, profil adresleri), `accountKpis.ts` (platforma göre KPI kutuları ve grafik serileri) |
+| `platforms/` | Platform başına arayüz sözlüğü (ad, simge, KPI kutuları, grafikler, içerik türleri) |
+| `locales/` | `<dil>/<ad-alanı>.json` biçiminde arayüz metinleri ve `keys.ts` (anahtar tipi) |
+| `lib/` | `api.ts` (zarf çözme), `i18n.ts` (`t()` / `useT()`), biçimlendirme, reklam metriği tanımları, tipler, `platforms.ts` (platform adları, yedek yetenek tablosu, içerik türleri, profil adresleri), `accountKpis.ts` (platforma göre KPI kutuları ve grafik serileri) |
 
 **Platforma duyarlı arayüz (v1.3).** Renderer, bir platformun neyi gösterebildiğini koda gömmez; `platforms:list` kanalına sorar (`hooks/usePlatforms.ts`: `usePlatforms`, `usePlatformCaps`, `useActivePlatforms`, `usePlatformScope`) ve yanıt gelmeden önce `providers/capabilities.js` ile aynı sabit yetenek tablosunu kullanır.
 
-- `components/PlatformFilter.tsx`: Genel Bakış ve İçerik ekranlarında Tümü / Instagram / Facebook / Threads seçimi. Yalnızca takip edilen hesabı olan platformlar listelenir; tek platform varken bileşen gizlenir. Seçim Zustand store'da tutulur ve `ui.platformFilter` ayarı olarak saklanır; `usePlatformScope()` bunu takip edilen platformlarla kesiştirir (boş = tümü), `usePortfolio()` da `platforms` olarak iletir.
+- `components/PlatformFilter.tsx`: Genel Bakış, İçerik ve Planlayıcı ekranlarında Tümü seçimi ve takip edilen her platform (Instagram, Facebook, Threads, YouTube, TikTok) için bir seçim. Yalnızca takip edilen hesabı olan platformlar listelenir; tek platform varken bileşen gizlenir. Seçim Zustand store'da tutulur ve `ui.platformFilter` ayarı olarak saklanır; `usePlatformScope()` bunu takip edilen platformlarla kesiştirir (boş = tümü), `usePortfolio()` da `platforms` olarak iletir.
 - `components/PlatformBadge.tsx` ve `Avatar` bileşeninin `platform` özelliği (Facebook/Threads avatarlarında köşe işareti; birden fazla platform takip edilirken Instagram avatarlarında da).
 - Eksik yetenekler "—" ve "… için mevcut değil" ipucuyla gösterilir (Facebook/Threads'te kaydetme oranı, Threads'te erişim) ya da tamamen gizlenir. Hesap sekmeleri yeteneklere göre açılır (Instagram: tüm sekmeler; Facebook: genel bakış/gönderiler/reklamlar; Threads: genel bakış/gönderiler/demografi). Karşılaştır ekranı karışık platformlar için uyarır ve kaydetme oranını devre dışı bırakır; Raporlar seçili hesapların hiçbirinin desteklemediği bölümleri soluk gösterir; Sunum, reklamı olmayan platformlarda reklam slaytlarını çıkarır.
 - Kurulum yedi adımdır: Hoş geldiniz, Meta uygulaması, token (`read_insights` izninin yalnızca Facebook Sayfaları için gerektiği belirtilir), hesaplar (`setup:facebook:*` ile isteğe bağlı **Facebook Sayfaları** listesiyle), reklam hesapları, isteğe bağlı **Threads** adımı (`setup:threads:*`) ve ilk senkronizasyon. Saklanan `setupStep` 0 tabanlıdır (5 = Threads, 6 = ilk senkronizasyon). **Ayarlar → Bağlantılar** Facebook Sayfası listesini ve Threads bağla/yenile/bağlantıyı kes denetimlerini içerir; `token:warning` bantları ilgili yere yönlendirir (`meta` → Kurulum adım 3, `threads` → Ayarlar → Bağlantılar).
@@ -69,16 +72,17 @@ handle(channel, async (payload, event) => data)
 
 - Sarmalayıcı her istisnayı yakalar, kanal adıyla loglar ve `toUserError()` (`src/main/meta/errors.js`) ile yerelleştirilmiş, kullanıcıya yönelik bir mesaja ve isteğe bağlı bir ipucuna (örn. hangi iznin eksik olduğu) dönüştürür. Ham yığın izleri arayüze ulaşmaz.
 - Renderer tarafında `src/renderer/lib/api.ts` içindeki `call()` zarfı açar ve TanStack Query'nin gösterebilmesi için `ApiCallError` fırlatır.
-- İşleyiciler `src/main/ipc/*.handlers.js` altında alana göre gruplanmıştır: setup, accounts (etiketler ve notlar dahil), sync, analytics, ads, export, system (ayarlar, yedekleme/geri yükleme, veri taşıma, SQL konsolu), competitors, platforms (`platforms:list`) ve platform kurulumları (`setup.facebook.handlers.js`, `setup.threads.handlers.js`).
-- Anlık olaylar (`sync:progress`, `sync:done`, `token:warning`) dahili bir `progressBus` üzerinden yayılır ve tüm pencerelere iletilir.
+- İşleyiciler `src/main/ipc/*.handlers.js` altında alana göre gruplanmıştır: setup, accounts (etiketler ve notlar dahil), sync, analytics, ads, export, system (ayarlar, yedekleme/geri yükleme, veri taşıma, SQL konsolu), competitors, platforms (`platforms:list`), update, AI, planner, publishing, studio, inbox, worker, team, session, CLI, app ve platform kurulumları (`setup.facebook`, `setup.threads`, `setup.youtube`, `setup.tiktok`).
+- Anlık olaylar (yukarıdaki izin listesi) dahili bir `progressBus` üzerinden yayılır ve tüm pencerelere iletilir.
 
 ## Veritabanı
 
 - **Motor:** better-sqlite3 (senkron, native). `src/main/db/index.js` içinde `journal_mode = WAL`, `foreign_keys = ON`, `synchronous = NORMAL` ile tek bağlantı açılır.
 - **Konum:** `<userData>/data.db`. `src/main/paths.js`, Electron'un `userData` çözümlemesini taklit eder; böylece komut satırı betikleri (örn. `ELECTRON_RUN_AS_NODE=1` ile çalışan `scripts/seed.js`) aynı dosyayı kullanır.
 - **Migration'lar:** `src/main/db/migrations/` altında numaralı SQL dosyaları (`001_init.sql`, `002_ad_breakdowns.sql`, …). Açılışta, sayısal öneki `schema_version` tablosunda olmayan her dosya kendi transaction'ı içinde çalıştırılır ve kaydedilir. Migration'lar yalnızca ileri yönlüdür; şemayı değiştirmek için bir sonraki numarayla yeni dosya ekleyin.
-- **Sorgular:** `src/main/db/queries/*.js`, alan bazında hazırlanmış sorguları sarmalar (accounts, media, stories, ads, competitors, profiles, settings, sync, tags). Küçük `q` yardımcısı `all/get/run/tx` sunar.
-- **Başlıca tablolar:** `settings` (şifreli sırlar dahil JSON kodlu anahtar/değerler), `profiles`, `accounts`, `tags`/`account_tags`, `account_snapshots` (günlük takipçi sayıları), `account_insights_daily`, `account_demographics`, `media`, `media_insight_snapshots` (gönderi başına zaman serisi, yaşam eğrileri için), `media_latest`, `stories`, `comments`, `competitors`/`competitor_snapshots`, `ad_accounts`, `ad_insights_daily`, `ad_insights_breakdown`, `ad_media_links` (reklam → Instagram gönderisi), `ad_budget_overrides`, `sync_runs`, `sync_errors`, `disabled_metrics`, `metric_resolution` (Facebook/Threads için çalışan metrik adları, v1.3), `notes`.
+- **Sorgular:** `src/main/db/queries/*.js`, alan bazında hazırlanmış sorguları sarmalar (accounts, media, stories, ads, competitors, profiles, settings, sync, tags, planner, inbox, quota, …). Küçük `q` yardımcısı `all/get/run/tx` sunar.
+- **Eşzamanlılık:** bağlantı 5 sn `busy_timeout` kullanır ve senkronizasyon `locks` tablosunda süreçler arası bir kilit alır; böylece CLI uygulamayla yan yana çalışabilir.
+- **Başlıca tablolar:** `settings` (şifreli sırlar dahil JSON kodlu anahtar/değerler), `profiles`, `accounts`, `tags`/`account_tags`, `account_snapshots` (günlük takipçi sayıları), `account_insights_daily`, `account_demographics`, `media`, `media_insight_snapshots` (gönderi başına zaman serisi, yaşam eğrileri için), `media_latest`, `stories`, `comments`, `competitors`/`competitor_snapshots`, `ad_accounts`, `ad_insights_daily`, `ad_insights_breakdown`, `ad_media_links` (reklam → Instagram gönderisi), `ad_budget_overrides`, `sync_runs`, `sync_errors`, `disabled_metrics`, `metric_resolution` (platform başına çalışan metrik adları, v1.3), `notes`. Sonraki migration'lar planlayıcı ve yayımlama (009), yapay zekâ stüdyosu ve kullanım (010), çoklu profil kimlik doğrulaması, kota ve kilitler (011), gelen kutusu (012), ekip (013) ve worker (014) tablolarını ekler.
 
 ## Meta entegrasyonu (`src/main/meta`)
 
@@ -101,22 +105,22 @@ v1.3'ten itibaren her sosyal platform tek bir arayüzün arkasındaki bir *sağl
 
 | Modül | Sorumluluk |
 | --- | --- |
-| `index.js` | Kayıt: `listProviders()` (etkin sağlayıcılar, Instagram → Facebook → Threads sırasıyla), `getProvider(platform)`. Taslak sağlayıcılar (`{ platform, enabled: false }`) atlanır. |
-| `types.js` | JSDoc sözleşmesi (`Provider`, `SyncContext`, `Post`, …): `discover`, `prepare?`, `fetchProfile`, `fetchPosts`, `fetchPostInsights`, `fetchDailyInsights`, `fetchDemographics?`, `fetchComments?`, `skipInsights?`, `maintenance?`, `dailyWindow`, `concurrency`, `auth` (`meta` / `threads`). |
-| `capabilities.js` | Platform yetenekleri (erişim, kaydetme oranı, hikâyeler, demografi, rakipler, yorumlar, reklamlar), birincil metrik (`reach`, Threads için `views`) ve hesap anahtarı yardımcıları. `platforms:list` ile renderer'a açılır. |
+| `index.js` | Kayıt: `listProviders()` (etkin sağlayıcılar, Instagram → Facebook → Threads → YouTube → TikTok sırasıyla), `getProvider(platform)`. Taslak sağlayıcılar (`{ platform, enabled: false }`) atlanır. |
+| `types.js` | JSDoc sözleşmesi (`Provider`, `SyncContext`, `Post`, …): `discover`, `prepare?`, `fetchProfile`, `fetchPosts`, `fetchPostInsights`, `fetchDailyInsights`, `fetchDemographics?`, `fetchComments?`, `skipInsights?`, `maintenance?`, `refreshToken?`, `inbox?`, `demo?`, `dailyWindow`, `concurrency`, `auth`. Bkz. [providers.md](providers.md). |
+| `capabilities.js` | Her sağlayıcının `meta.js` dosyasından türetilir: yetenekler (erişim, kaydetme oranı, hikâyeler, demografi, rakipler, yorumlar, reklamlar, gelen kutusu, izlenme süresi, günlük seri, deneysel), birincil metrik (`reach`; Threads, YouTube ve TikTok için `views`) ve hesap anahtarı yardımcıları. `platforms:list` ile renderer'a açılır. |
 | `shared/insights.js` | Genel günlük `/insights` döngüsü (önce zaman serisi, yalnızca `total_value` sunulan metrikler gün gün, desteklenmeyenler düşürülür). |
 | `shared/metricFallback.js` | Kanonik metrik → aday API adları; çalışan ad `metric_resolution` tablosuna yazılır, tüm adayları biten metrik desteklenmiyor olarak işaretlenir. |
 | `shared/metaPages.js` | Instagram ve Facebook keşfinin paylaştığı Facebook Sayfası taraması (`/me/accounts` + Business Manager sayfaları). |
 | `shared/tiers.js` | Gönderi istatistiği yenileme kademeleri (`needsRefresh`). |
-| `instagram/` | Instagram sağlayıcısı (`api.js`, `stories.js`, `metrics.js`). `facebook/` ve `threads/` diğer sağlayıcıları barındırır. |
+| `instagram/` | Instagram sağlayıcısı (`api.js`, `stories.js`, `metrics.js`). `facebook/`, `threads/`, `youtube/` ve `tiktok/` diğer sağlayıcıları barındırır; `_template/` yeni sağlayıcılar için bir iskelettir. |
 
-Tüm platformların hesapları `accounts` tablosundadır; `ig_id` sütunu *hesap anahtarıdır* (ham Instagram kimliği, `fb-<pageId>`, `th-<userId>`), `external_id` ise ham API kimliğidir. `profiles.platform` Meta ve Threads bağlantılarını ayırır.
+Tüm platformların hesapları `accounts` tablosundadır; `ig_id` sütunu *hesap anahtarıdır* (ham Instagram kimliği, `fb-<pageId>`, `th-<userId>`, `yt-<channelId>`, `tt-<id>`), `external_id` ise ham API kimliğidir. `profiles.platform` bağlantıları ayırır; YouTube ve TikTok'ta her kanal ya da hesabın kendi profili (ve token'ı) vardır.
 
 ## Senkronizasyon
 
 ### Orkestratör (`src/main/sync/orchestrator.js`)
 
-`runSync({ scope, igIds, platforms })`, `scope` = `full | organic | stories | ads | competitors`:
+`runSync({ scope, igIds, platforms })`, `scope` = `full | organic | stories | ads | competitors | inbox`:
 
 1. Takip edilen hesaplardan, takip edilen reklam hesaplarından ve rakiplerden iş listesini oluşturur (isteğe bağlı olarak `igIds` ile daraltılır).
 2. Bir `sync_runs` satırı açar ve her hesap için bir işi ayrı [p-queue](https://github.com/sindresorhus/p-queue) kuyruklarına ekler:
@@ -129,9 +133,9 @@ Tüm platformların hesapları `accounts` tablosundadır; `ig_id` sütunu *hesap
    | competitors | 1 |
 
 3. `sync:progress` (aşama, geçerli hesap, tamamlanan/toplam, API çağrısı) ve sonunda `sync:done` olaylarını yayar. Çalışma `ok`, `partial` (bazı işlerde hata; `sync_errors`'a yazılır) veya `failed` olarak biter.
-4. Meta token hatası (190/102) tüm çalışmayı durdurur ve `platform: 'meta'` ile `token:warning` yayar; Threads token hatası yalnızca kalan Threads işlerini atlar (`platform: 'threads'` ile `token:warning`, `sync:done.invalidAuth`). Ağ hatası çalışmayı iptal eder, mevcut veriler olduğu gibi kalır. `cancelSync()` bir `AbortController` ile iptal eder ve kuyrukları boşaltır.
+4. Meta token hatası (190/102) tüm çalışmayı durdurur ve `platform: 'meta'` ile `token:warning` yayar; Threads, YouTube veya TikTok token hatası yalnızca o bağlantının kalan işlerini atlar (platformla birlikte `token:warning`, `sync:done.invalidAuth`). YouTube kota hatası yalnızca o günün YouTube işlerini durdurur. Ağ hatası çalışmayı iptal eder, mevcut veriler olduğu gibi kalır. `cancelSync()` bir `AbortController` ile iptal eder ve kuyrukları boşaltır.
 
-Aynı anda yalnızca bir senkronizasyon çalışır. Etkin profil demo profiliyse `sync/demo.js` aşamaları ağ çağrısı yapmadan simüle eder ve demo veri kümesini bir gün ileri alır.
+Uygulama ve CLI süreçleri genelinde aynı anda yalnızca bir senkronizasyon çalışır (`locks` tablosundaki kilit). Etkin profil demo profiliyse `sync/demo.js` aşamaları ağ çağrısı yapmadan simüle eder ve demo veri kümesini bir gün ileri alır.
 
 ### İşler (`src/main/sync/jobs`)
 
@@ -143,7 +147,7 @@ Aynı anda yalnızca bir senkronizasyon çalışır. Etkin profil demo profiliys
 
 ### Zamanlayıcı (`src/main/sync/scheduler.js`)
 
-Her döngü önce tüm sağlayıcıların `maintenance()` kancasını çalıştırır (ör. Threads token yenileme).
+Her döngü önce tüm sağlayıcıların `maintenance()` kancasını çalıştırır (ör. Threads token yenileme). Gelen kutusu yoklaması (`inbox` kapsamı, varsayılan olarak 30 dakikada bir) kendi zamanlayıcısıyla çalışır ve başka bir senkronizasyon sürerken atlanır.
 
 Uygulama açıkken 15 dakikalık bir döngü; son story senkronizasyonu `storyIntervalHours`'tan (varsayılan 4, `0` kapatır) eskiyse story senkronizasyonu, `autoSyncDaily` açıksa günde bir tam senkronizasyon çalıştırır. Arayüz ayrıca son başarılı senkronizasyon 20 saatten eskiyse güncelleme önerir.
 
@@ -170,7 +174,7 @@ Tüm analizler main process'te SQLite'tan hesaplanır ve IPC ile döndürülür.
 | `pdf.js` | Aynı HTML'i gizli, sandbox'lı bir `BrowserWindow`'da açıp `printToPDF` (A4) çağırır. |
 | `xlsxReport.js`, `xlsx.js` | exceljs ile çok sayfalı Excel çalışma kitapları (özet, günlük seri, gönderiler, tür/hashtag, story, demografi, reklamlar). |
 | `tablePdf.js` | Ekrandaki herhangi bir tabloyu yatay A4 PDF'e çevirir. |
-| `reportI18n.js` | Arayüz dilinden bağımsız, `[tr, en]` çiftleri hâlinde rapor metinleri. |
+| `reportI18n.js` | `makeL(lang)`: arayüz dilinden bağımsız olarak `report` ad alanından rapor metinleri. |
 | `csv.js` | Hazır CSV dışa aktarımları ve salt okunur SQL konsolu. Sorgular `SELECT`/`WITH` ile başlamalıdır; yazma/DDL anahtar kelimeleri (`insert`, `update`, `delete`, `drop`, `alter`, `create`, `attach`, `pragma`, …) reddedilir. |
 
 ## Yedekleme, geri yükleme ve veri taşıma
@@ -189,20 +193,22 @@ Tüm analizler main process'te SQLite'tan hesaplanır ve IPC ile döndürülür.
 
 ## Uluslararasılaştırma
 
-| Katman | Dosya | Biçim |
+| Katman | Dosyalar | Erişim |
 | --- | --- | --- |
-| Renderer arayüzü | `src/renderer/lib/i18n.ts` | `key: [tr, en]` |
-| Raporlar | `src/main/export/reportI18n.js` | `key: [tr, en]` |
-| Main process mesajları (hatalar, diyaloglar) | `src/main/i18n.js` | `key: [en, tr]` |
+| Renderer arayüzü | `src/renderer/locales/<dil>/<ad-alanı>.json` | `src/renderer/lib/i18n.ts` içindeki `t()` / `useT()` |
+| Main process mesajları (hatalar, diyaloglar) | `src/main/locales/<dil>/<ad-alanı>.json` | `src/main/i18n.js` içindeki `msg()` |
+| Raporlar ve onay paketleri | `src/main/locales/<dil>/report.json`, `approval.json` | `src/main/export/reportI18n.js` içindeki `makeL(lang)` |
+| Dil listesi | `src/main/locales/index.json` | kod, yerel ad, Intl yerel ayarı, `partial` işareti |
 
-Arayüz dili varsayılan olarak İngilizcedir ve `lang` ayarında saklanır. Raporlar kendi `lang` parametresini alır.
+Kaynak ve yedek dil İngilizcedir: İngilizce ve Türkçe eksiksizdir, Almanca ve İspanyolca kısmidir. Arayüz dili varsayılan olarak İngilizcedir ve `lang` ayarında saklanır; raporlar kendi `lang` parametresini alır. `npm run i18n:check` anahtarları ve yer tutucuları doğrular. Bkz. [translating.md](translating.md).
 
 ## Güvenlik modeli
 
 - **Pencere:** `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`. Renderer yalnızca preload API'sini görür.
-- **Content Security Policy** (`src/renderer/index.html`): `default-src 'self'`, `script-src 'self'`; görsellere `https:` ve `data:` kaynaklarından izin verilir (Meta CDN küçük resimleri ve profil fotoğrafları); `connect-src` yalnızca yerel Vite geliştirme sunucusuna izin verir.
+- **Content Security Policy** (`src/renderer/index.html`): `default-src 'self'`, `script-src 'self'`; görsellere `https:` ve `data:` (platform CDN küçük resimleri ve profil fotoğrafları) ile `mdmedia:` (yerel medya kitaplığının özel protokolü) kaynaklarından izin verilir; `connect-src` paketlenmiş sürümlerde yalnızca `'self'`e izin verir (yerel Vite geliştirme sunucusuna yalnızca geliştirmede izin verilir).
 - **Gezinme:** `setWindowOpenHandler` tüm yeni pencereleri reddeder; `http(s)` bağlantıları sistem tarayıcısında açılır. `system:openExternal` http(s) dışındaki adresleri reddeder.
-- **Ağ:** yalnızca main process istek yapar: `graph.facebook.com`'a ve kurulu sürümlerde güncelleme denetimi için GitHub'a (`api.github.com` / `github.com` sürüm indirmeleri); bu denetim Ayarlar'dan kapatılabilir. Telemetri yoktur.
+- **Ağ:** yalnızca main process istek yapar ve yalnızca sizin kurduğunuz hizmetlere: bağladığınız platform API'leri (`graph.facebook.com` ve yükleme sunucuları, `graph.threads.net`, Google OAuth, YouTube Data ve Analytics API'leri, `open.tiktokapis.com`), yayımlarken medya sunucunuz, yapay zekâ açık ve kullanılıyorken yapay zekâ sağlayıcınız, eşleştirildiyse kendi worker'ınız ve kurulu sürümlerde güncelleme denetimi için GitHub (`api.github.com` / `github.com` sürüm indirmeleri); bu denetim Ayarlar'dan kapatılabilir. Telemetri yoktur. Tam liste README'de [Veri ve gizlilik](../../README.tr.md#veri-ve-gizlilik) bölümündedir.
+- **OAuth (YouTube, TikTok):** PKCE ve tek kullanımlık bir `127.0.0.1` geri dönüş alıcısı (rastgele port, sabit süreli state kontrolü, tek istekten ya da 5 dakikadan sonra kapanır). Tarayıcı sistem işleyicisiyle açılır; CLI adresi yazdırır.
 - **SQL konsolu:** yalnızca salt okunur ifadeler (bkz. Dışa aktarım).
 - **Electron fuse'ları** (`scripts/afterPack.cjs`, electron-builder tarafından paketlenmiş uygulamaya uygulanır):
 
@@ -220,14 +226,28 @@ Arayüz dili varsayılan olarak İngilizcedir ve `lang` ayarında saklanır. Rap
 
 ## Test
 
-- **Birim ve entegrasyon testleri** (`tests/`, Vitest, `environment: node`), native modül ABI'si eşleşsin diye Electron'un Node'u altında (`ELECTRON_RUN_AS_NODE=1`) çalışır. `sync.integration.test.js`, sahte bir Graph API'ye karşı tam bir senkronizasyon çalıştırır.
+- **Birim ve entegrasyon testleri** (`tests/`, Vitest, `environment: node`), native modül ABI'si eşleşsin diye Electron'un Node'u altında (`ELECTRON_RUN_AS_NODE=1`) çalışır. `tests/fixtures/fakeFetch.js` istekleri sahte Meta, Threads, Google ve TikTok API'lerine yönlendirir; `sync.*.integration.test.js` dosyaları gerçek orkestratör üzerinden tam senkronizasyon çalıştırır, `providers.contract.test.js` her sağlayıcıyı arayüze göre denetler.
 - **Tip kontrolü:** renderer için `tsc --noEmit`.
-- **Smoke testi:** `npm run smoke` gerçek uygulamayı başlatır, tüm rotaları gezer ve renderer hatalarında başarısız olur.
+- **Çeviriler:** `npm run i18n:check`.
+- **Smoke testleri:** `npm run smoke` gerçek uygulamayı başlatır, tüm rotaları gezer ve renderer hatalarında başarısız olur; `node scripts/cli-smoke.mjs` her CLI komutunu geçici bir demo veritabanında çalıştırır; `sh worker/test/smoke.sh` worker imajını derleyip denetler.
 
-## v2.0 "Ölçek"
+## Özellik modülleri (v1.4–v2.0)
 
-Her özelliğin kendi belgesi vardır; aşağıdaki bölümler yalnızca onlara yönlendirir. Ortak sözleşmeler (011–014
+Her özelliğin kendi belgesi vardır; aşağıdaki bölümler yalnızca onlara yönlendirir. v2.0'da ortak sözleşmeler (011–014
 göçleri, sağlayıcı kancaları, IPC taslakları, preload yüzeyi) özellikler paralel geliştirilebilsin diye önce kuruldu.
+
+### Planlayıcı ve yayımlama
+
+`src/main/planner/` (medya kitaplığı, dosya inceleme, doğrulama, en iyi zaman önerileri, onay paketleri) ve
+`src/main/publishing/` (kira tabanlı kuyruk, platform adımları, sınırlar, medya sunucuları). Platform yayıncılarının
+kendisi, worker'ın da kullanabilmesi için saf tutulan `src/shared/publish/` içindedir. Arka plan modu `tray.js` ve
+`lifecycle.js` içindedir. Bkz. [planner.md](planner.md) ve [publishing-setup.md](publishing-setup.md).
+
+### Yapay zekâ
+
+`src/main/ai/`: sağlayıcılar (Anthropic SDK, OpenAI, Gemini, Ollama), yapılandırılmış çıktı, görsel desteği, kullanım
+ve fiyatlandırma, **Verine sor** (`ask/`, salt okunur SQL korumasıyla) ve Stüdyo özellikleri (`studio/`).
+Bkz. [ai-studio.md](ai-studio.md).
 
 ### Sağlayıcılar ve genişletilebilirlik
 

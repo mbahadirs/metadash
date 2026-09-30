@@ -1,5 +1,7 @@
 # Ekip çalışma alanı ve roller (sunucusuz)
 
+[English](../team.md)
+
 MetaDash v2.0, küçük bir ekibin tek bir çalışma alanını bilgisayarları arasında zaten eşitlenen bir klasör
 üzerinden paylaşmasını sağlar: Dropbox, iCloud Drive, OneDrive, masaüstü Google Drive veya bir NAS/SMB paylaşımı.
 MetaDash sunucusu ya da hesap sistemi yoktur.

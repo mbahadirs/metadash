@@ -1,5 +1,7 @@
 # Self-hosted publish worker (optional)
 
+[Türkçe](tr/worker.md)
+
 MetaDash publishes scheduled posts from your computer (tray mode). If the computer sleeps or is off at the scheduled
 time, the post is missed. The **worker** is a small, optional service you run yourself — on a VPS, a NAS or a
 Raspberry Pi — that holds the queued posts you hand to it and publishes them on time to **Instagram, Facebook Pages
@@ -36,6 +38,10 @@ Tokens with permissions beyond publishing (ads, insights, comments, messaging �
    ```
 3. Back in MetaDash, enter the worker address and the secret (or a pairing string `mdw1:…`) and press **Connect**.
    The desktop verifies the secret with a signed request before saving it.
+
+   > **Only paste pairing strings from a worker you run yourself.** A pairing string is a credential: it decides
+   > where MetaDash sends your publishing tokens. Before the first token is sent, MetaDash shows the decoded worker
+   > address and asks you to confirm it, and it warns when the address is plain `http://` and not on this computer.
 4. Send a token for every account the worker should publish to, then choose **Publish via → Worker** per post and
    account in the composer (or make the worker the default for new Meta posts).
 
@@ -74,6 +80,11 @@ is not on a private network**:
 - **Public HTTPS:** the Compose `https` profile runs **Caddy** with automatic certificates. Set `MD_DOMAIN`
   and `MD_PUBLIC_URL=https://<domain>`. Any reverse proxy works if it **does not rewrite paths or query strings**
   (the signature covers them) and allows 110 MB request bodies.
+- **Behind a proxy, set `MD_TRUST_PROXY=1`.** Otherwise every request seems to come from the proxy's address, so
+  all clients share one rate limit, and 20 failed requests from anyone lock *everyone* out for 15 minutes. The
+  Compose file sets it to `1` by default. The header is honoured only when the direct peer is a loopback or
+  private-network address (your proxy), and MetaDash uses the right-most public address in it, so clients cannot
+  pick their own address.
 
 ### Media URLs
 
@@ -98,7 +109,7 @@ Facebook uploads and Instagram videos are uploaded by the worker directly (no pu
 | `MD_DATA_DIR` | `/data` | state file + media |
 | `PORT` / `HOST` | `8787` / `0.0.0.0` | |
 | `MD_STRICT_SCOPES` | `1` | re-check Instagram token scopes with Meta (`/me/permissions`) and token validity on receipt |
-| `MD_TRUST_PROXY` | `0` | use `X-Forwarded-For` for rate limiting (only behind your own proxy) |
+| `MD_TRUST_PROXY` | `0` (`1` in `docker-compose.yml`) | use `X-Forwarded-For` for rate limiting and lockout; required behind a reverse proxy. Honoured only from loopback/private-network peers |
 | `MD_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
 | `TZ` | container default | shown in `/v1/info` |
 
@@ -161,6 +172,7 @@ Rate limit: 120 requests/min per client; 20 authentication failures in 10 min lo
 | Threat | Mitigation |
 |---|---|
 | Someone on the network calls the API | HMAC on every route, nonce + timestamp window, rate limit and lockout |
+| A pairing string from someone else redirects your tokens | the desktop shows the decoded address and asks before the first token push; warns on non-loopback `http://`; only pair with a worker you run |
 | TLS-terminating proxy or network observer | tokens travel sealed with a key derived from the secret; use TLS/Tailscale for content |
 | Stolen `/data` volume or backup | tokens encrypted at rest with `MD_WORKER_DATA_KEY` (not in `/data`) |
 | Worker host fully compromised | attacker gets publishing tokens only (no user token for Facebook, no app secret, no analytics); revoke tokens in Meta and re-pair |
@@ -173,6 +185,8 @@ Rate limit: 120 requests/min per client; 20 authentication failures in 10 min lo
 ## Troubleshooting
 
 - *The worker refused the request (secret)*: wrong secret, or clocks differ by more than 5 minutes (enable NTP).
+- *Everyone is locked out after a few failed requests*: the worker runs behind a proxy without `MD_TRUST_PROXY=1`
+  (see [Network and TLS](#network-and-tls)).
 - *Unreachable*: check `docker compose ps`, the URL, and that Tailscale is up. `metadash worker test` from the CLI
   prints the round trip.
 - *Needs public media URLs*: set `MD_PUBLIC_URL` (with HTTPS) or configure a media host in Settings → Publishing.

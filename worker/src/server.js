@@ -1,7 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import { PROTOCOL_VERSION, isSha256, sha256Hex, TOKEN_KEY_RE } from './shared.js';
+import { PROTOCOL_VERSION, isSha256, sha256Hex, TOKEN_KEY_RE, HEADER_PROTOCOL, HEADER_TS, HEADER_NONCE, HEADER_SIG } from './shared.js';
 import { createStore } from './store.js';
 import { createAuthenticator } from './auth.js';
 import { createDataVault, openRotation } from './crypto.js';
@@ -11,11 +11,15 @@ import { createTokenVault, TokenRejected } from './tokens.js';
 import { createScheduler } from './scheduler.js';
 import { upsertItems, recallItem, toChange, queueCounts, isItemId, MAX_BATCH } from './items.js';
 import { silentLogger } from './log.js';
+import { clientKeyFor } from './clientip.js';
 
 /**
  * HTTP API (node:http, no framework). Every route except GET /v1/health (Docker HEALTHCHECK: {ok, protocol, version})
  * and GET /m/<sha256> (signed expiring URL for Meta's media crawler) requires an HMAC-signed request (auth.js).
- * Per-IP rate limit on every route and an auth-failure lockout. JSON bodies ≤ 1 MB; media uploads ≤ 100 MB streamed.
+ * Per-IP rate limit on every route and an auth-failure lockout. Only requests that carry signature headers count toward
+ * the lockout (unsigned scans get 401 and are bounded by the per-minute limiter); /v1/health is never locked out.
+ * Client address: clientip.js (X-Forwarded-For only with MD_TRUST_PROXY=1 and a private/loopback proxy peer).
+ * JSON bodies ≤ 1 MB; media uploads ≤ 100 MB streamed.
  *
  *   GET    /v1/info                     → { version, time, tz, queue, publicMediaUrl, tokens }
  *   PUT    /v1/tokens/:key              { platform, accountId, envelope, expiresAt, scopes, broad? }
@@ -95,15 +99,14 @@ export function createWorkerApp(opts) {
   const scheduler = createScheduler({ store, tokens, media, fetchImpl, now, log });
   const tz = opts.tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  const clientKey = (req) => {
-    const fwd = trustProxy ? String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() : '';
-    return fwd || req.socket.remoteAddress || 'unknown';
-  };
+  const clientKey = (req) => clientKeyFor({ trustProxy, remoteAddress: req.socket.remoteAddress, forwardedFor: req.headers['x-forwarded-for'] });
+  const bearsSignature = (req) => [HEADER_TS, HEADER_NONCE, HEADER_SIG].some((h) => req.headers[h] != null);
 
   function authenticate(req, path, bodyHash, ip) {
+    if (!bearsSignature(req) && req.headers[HEADER_PROTOCOL] == null) throw new HttpError(401, 'unauthorized'); // unsigned: no lockout
     const r = auth.verify({ method: req.method, path, headers: req.headers, bodyHash });
     if (!r.ok) {
-      limiter.fail(ip);
+      if (bearsSignature(req)) limiter.fail(ip);
       log.warn('auth rejected', { code: r.code, ip });
       throw new HttpError(r.status, r.code);
     }
@@ -180,14 +183,15 @@ export function createWorkerApp(opts) {
 
   async function route(req, res) {
     const ip = clientKey(req);
-    if (limiter.blocked(ip)) throw new HttpError(429, 'locked_out');
     if (!limiter.take(ip)) throw new HttpError(429, 'rate_limited');
     const url = new URL(req.url, 'http://worker.local');
     const path = req.url; // signed exactly as sent (path + query)
     const p = url.pathname;
     const m = req.method;
 
+    // Health (Docker HEALTHCHECK, desktop reachability test) is unauthenticated and never subject to the lockout.
     if (m === 'GET' && p === '/v1/health') return send(res, 200, { ok: true, protocol: PROTOCOL_VERSION, version: WORKER_VERSION });
+    if (limiter.blocked(ip)) { req.resume(); throw new HttpError(429, 'locked_out'); }
     const mediaGet = p.match(/^\/m\/([a-f0-9]{64})$/);
     if ((m === 'GET' || m === 'HEAD') && mediaGet) return serveMedia(req, res, mediaGet[1], url);
 

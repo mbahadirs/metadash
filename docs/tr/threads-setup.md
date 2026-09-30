@@ -32,6 +32,11 @@ Meta arayüzü sık değişir; menü adları biraz farklı olabilir. Yaklaşık 
    - `threads_basic` (profil ve gönderiler, her zaman gerekli)
    - `threads_manage_insights` (görüntülenme, beğeni, yanıt, yeniden paylaşım, alıntı, takipçi, demografi)
 
+   İsteğe bağlı: Planlayıcı'dan yayımlamak için `threads_content_publish` ve `threads_manage_replies`
+   ([publishing-setup.md](publishing-setup.md)), birleşik gelen kutusunda yanıtları okumak için `threads_read_replies`
+   ([inbox.md](inbox.md)). MetaDash bunları yalnızca Ayarlar → Bağlantılar'da **Paylaşım iznini de iste** açıkken
+   ister.
+
 ## 2. Threads App ID ve App Secret
 
 Threads kullanım senaryosu olan bir uygulamada **iki** App ID ve secret bulunur. MetaDash **Threads** olanlara ihtiyaç

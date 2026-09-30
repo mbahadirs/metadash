@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, call } from '@/lib/api';
-import type { WorkerExecutor, WorkerPairing, WorkerState, WorkerStatusEvent, WorkerToken } from '@/lib/types';
+import type { WorkerExecutor, WorkerPairing, WorkerState, WorkerStatusEvent, WorkerTarget, WorkerToken } from '@/lib/types';
 
 /** Self-hosted publish worker (v2.0 chunk E): state query refreshed on `worker:status`, and thin API wrappers. */
 export const WORKER_KEY = ['worker', 'state'] as const;
@@ -20,7 +20,8 @@ export interface ExecutorResult { updated: number; skipped: { targetId: number; 
 export const workerApi = {
   state: () => call<WorkerStateX>(api.worker.getState()),
   generatePairing: () => call<WorkerPairing>(api.worker.generatePairing()),
-  configure: (p: { url?: string; pairing?: string; secret?: string }) => call<WorkerStateX>(api.worker.configure(p)),
+  inspect: (p: { url?: string; pairing?: string; secret?: string }) => call<WorkerTarget>(api.worker.inspect(p)),
+  configure: (p: { url?: string; pairing?: string; secret?: string; allowInsecureHttp?: boolean }) => call<WorkerStateX>(api.worker.configure(p)),
   preferences: (p: { defaultExecutor?: WorkerExecutor; enabled?: boolean; notify?: boolean }) => call<WorkerStateX>(api.worker.configure(p)),
   test: () => call<{ ok: boolean; version: string; protocol: number; latencyMs: number }>(api.worker.test()),
   tokens: () => call<WorkerToken[]>(api.worker.tokens()),

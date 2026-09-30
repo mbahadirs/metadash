@@ -19,13 +19,19 @@ Each file is a flat object of `"key": "text"`. English (`en`) is the source of t
 | `core` | Navigation, common labels, dashboards, setup, settings |
 | `planner` | Content planner and approvals |
 | `background` | Tray and background mode, publishing settings |
-| `studio`, `studio.voice`, `studio.ideas`, `studio.inbox` | AI studio |
+| `studio`, `studio.voice`, `studio.ideas`, `studio.inbox` | AI Studio |
+| `inbox` | Unified inbox |
+| `team` | Team workspace, roles, client view, notes |
+| `worker` | Self-hosted publish worker settings |
+| `cli` | Command-line tool settings |
+| `providers` | Texts shared by platforms (content types, Experimental badge) |
+| `youtube`, `tiktok` | YouTube and TikTok connections and screens |
 
 | Main namespace | Contents |
 | --- | --- |
 | `messages` | General messages (setup, sync, AI errors) |
 | `errors` | Meta/network error messages and hints |
-| `planner`, `publishing`, `background`, `studio*` | Feature messages |
+| `planner`, `publishing`, `background`, `studio*`, `inbox`, `team`, `worker`, `cli`, `providers`, `youtube`, `tiktok` | Feature messages (`cli` also holds the command-line tool's error messages) |
 | `report` | Headings and labels in HTML, PDF and Excel reports (`weekdays` is a comma-separated list, Sunday first) |
 | `approval` | Labels in the client approval pack |
 
@@ -60,7 +66,7 @@ Text in curly braces is filled in by the app: `"{n} posts"`, `"Connected as @{u}
 
 - Short, plain and friendly. Buttons are verbs ("Save", "Connect").
 - Use the informal or formal register that is normal for software in your language, and keep it consistent. Turkish uses the polite plural ("siz" forms).
-- Never translate platform and product names: Instagram, Facebook, Threads, Meta, Reels, Stories, MetaDash, Graph API Explorer.
+- Never translate platform and product names: Instagram, Facebook, Threads, YouTube, YouTube Shorts, TikTok, Meta, Reels, Stories, MetaDash, Graph API Explorer.
 - Common technical terms such as token, App ID, App Secret, API and hashtag stay in English unless your language has a well-established equivalent.
 - Metric names follow the platform's own wording in your language where one exists (for example "Viewers" for Facebook reach).
 

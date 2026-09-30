@@ -208,7 +208,7 @@ me/adaccounts?fields=name,account_status,currency
 
 ## 7. In MetaDash
 
-1. Setup wizard: **Welcome → Meta app** (App ID + Secret) **→ Token** (paste, exchange) **→ Account selection** (discovered Instagram accounts; set client names and tags) **→ Ad accounts** (optionally link each to an Instagram account) **→ First sync**.
+1. The Setup wizard has 7 steps: **Welcome → Meta app** (App ID + Secret) **→ Token** (paste, exchange) **→ Account selection** (discovered Instagram accounts and, optionally, Facebook Pages; set client names and tags) **→ Ad accounts** (optionally link each to an account) **→ Threads** (optional, separate app; see [threads-setup.md](threads-setup.md)) **→ First sync**. YouTube and TikTok are connected later in **Settings → Connections** ([youtube-setup.md](youtube-setup.md), [tiktok-setup.md](tiktok-setup.md)).
 2. The first sync can take a few minutes for dozens of accounts; progress is shown in the top bar.
 3. Afterwards, refresh with the **Update** button in the top bar or turn on automatic daily updates in Settings.
 
@@ -237,7 +237,7 @@ Notes:
 
 ### 7.3 Publishing permissions (Planner, optional)
 
-Publishing from the Planner (v1.4) needs extra permissions. Analytics keeps working without them; add them only if you publish from MetaDash.
+Publishing from the Planner needs extra permissions. Analytics keeps working without them; add them only if you publish from MetaDash.
 
 | Platform | Permission | Needed for |
 |---|---|---|
@@ -250,6 +250,10 @@ Publishing from the Planner (v1.4) needs extra permissions. Analytics keeps work
 2. Tick them in Graph API Explorer when you generate the token (section 6) and exchange the token again in MetaDash (Settings → Connection → **Renew token**). A token only carries the permissions that were ticked when it was created, so existing users must renew it.
 3. **Facebook Pages** also need the `CREATE_CONTENT` task on each Page (Explorer: `me/accounts?fields=name,tasks` — `tasks` must contain `CREATE_CONTENT`).
 4. Settings → Publishing shows per-platform readiness and what is missing. Media hosting for Instagram and Threads and the full walkthrough are in [publishing-setup.md](publishing-setup.md).
+
+### 7.4 Inbox permissions (optional)
+
+The [unified inbox](inbox.md) reads and answers comments with the same token. Instagram needs `instagram_manage_comments`. For Facebook Pages, add `pages_read_user_content` (to read comments with their authors) and `pages_manage_engagement` (to reply and hide; your Page role needs the `MODERATE` task). Add them to the use case (section 3.2), tick them in the Explorer (section 6) and renew the token. The full table is in [inbox.md](inbox.md#permissions).
 
 ---
 

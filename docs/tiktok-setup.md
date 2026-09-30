@@ -37,7 +37,7 @@ Because there is no daily series, MetaDash **estimates** daily views and new fol
 - new followers per day = follower count at this sync day − follower count at the previous sync day;
 - views per day = the growth of every video's cumulative view count between syncs.
 
-The account page labels these "estimated from syncs". Sync at least once a day (Settings → Background) for accurate
+The account page labels these "estimated from syncs". Sync at least once a day (Settings → Sync → daily auto-update, or a scheduled [CLI](cli.md) sync) for accurate
 days; a day without a sync shows its growth on the next synced day.
 
 Other limits:

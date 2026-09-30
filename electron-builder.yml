@@ -6,6 +6,8 @@ directories:
   buildResources: resources
 files:
   - src/main/**/*
+  # Pure publishers shared with the self-hosted worker (imported by src/main/publishing).
+  - src/shared/**/*
   - dist/renderer/**/*
   - package.json
   - "!src/renderer/**"

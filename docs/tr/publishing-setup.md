@@ -1,5 +1,7 @@
 # Yayımlama kurulumu (Planlayıcı)
 
+[English](../publishing-setup.md)
+
 MetaDash, **Planlayıcı**'da hazırladığınız gönderileri Instagram, Facebook Sayfaları ve Threads'te yayımlayabilir. Bu kılavuz her platformun gerektirdiği izinleri, Instagram ve Threads için gereken medya barındırmayı, MetaDash'in kontrol ettiği sınırları ve bilgisayar kapalıyken neler olduğunu anlatır.
 
 Yayımlama isteğe bağlıdır. Analiz bunların hiçbiri olmadan çalışır.
@@ -100,9 +102,10 @@ Bir klasörü zaten bir web sunucusuyla eşitliyorsanız MetaDash'i onun herkese
 |---|---|---|
 | **Facebook'ta zamanla** seçili Facebook gönderisi | ✅ Facebook yayımlar | ✅ |
 | Instagram, Threads ve bu seçenek olmadan Facebook | ❌ kaçırılır | ✅ |
+| **Yayınlayan: Worker** olarak ayarlanan her gönderi ([kendi sunucunuzdaki worker](worker.md)) | ✅ worker yayımlar | ✅ |
 
 - **Facebook'ta zamanla**, gönderiyi hemen Facebook'un kendi zamanlayıcısına devreder. Zaman 10 dakika ile 30 gün arasında ileride olmalıdır. Böyle bir gönderinin ilk yorumu ancak MetaDash çalışırken gönderinin yayına girdiğini gördüğünde eklenir.
-- Diğer her şeyi MetaDash kendisi yayımlar; bu yüzden uygulama planlanan zamanda çalışıyor olmalıdır. Pencereyi kapatınca MetaDash'in çalışmaya devam etmesi için **tepsi modunu** (Ayarlar → Arka plan), isterseniz **oturum açılışında başlatmayı** açın. Kapağı kapatılan dizüstü bilgisayar yine de uykuya geçer.
+- Diğer her şeyi MetaDash kendisi yayımlar; bu yüzden uygulama planlanan zamanda çalışıyor olmalıdır. Pencereyi kapatınca MetaDash'in çalışmaya devam etmesi için **tepsi modunu** (Ayarlar → Arka planda çalışma), isterseniz **oturum açılışında başlatmayı** açın. Kapağı kapatılan dizüstü bilgisayar yine de uykuya geçer.
 - Instagram videoları planlanan zamandan 30 dakika, görseller 5 dakika önce hazırlanır; MetaDash o sırada da çalışıyor olmalıdır.
 
 **Kaçırılan gönderiler.** Bilgisayar, gönderinin zamanından 15 dakikadan (**tolerans süresi**) fazla uykuda kaldıysa MetaDash Ayarlar'daki **kaçırılan gönderi politikasını** uygular:
@@ -122,7 +125,7 @@ Bir klasörü zaten bir web sunucusuyla eşitliyorsanız MetaDash'i onun herkese
 
 ## 5. Sınırlar
 
-MetaDash bunları zamanlamadan önce kontrol eder. **VERIFY** ile işaretli değerler güncel Meta belgeleriyle doğrulanamadı (veya belgeler çelişiyor); MetaDash temkinli değeri kullanır. Hepsi `src/main/publishing/limits.js` dosyasındadır. Meta geliştirici belgeleriyle 2026-09-29'da karşılaştırıldı.
+MetaDash bunları zamanlamadan önce kontrol eder. **VERIFY** ile işaretli değerler güncel Meta belgeleriyle doğrulanamadı (veya belgeler çelişiyor); MetaDash temkinli değeri kullanır. Hepsi `src/main/publishing/limits.js` dosyasındadır. Meta geliştirici belgeleriyle 2026-09-29'da karşılaştırıldı. Meta farklı davranırsa [Bilinen sınırlamalar](known-limitations.md) sayfasına bakın ve lütfen bir issue açın.
 
 | | Instagram | Facebook Sayfası | Threads |
 |---|---|---|---|

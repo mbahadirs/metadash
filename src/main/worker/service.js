@@ -3,6 +3,7 @@ import { setSetting } from '../db/queries/settings.js';
 import { msg } from '../i18n.js';
 import { createWorkerClient, normalizeUrl, WorkerHttpError } from './client.js';
 import { resolveConfigureInput, generatePairing } from './pairing.js';
+import { describeWorkerUrl } from './urlPolicy.js';
 import { generateSecret } from '../../shared/publish/protocol.js';
 import { saveConnection, clearConnection, isConfigured, setInfo, setDefaultExecutor, setEnabled, setCursor, workerConfig } from './config.js';
 import { getClient, workerState, syncNow, setWorkerSyncDeps } from './sync.js';
@@ -36,12 +37,30 @@ function friendly(e) {
 
 export const generate = () => generatePairing();
 
-/** worker:configure — verifies the URL and secret against the worker, then stores them. */
-export async function configure(payload = {}) {
+function resolveTarget(payload) {
   let input;
   try { input = resolveConfigureInput(payload); } catch (e) { throw workerError(e.code === 'BAD_PAIRING' ? 'worker_err_pairing' : 'worker_err_secret', e.code); }
-  let url;
-  try { url = normalizeUrl(input.url); } catch { throw workerError('worker_err_url', 'BAD_URL'); }
+  let target;
+  try { target = describeWorkerUrl(input.url); } catch { throw workerError('worker_err_url', 'BAD_URL'); }
+  return { input, target };
+}
+
+/**
+ * worker:inspect — decodes a pairing string / URL without contacting the worker, so the UI can show where the secret
+ * and tokens would go before the user confirms. → { url, scheme, host, local, insecure } (never the secret).
+ */
+export function inspect(payload = {}) {
+  return resolveTarget(payload).target;
+}
+
+/**
+ * worker:configure — verifies the URL and secret against the worker, then stores them. Plain http:// to a host that is
+ * not loopback / private is refused (INSECURE_HTTP, nothing is sent) unless `allowInsecureHttp: true` is passed.
+ */
+export async function configure(payload = {}) {
+  const { input, target } = resolveTarget(payload);
+  if (target.insecure && payload.allowInsecureHttp !== true) throw workerError('worker_err_insecure_http', 'INSECURE_HTTP', { url: target.url });
+  const url = normalizeUrl(target.url);
   const client = createWorkerClient({ url, secret: input.secret, fetchImpl: fetchImpl ?? globalThis.fetch, now: nowFn });
   try {
     await client.health();
